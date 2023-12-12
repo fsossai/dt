@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.13)
 
-#project(compiler C CXX ASM)
+execute_process(
+    COMMAND noelle-config
+    OUTPUT_VARIABLE NOELLE_INSTALL_DIR
+    RESULT_VARIABLE return_code
+    ERROR_QUIET
+)
 
-set(NOELLE_HOME $ENV{NOELLE_HOME})
-if(NOT NOELLE_HOME)
-  message(FATAL_ERROR "Please set the environment variable NOELLE_HOME")
+if(return_code AND (NOT return_code EQUAL 1))
+  message(FATAL_ERROR "Please source NOELLE. 'noelle-config' must be available")
 endif()
-message(STATUS "NOELLE: " ${NOELLE_HOME})
+
+string(STRIP ${NOELLE_INSTALL_DIR} NOELLE_INSTALL_DIR)
+message(STATUS "Found NOELLE at: " ${NOELLE_INSTALL_DIR})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -29,8 +35,8 @@ include(AddLLVM)
 
 include_directories(
   ${LLVM_INCLUDE_DIRS}
-  ${NOELLE_HOME}/install/include
-  ${NOELLE_HOME}/install/include/svf)
+  ${NOELLE_INSTALL_DIR}/include
+  ${NOELLE_INSTALL_DIR}/include/svf)
 
 configure_file(dt-opt.in dt-opt @ONLY)
 configure_file(enable.in enable @ONLY)
