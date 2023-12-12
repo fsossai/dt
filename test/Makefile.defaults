@@ -1,0 +1,5 @@
+CC=clang++
+STD=-std=c++17
+OPT=-O3
+INCLUDE_DIRS=-I../skynet
+FLAGS=

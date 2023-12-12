@@ -1,0 +1,3 @@
+#!/bin/bash
+
+source @CMAKE_BINARY_DIR@/compiler/enable

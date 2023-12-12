@@ -1,0 +1,4 @@
+#!/bin/bash
+
+noelle-load -load @CMAKE_CURRENT_BINARY_DIR@/Printer.so $@
+
