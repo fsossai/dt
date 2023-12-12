@@ -5,7 +5,7 @@ _"I need your loops, your clause, and your dependences."_
 ## Getting started
 
 To compile and enable the compiler:
-- Set the environment variable `NOELLE_HOME`
+- Source NOELLE, e.g.: `source /path/to/noelle/enable`
 - Run `make`
 - Run `source enable`
 
