@@ -40,11 +40,11 @@ public:
     return container_[idx];
   }
 
-  typename ContainerType::iterator begin() {
+  typename ContainerType<T>::iterator begin() {
     return container_.begin();
   }
 
-  typename ContainerType::iterator end() {
+  typename ContainerType<T>::iterator end() {
     return container_.end();
   }
 
