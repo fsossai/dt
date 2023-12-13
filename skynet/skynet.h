@@ -8,10 +8,6 @@
 
 namespace skynet {
 
-int next_k() {
-  return 0;
-}
-
 template<typename T>
 class Sequence {
 public:
@@ -20,11 +16,13 @@ public:
 
   Sequence() = default;
 
+  T plus1(T t) const {
+    return t+1;
+  }
 
   __attribute__((always_inline))
-  void append(const T &value) {
-    int k = 0;
-    PRAGMA_LDTC(k, next_k);
+  void append(T value) {
+    PRAGMA_LDTC(value, Sequence<T>::plus1, this, value);
     container_.push_back(value);
   }
 
@@ -50,6 +48,9 @@ public:
 
 private:
   ContainerType<T> container_;
+  int k_ = 17;
+  char c[10];
+  std::string ds = "[%i]\n";
 };
 
 }
