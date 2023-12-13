@@ -1,5 +1,5 @@
 CC=clang++
 STD=-std=c++17
 OPT=-O3
-INCLUDE_DIRS=-I../skynet
+INCLUDE_DIRS=-I../skynet -I../compiler
 FLAGS=

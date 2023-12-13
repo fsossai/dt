@@ -1,7 +1,9 @@
-#ifndef __COLLECTIONS__
-#define __COLLECTIONS__
+#ifndef __SKYNET__
+#define __SKYNET__
 
 #include <vector>
+
+#include "dti.h"
 
 namespace skynet {
 
@@ -42,4 +44,4 @@ private:
 
 }
 
-#endif
+#endif // __SKYNET__
