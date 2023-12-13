@@ -2,19 +2,29 @@
 #define __SKYNET__
 
 #include <vector>
+#include <iostream>
 
 #include "dti.h"
 
 namespace skynet {
 
+int next_k() {
+  return 0;
+}
+
 template<typename T>
 class Sequence {
 public:
-  using ContainerType = std::vector<T>;
+  template<typename U>
+  using ContainerType = std::vector<U>;
 
   Sequence() = default;
 
+
+  __attribute__((always_inline))
   void append(const T &value) {
+    int k = 0;
+    PRAGMA_LDTC(k, next_k);
     container_.push_back(value);
   }
 
@@ -39,7 +49,7 @@ public:
   }
 
 private:
-  ContainerType container_;
+  ContainerType<T> container_;
 };
 
 }
