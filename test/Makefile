@@ -12,9 +12,9 @@ targets:
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
 	$(CC) $(STD) $(INCLUDE_DIRS) -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
-	noelle-norm $@.bc -o $@.norm.bc
-	#noelle-inline $@.norm.bc
-	llvm-dis $@.norm.bc
+	opt --inline $@.bc -o $@.inline.bc
+	noelle-norm $@.inline.bc -o $@.inline.norm.bc
+	llvm-dis $@.inline.norm.bc
 	$(CC) $(OPT) $(FLAGS) $@.bc -o $@.out
 
 clean:
