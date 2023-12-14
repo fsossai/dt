@@ -1,4 +1,7 @@
 #!/bin/bash
 
-noelle-load -load @CMAKE_CURRENT_BINARY_DIR@/Printer.so $@
+noelle-load \
+  -load @CMAKE_CURRENT_BINARY_DIR@/Printer.so \
+  -load @CMAKE_CURRENT_BINARY_DIR@/Analysis.so \
+  $@
 

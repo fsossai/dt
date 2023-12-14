@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
+project(DTCompiler)
+
+set(CMAKE_CXX_STANDARD 17)
+
 execute_process(
     COMMAND noelle-config
     OUTPUT_VARIABLE NOELLE_INSTALL_DIR
@@ -42,3 +46,4 @@ configure_file(dt-opt.in dt-opt @ONLY)
 configure_file(enable.in enable @ONLY)
 
 add_subdirectory(printer)
+add_subdirectory(analysis)
