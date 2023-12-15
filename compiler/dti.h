@@ -6,14 +6,24 @@
 #define __DTI__
 
 #ifdef DT_ENABLE
-#define PRAGMA_LDTC(var, func, ...) __dt_ldtc(&var, &func, __VA_ARGS__)
+
+#define PRAGMA_LDTC_BEGIN(var, func, ...) __dt_ldtc_begin(&var, &func, __VA_ARGS__)
+#define PRAGMA_LDTC_END() __dt_ldtc_end()
+
 #else
-#define PRAGMA_LDTC(var, func, ...)
+
+#define PRAGMA_LDTC_BEGIN(id, var, func, ...)
+#define PRAGMA_LDTC_END(id) 
+
 #endif
 
 template <typename V, typename F, typename... Args>
 __attribute__((noinline, optnone))
-void __dt_ldtc(V var, F func, Args... args) noexcept {
+void __dt_ldtc_begin(V var, F func, Args... args) noexcept {
+}
+
+__attribute((noinline, optnone))
+void __dt_ldtc_end() noexcept {
 }
 
 

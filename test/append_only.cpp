@@ -15,10 +15,7 @@ int main() {
     a.append(i);
   }
 
-  for (int i = 0; i < a.size(); i++) {
-    cout << a[i] << " ";
-  }
-  cout << endl;
+  a.printInternals();
 
   return 0;
 }
