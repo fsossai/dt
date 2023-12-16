@@ -13,6 +13,7 @@ int main() {
 
   for (int i = 3; i < 10; i++) {
     a.append(i);
+    a.append(i);
   }
 
   a.printInternals();
