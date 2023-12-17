@@ -123,7 +123,7 @@ struct AnalysisPass : public ModulePass {
         if (auto LCU = dyn_cast<LoopCarriedUnknownSCC>(genericSCC)) {
           auto LCDs = LCU->getLoopCarriedDependences();
           // Filtering out control dependences
-          for (auto it = LCDs.begin(); it != LCDs.end(); ) {
+          for (auto it = LCDs.begin(); it != LCDs.end();) {
             auto dep = *it;
             if (dep->isControlDependence()) {
               it = LCDs.erase(it);
@@ -144,6 +144,8 @@ struct AnalysisPass : public ModulePass {
       }
     }
 
+    errs() << "DependenceTerminator: Info: Found "
+           << candidateLCDs_.size() << " candidate loop-carried dependences\n";
     errs() << "DependenceTerminator: Info: Found "
            << candidateLSs_.size() << " candidate loop structures\n";
 
@@ -299,6 +301,8 @@ struct AnalysisPass : public ModulePass {
     }
     loopToClauses_[LS] = foundClauses;
     clauses_.insert(foundClauses.begin(), foundClauses.end());
+    errs() << "DependenceTerminator: Info: Found "
+           << clauses_.size() << " clauses\n";
   }
 
   void resolveClauses() {
