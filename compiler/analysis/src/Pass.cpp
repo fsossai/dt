@@ -2,6 +2,7 @@
 #include <queue>
 #include <map>
 #include <set>
+#include <stack>
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Dominators.h"
@@ -67,7 +68,7 @@ struct AnalysisPass : public ModulePass {
            << *dstValue << "\n";
   }
 
-  bool isLDTCBegin(const Instruction *I) {
+  bool isLDTCBegin(const Instruction *I) const {
     if (auto *CI = dyn_cast<CallInst>(I)) {
       auto callee = CI->getCalledFunction();
       if (callee) {
@@ -79,7 +80,7 @@ struct AnalysisPass : public ModulePass {
     return false;
   }
 
-  bool isLDTCEnd(const Instruction *I) {
+  bool isLDTCEnd(const Instruction *I) const {
     if (auto *CI = dyn_cast<CallInst>(I)) {
       auto callee = CI->getCalledFunction();
       if (callee) {
@@ -91,15 +92,11 @@ struct AnalysisPass : public ModulePass {
     return false;
   }
 
-  bool isLDTC(const Instruction *I) {
+  bool isLDTC(const Instruction *I) const {
     return isLDTCBegin(I) || isLDTCEnd(I);
   }
 
-  Clause *getClauseFor(const Instruction *I) {
-    return nullptr;
-  }
-
-  set<Instruction*> getPragmasInLoop(LoopStructure *LS) {
+  set<Instruction*> getPragmasInLoop(LoopStructure *LS) const {
     set<Instruction*> pragmas;
     for (auto I : LS->getInstructions()) {
       if (isLDTC(I)) {
@@ -129,9 +126,6 @@ struct AnalysisPass : public ModulePass {
           for (auto it = LCDs.begin(); it != LCDs.end(); ) {
             auto dep = *it;
             if (dep->isControlDependence()) {
-              //errs() << "DependenceTerminator: Dependence: Discarding control dependence in "
-              //       << LS->getFunction()->getName() << "\n";
-              //printDependence(dep);
               it = LCDs.erase(it);
             }
             else {
@@ -158,7 +152,7 @@ struct AnalysisPass : public ModulePass {
       if (pragmas.size() > 0) {
         targetLSs_.insert(LS);
         loopToPragmas_[LS] = pragmas;
-        errs() << "DependenceTerminator: Header: Candidate loop header\n";
+        errs() << "DependenceTerminator: Header: Candidate loop header:\n";
         errs() << *LS->getHeader() << "\n";
       }
     }
@@ -166,41 +160,78 @@ struct AnalysisPass : public ModulePass {
            << targetLSs_.size() << " target loops\n";
   }
 
-  bool containsEnd(BasicBlock *BB) {
+  Instruction *findUnmatchedBegin(BasicBlock *BB) const {
+    stack<Instruction*> begins;
     for (auto &I : *BB) {
-      if (isLDTCEnd(&I)) {
-        return true;
+      if (isLDTCBegin(&I)) {
+        begins.push(&I);
+      } else if (isLDTCEnd(&I)) {
+        if (!begins.empty()) {
+          begins.pop();
+        }
       }
     }
-    return false;
+    if (begins.empty()) {
+      return nullptr;
+    }
+    return begins.top();
   }
 
-  // @return a non-empty set if the pragmas match
-  set<Instruction*> matchPragmas(Instruction *begin, Instruction *end) {
-    assert(begin->getParent()->getParent() == end->getParent()->getParent());
+  Instruction *findMatchingBeginSingleBlock(Instruction *end) const {
+    stack<Instruction*> ends;
+    ends.push(end);
+    auto BB = end->getParent();
+    auto rit = BB->rbegin();
+    while (&*rit != end) rit++;
+    for (; rit != BB->rend(); rit++) {
+      auto &I = *rit;
+      if (isLDTCBegin(&I)) {
+        if (ends.top() == end) {
+          return &I;
+        } else {
+          ends.pop();
+        }
+      } else if (isLDTCEnd(&I)) {
+        ends.push(&I);
+      }
+    }
+    return nullptr;
+  }
 
+  set<Instruction*> findMatchingBegin(Instruction *end, Instruction **beginFound) {
     auto &noelle = getAnalysis<Noelle>();
-    auto F = begin->getParent()->getParent();
+    auto F = end->getParent()->getParent();
     auto DS = noelle.getDominators(F);
     auto &DT = DS->DT;
 
-    auto beginBB = begin->getParent();
     auto endBB = end->getParent();
-
-    if (!DT.dominates(beginBB, endBB)) {
-      return {};
-    }
+    BasicBlock *beginBB = nullptr;
+    *beginFound = nullptr;
 
     set<Instruction*> region;
-    auto addRangeToRegion = [&region](auto from, auto to) {
+    auto addRangeToRegion = [&](auto from, auto to) {
       auto it = from;
-      while (it++ != to) {
+      while (it != to) {
         region.insert(&*it);
         it++;
       }
     };
 
+    if (auto begin = findMatchingBeginSingleBlock(end)) {
+      auto itFrom = endBB->begin();
+      while (&*itFrom != begin) itFrom++;
+      auto itTo = itFrom;
+      while (&*itTo != end) itTo++;
+      addRangeToRegion(++itFrom, itTo);
+      *beginFound = begin;
+      return region;
+    }
+
     queue<BasicBlock*> q;
+    set<BasicBlock*> selected;
+    auto alreadySelected = [&](BasicBlock *BB) {
+      return selected.find(BB) != selected.end();
+    };
     q.push(endBB);
 
     while (!q.empty()) {
@@ -208,29 +239,41 @@ struct AnalysisPass : public ModulePass {
       q.pop();
 
       for (auto BB : predecessors(current)) {
-        if (BB != beginBB) {
-          assert(DT.dominates(beginBB, BB));
-          addRangeToRegion(BB->begin(), BB->end());
-          if (!containsEnd(BB)) {
+        auto begin = findUnmatchedBegin(BB);
+        if (begin == nullptr) {
+          if (!alreadySelected(BB)) {
+            selected.insert(BB);
             q.push(BB);
           }
+        } else {
+          assert(beginBB == nullptr);
+          beginBB = BB;
+          *beginFound = begin;
         }
       }
     }
 
+    for (auto BB : selected) {
+      addRangeToRegion(BB->begin(), BB->end());
+    }
+
     // considering all instructions after `begin` in its BB
     auto it1 = beginBB->begin();
+    auto begin = findUnmatchedBegin(beginBB);
+    assert(begin != nullptr);
     while (&*it1 != begin) it1++;
-    addRangeToRegion(it1, beginBB->end());
+    addRangeToRegion(++it1, beginBB->end());
 
     // considering all instruction before 'end' in its BB
     auto it2 = endBB->begin();
     while (&*it2 != end) it2++;
     addRangeToRegion(endBB->begin(), it2);
 
+    *beginFound = begin;
     return region;
+
   }
-  
+
   void resolveClauses(LoopStructure *LS) {
     auto &pragmas = loopToPragmas_[LS];
 
@@ -247,16 +290,12 @@ struct AnalysisPass : public ModulePass {
     }
 
     set<Clause*> foundClauses;
-    for (auto begin : begins) {
-      for (auto end : ends) {
-        errs() << "matching " << *begin << "\n  with " << *end << "\n";
-        auto region = matchPragmas(begin, end);
-        if (region.size() > 0) {
-          auto clause = new Clause(begin, end);
-          foundClauses.insert(clause);
-          clauseToInsts_[clause] = region;
-        }
-      }
+    for (auto end : ends) {
+      Instruction *begin;
+      auto region = findMatchingBegin(end, &begin);
+      auto clause = new Clause(begin, end);
+      foundClauses.insert(clause);
+      clauseToInsts_[clause] = region;
     }
     loopToClauses_[LS] = foundClauses;
     clauses_.insert(foundClauses.begin(), foundClauses.end());
