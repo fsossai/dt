@@ -1,2 +1,4 @@
-- [skynet] Add _begin_ and _end_ for clause scoping
-- [analysis] Add abstraction to associate instructions with clauses
+- [analysis] Connect candidate LCDs to their clauses
+- [analysis] Handle wrong clauses: many entries, many exits
+- [analysis] Handle wrong clauses: missing begin/end
+
