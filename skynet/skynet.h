@@ -9,11 +9,24 @@
 
 namespace skynet {
 
+// Foward declaration
+template<typename T>
+class Sequence;
+
+template<typename T>
+int next_k(Sequence<T> *base) {
+  base->k_++;
+  base->container_.emplace_back();
+  return base->k_;
+}
+
 template<class T>
 class Sequence {
 public:
   template<typename U>
   using ContainerType = std::vector<U>;
+
+  friend int next_k<T>(Sequence<T> *base);
 
   class Iterator {
   public:
@@ -44,9 +57,10 @@ public:
     k_ = 0;
   }
 
+  __attribute__((always_inline))
   void append(T value) {
     int k = container_.size() - 1;
-    PRAGMA_LDTC_BEGIN(value, Sequence<T>::next_k, this);
+    PRAGMA_LDTC_BEGIN(value, next_k<T>, this);
     container_[k].push_back(value);
     PRAGMA_LDTC_END();
   }
@@ -85,16 +99,9 @@ public:
     }
   }
 
-
 private:
   std::vector<std::vector<T>> container_;
 
-  int next_k() {
-    k_++;
-    container_.emplace_back();
-    return k_;
-  }
- 
   std::pair<size_t, size_t> getCoordinate(size_t idx) const {
     size_t c1 = 0;
     size_t csum = container_[0].size();
@@ -120,46 +127,6 @@ private:
 
   int k_;
 };
-
-//template<typename T>
-//class Sequence {
-//public:
-//  template<typename U>
-//  using ContainerType = std::vector<U>;
-//
-//  Sequence() = default;
-//
-//  void append(T value) {
-//    int k = container_.size()-1;
-//    PRAGMA_LDTC_BEGIN(value, Sequence<T>::next_k, this);
-//    container_[k].push_back(value);
-//    PRAGMA_LDTC_END();
-//  }
-//
-//  size_t size() const {
-//    return container_.size();
-//  }
-//
-//  T& operator[](size_t idx) {
-//    return container_[idx];
-//  }
-//  
-//  const T& operator[](size_t idx) const {
-//    return container_[idx];
-//  }
-//
-//  typename ContainerType<T>::iterator begin() {
-//    return container_.begin();
-//  }
-//
-//  typename ContainerType<T>::iterator end() {
-//    return container_.end();
-//  }
-//
-//private:
-//  ContainerType<T> container_;
-//  int k_ = 0;
-//};
 
 }
 

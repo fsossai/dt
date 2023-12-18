@@ -1,6 +1,7 @@
 // This header provides a mean to interface with the DT compiler.
-// The following are attributes to attach information to C++ compound
-// statments that the DT compiler will use to extend the LLVM IR.
+// The following are attributes to attach information to C++
+// single-exit-multiple-exit regions that the DT compiler
+// will use to extend the LLVM IR.
 
 #ifndef __DTI__
 #define __DTI__
@@ -25,6 +26,5 @@ void __dt_ldtc_begin(V var, F func, Args... args) noexcept {
 __attribute((noinline, optnone))
 void __dt_ldtc_end() noexcept {
 }
-
 
 #endif // __DTI__
