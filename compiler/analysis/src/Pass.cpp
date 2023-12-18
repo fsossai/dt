@@ -12,6 +12,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/DerivedTypes.h"
+
 #include "noelle/core/DominatorForest.hpp"
 #include "noelle/core/LoopCarriedUnknownSCC.hpp"
 #include "noelle/core/Noelle.hpp"
@@ -26,18 +30,45 @@ public:
   Clause(Instruction *begin, Instruction *end)
       : begin(begin)
       , end(end) {
-    // TODO
+    extractClauseOperands();
   }
 
   void print() const {
-    errs() << "DependenceTerminator: Clause: Begin: "
-           << *begin << "\n";
-    errs() << "DependenceTerminator: Clause: End: "
-           << *end << "\n";
+    errs() << "DependenceTerminator: Clause: Function: "
+           << function->getName() << "\n";
+  }
+
+  void extractClauseOperands() {
+    auto CI = cast<CallInst>(begin);
+    variable = CI->getArgOperand(0);
+    auto f = CI->getArgOperand(1);
+    if (auto fp = dyn_cast<Function>(f)) {
+      function = fp;
+      return;
+    }
+
+    // It may happen that the clause function is stored
+    // as a `i64 ptrtoint (...)`
+
+    auto BB = begin->getParent();
+    auto load = cast<LoadInst>(f);
+    auto gep = cast<GetElementPtrInst>(load->getPointerOperand());
+    auto alloca = gep->getPointerOperand();
+
+    for (auto it = BasicBlock::reverse_iterator(begin); it != BB->rend(); it++) {
+      if (auto store = dyn_cast<StoreInst>(&*it)) {
+        if (store->getPointerOperand() == alloca) {
+          auto ptr = cast<User>(store->getValueOperand())->getOperand(0);
+          auto fPtr = cast<PtrToIntOperator>(ptr)->getPointerOperand();
+          function = cast<Function>(fPtr);
+          return;
+        }
+      }
+    }
   }
 
   Value *variable;
-  FunctionType *function;
+  Function *function;
   Instruction *begin;
   Instruction *end;
 };
@@ -57,6 +88,17 @@ struct AnalysisPass : public ModulePass {
 
   bool doInitialization(Module &M) override {
     return false;
+  }
+
+  bool runOnModule(Module &M) override {
+    initialize();
+    resolveClauses();
+    printClauses();
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<Noelle>();
   }
 
   void printDependence(const Dependence *LCD) const {
@@ -315,17 +357,6 @@ struct AnalysisPass : public ModulePass {
     for (auto C : clauses_) {
       C->print();
     }
-  }
-
-  bool runOnModule(Module &M) override {
-    initialize();
-    resolveClauses();
-    printClauses();
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<Noelle>();
   }
 
 private:

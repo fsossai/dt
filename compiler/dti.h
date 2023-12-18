@@ -12,8 +12,8 @@
 
 #else
 
-#define PRAGMA_LDTC_BEGIN(id, var, func, ...)
-#define PRAGMA_LDTC_END(id) 
+#define PRAGMA_LDTC_BEGIN(var, func, ...)
+#define PRAGMA_LDTC_END() 
 
 #endif
 
