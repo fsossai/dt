@@ -34,6 +34,10 @@ public:
   }
 
   void print() const {
+    errs() << "DependenceTerminator: Clause: Begin: "
+           << *begin << "\n";
+    errs() << "DependenceTerminator: Clause: End: "
+           << *end << "\n";
     errs() << "DependenceTerminator: Clause: Function: "
            << function->getName() << "\n";
   }
@@ -94,6 +98,7 @@ struct AnalysisPass : public ModulePass {
     initialize();
     resolveClauses();
     printClauses();
+    sanityChecks();
     return false;
   }
 
@@ -356,6 +361,18 @@ struct AnalysisPass : public ModulePass {
   void printClauses() const {
     for (auto C : clauses_) {
       C->print();
+    }
+  }
+
+  void sanityChecks() {
+    // `begin` and `end` instructions must belong to one and only one clause
+    set<Instruction*> beginSeen;
+    set<Instruction*> endSeen;
+    for (auto C : clauses_) {
+      bool duplicatedBegin = !beginSeen.insert(C->begin).second;
+      assert(!duplicatedBegin);
+      bool duplicatedEnd = !endSeen.insert(C->end).second;
+      assert(!duplicatedEnd);
     }
   }
 
