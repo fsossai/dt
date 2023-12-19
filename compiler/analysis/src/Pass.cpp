@@ -34,10 +34,10 @@ public:
   }
 
   void print() const {
-    errs() << "DependenceTerminator: Clause: Begin: "
-           << *begin << "\n";
-    errs() << "DependenceTerminator: Clause: End: "
-           << *end << "\n";
+    //errs() << "DependenceTerminator: Clause: Begin: "
+    //       << *begin << "\n";
+    //errs() << "DependenceTerminator: Clause: End: "
+    //       << *end << "\n";
     errs() << "DependenceTerminator: Clause: Function: "
            << function->getName() << "\n";
   }
@@ -99,6 +99,7 @@ struct AnalysisPass : public ModulePass {
     resolveClauses();
     printClauses();
     sanityChecks();
+    findBreakableDependences();
     return false;
   }
 
@@ -194,7 +195,7 @@ struct AnalysisPass : public ModulePass {
     errs() << "DependenceTerminator: Info: Found "
            << candidateLCDs_.size() << " candidate loop-carried dependences\n";
     errs() << "DependenceTerminator: Info: Found "
-           << candidateLSs_.size() << " candidate loop structures\n";
+           << candidateLSs_.size() << " candidate loops\n";
 
     for (auto LS : candidateLSs_) {
       auto pragmas = getPragmasInLoop(LS);
@@ -346,6 +347,9 @@ struct AnalysisPass : public ModulePass {
       auto clause = new Clause(begin, end);
       foundClauses.insert(clause);
       clauseToInsts_[clause] = region;
+      for (auto I : region) {
+        instToClause_[I] = clause;
+      }
     }
     loopToClauses_[LS] = foundClauses;
     clauses_.insert(foundClauses.begin(), foundClauses.end());
@@ -363,6 +367,55 @@ struct AnalysisPass : public ModulePass {
     for (auto C : clauses_) {
       C->print();
     }
+  }
+
+  void findBreakableDependences() {
+    // here we use being `covered` meaning that an instruction
+    // is in a region of code that belongs to a clause
+    int notCovered = 0;
+    int onlySrcCovered = 0;
+    int onlyDstCovered = 0;
+    int fullyCovered = 0;
+    int crossCovered = 0;
+    const auto none = instToClause_.end();
+    for (auto LCD : candidateLCDs_) {
+      auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
+      auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
+      auto srcClause = instToClause_.find(srcValue);
+      auto dstClause = instToClause_.find(dstValue);
+
+      char *tag;
+      if (srcClause == none && dstClause == none) {
+        tag = "uncovered";
+        notCovered++;
+      } else if (srcClause != none && dstClause == none) {
+        tag = "source-only-covered";
+        onlySrcCovered++;
+      } else if (srcClause == none && dstClause != none) {
+        tag = "destination-only-covered";
+        onlyDstCovered++;
+      } else if (srcClause != none && dstClause != none) {
+        if (srcClause == dstClause) {
+          tag = "fully-covered";
+          fullyCovered++;
+        } else {
+          tag = "cross-covered";
+          crossCovered++;
+        }
+      }
+      errs() << "DependenceTerminator: Dependence: Found " << tag << " LCD\n";
+      printDependence(LCD);
+    }
+    errs() << "DependenceTerminator: Info: Found "
+           << notCovered << " uncovered LCDs\n";
+    errs() << "DependenceTerminator: Info: Found "
+           << fullyCovered << " fully-covered LCDs\n";
+    errs() << "DependenceTerminator: Info: Found "
+           << crossCovered << " cross-covered LCDs\n";
+    errs() << "DependenceTerminator: Info: Found "
+           << onlySrcCovered << " source-only-covered LCDs\n";
+    errs() << "DependenceTerminator: Info: Found "
+           << onlyDstCovered << " destination-only-covered LCDs\n";
   }
 
   void sanityChecks() {
@@ -385,6 +438,7 @@ private:
   set<LoopStructure*> candidateLSs_;
   set<LoopStructure*> targetLSs_;
   set<Dependence*> candidateLCDs_;
+  set<Dependence*> breakableLCDs_;
   map<LoopStructure*, set<Instruction*>> loopToPragmas_;
   set<Instruction*> matchedBegins_;
 
