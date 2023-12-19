@@ -35,9 +35,9 @@ public:
 
   void print() const {
     //errs() << "DependenceTerminator: Clause: Begin: "
-    //       << *begin << "\n";
+    //       << begin << "\n";
     //errs() << "DependenceTerminator: Clause: End: "
-    //       << *end << "\n";
+    //       << end << "\n";
     errs() << "DependenceTerminator: Clause: Function: "
            << function->getName() << "\n";
   }
@@ -395,7 +395,7 @@ struct AnalysisPass : public ModulePass {
         tag = "destination-only-covered";
         onlyDstCovered++;
       } else if (srcClause != none && dstClause != none) {
-        if (srcClause == dstClause) {
+        if (srcClause->second == dstClause->second) {
           tag = "fully-covered";
           fullyCovered++;
         } else {
@@ -403,8 +403,10 @@ struct AnalysisPass : public ModulePass {
           crossCovered++;
         }
       }
-      errs() << "DependenceTerminator: Dependence: Found " << tag << " LCD\n";
-      printDependence(LCD);
+      if (tag != "fully-covered") {
+        errs() << "DependenceTerminator: Dependence: Found " << tag << " LCD\n";
+        printDependence(LCD);
+      }
     }
     errs() << "DependenceTerminator: Info: Found "
            << notCovered << " uncovered LCDs\n";
