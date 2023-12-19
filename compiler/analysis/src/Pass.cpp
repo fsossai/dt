@@ -209,10 +209,14 @@ struct AnalysisPass : public ModulePass {
            << targetLSs_.size() << " target loops\n";
   }
 
+  bool isUnmatched(Instruction *begin) const {
+    return matchedBegins_.find(begin) == matchedBegins_.end();
+  }
+
   Instruction *findUnmatchedBegin(BasicBlock *BB) const {
     stack<Instruction*> begins;
     for (auto &I : *BB) {
-      if (isLDTCBegin(&I)) {
+      if (isLDTCBegin(&I) && isUnmatched(&I)) {
         begins.push(&I);
       } else if (isLDTCEnd(&I)) {
         if (!begins.empty()) {
@@ -234,7 +238,7 @@ struct AnalysisPass : public ModulePass {
     while (&*rit != end) rit++;
     for (; rit != BB->rend(); rit++) {
       auto &I = *rit;
-      if (isLDTCBegin(&I)) {
+      if (isLDTCBegin(&I) && isUnmatched(&I)) {
         if (ends.top() == end) {
           return &I;
         } else {
@@ -326,13 +330,9 @@ struct AnalysisPass : public ModulePass {
   void resolveClauses(LoopStructure *LS) {
     auto &pragmas = loopToPragmas_[LS];
 
-    // Find `begin` and `end` pragmas
-    set<Instruction*> begins;
+    // Find `end` pragmas
     set<Instruction*> ends;
     for (auto I : pragmas) {
-      if (isLDTCBegin(I)) {
-        begins.insert(I);
-      }
       if (isLDTCEnd(I)) {
         ends.insert(I);
       }
@@ -342,6 +342,7 @@ struct AnalysisPass : public ModulePass {
     for (auto end : ends) {
       Instruction *begin;
       auto region = findMatchingBegin(end, &begin);
+      matchedBegins_.insert(begin);
       auto clause = new Clause(begin, end);
       foundClauses.insert(clause);
       clauseToInsts_[clause] = region;
@@ -385,6 +386,7 @@ private:
   set<LoopStructure*> targetLSs_;
   set<Dependence*> candidateLCDs_;
   map<LoopStructure*, set<Instruction*>> loopToPragmas_;
+  set<Instruction*> matchedBegins_;
 
 };
 } // namespace

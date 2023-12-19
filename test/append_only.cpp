@@ -16,8 +16,8 @@ int main() {
   int k = 0;
 
   for (int i = 3; i < 10; i++) {
-    a.append(i);
     PRAGMA_LDTC_BEGIN(i, myfunc, 9.8f);
+    a.append(i);
     PRAGMA_LDTC_END();
   }
 
