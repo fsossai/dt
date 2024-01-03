@@ -5,7 +5,7 @@ project(DTCompiler)
 set(CMAKE_CXX_STANDARD 17)
 
 execute_process(
-    COMMAND noelle-config
+    COMMAND noelle-config --prefix
     OUTPUT_VARIABLE NOELLE_INSTALL_DIR
     RESULT_VARIABLE return_code
     ERROR_QUIET
