@@ -193,7 +193,7 @@ struct AnalysisPass : public ModulePass {
     }
 
     errs() << "DependenceTerminator: Info: Found "
-           << candidateLCDs_.size() << " candidate loop-carried dependences\n";
+           << candidateLCDs_.size() << " candidate LCDs\n";
     errs() << "DependenceTerminator: Info: Found "
            << candidateLSs_.size() << " candidate loops\n";
 
@@ -369,6 +369,28 @@ struct AnalysisPass : public ModulePass {
     }
   }
 
+  set<const Clause*> canBeTerminated(Dependence *LCD) const {
+    auto none = instToClause_.end();
+    auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
+    auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
+    auto srcClause = instToClause_.find(srcValue);
+    auto dstClause = instToClause_.find(dstValue);
+
+    if (srcClause == none && dstClause == none) {
+      return {};
+    } else if (srcClause != none && dstClause == none) {
+      return {srcClause->second};
+    } else if (srcClause == none && dstClause != none) {
+      return {dstClause->second};
+    } else if (srcClause != none && dstClause != none) {
+      if (srcClause->second == dstClause->second) {
+        return {srcClause->second};
+      } else {
+        return {srcClause->second, dstClause->second};
+      }
+    }
+  }
+
   void findBreakableDependences() {
     // here we use being `covered` meaning that an instruction
     // is in a region of code that belongs to a clause
@@ -440,7 +462,6 @@ private:
   set<LoopStructure*> candidateLSs_;
   set<LoopStructure*> targetLSs_;
   set<Dependence*> candidateLCDs_;
-  set<Dependence*> breakableLCDs_;
   map<LoopStructure*, set<Instruction*>> loopToPragmas_;
   set<Instruction*> matchedBegins_;
 
