@@ -14,10 +14,10 @@ template<typename T>
 class Sequence;
 
 template<typename T>
-int next_k(Sequence<T> *base) {
-  base->k_++;
-  base->container_.emplace_back();
-  return base->k_;
+int next_k(Sequence<T> *seq) {
+  seq->k_++;
+  seq->container_.emplace_back();
+  return seq->k_;
 }
 
 template<class T>
@@ -60,7 +60,7 @@ public:
   __attribute__((always_inline))
   void append(T value) {
     int k = container_.size() - 1;
-    PRAGMA_LDTC_BEGIN(value, next_k<T>, this);
+    PRAGMA_LDTC_BEGIN(k, next_k<T>, this);
     container_[k].push_back(value);
     PRAGMA_LDTC_END();
   }
