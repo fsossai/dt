@@ -95,11 +95,11 @@ struct AnalysisPass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
-    initialize();
+    findCandidates();
     resolveClauses();
     printClauses();
     sanityChecks();
-    findBreakableDependences();
+    categorizeDependences();
     return false;
   }
 
@@ -145,16 +145,22 @@ struct AnalysisPass : public ModulePass {
   }
 
   set<Instruction*> getPragmasInLoop(LoopStructure *LS) const {
+    auto &noelle = getAnalysis<Noelle>();
+    auto LF = noelle.getLoopNestingForest();
     set<Instruction*> pragmas;
     for (auto I : LS->getInstructions()) {
       if (isLDTC(I)) {
-        pragmas.insert(I);
+        // Pragmas are always referred to the innermost loop that contain them
+        if (LF->getInnermostLoopThatContains(I)->getLoop()->getHeader()
+            == LS->getHeader()) {
+          pragmas.insert(I);
+        }
       }
     }
     return pragmas;
   }
 
-  void initialize() {
+  void findCandidates() {
     auto &noelle = getAnalysis<Noelle>();
     auto LSs = noelle.getLoopStructures();
 
@@ -202,7 +208,7 @@ struct AnalysisPass : public ModulePass {
       if (pragmas.size() > 0) {
         targetLSs_.insert(LS);
         loopToPragmas_[LS] = pragmas;
-        errs() << "DependenceTerminator: Header: Candidate loop header:\n";
+        errs() << "DependenceTerminator: Header: Target loop header:\n";
         errs() << *LS->getHeader() << "\n";
       }
     }
@@ -391,7 +397,7 @@ struct AnalysisPass : public ModulePass {
     }
   }
 
-  void findBreakableDependences() {
+  void categorizeDependences() {
     // here we use being `covered` meaning that an instruction
     // is in a region of code that belongs to a clause
     int notCovered = 0;
