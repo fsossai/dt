@@ -12,7 +12,7 @@ int main() {
     for (int j = 0; j < i; j++) {
       a.append(i);
     }
-    skynet::next_k(&a);
+    //skynet::next_k(&a);
   }
 
   a.printInternals();
