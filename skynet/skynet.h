@@ -58,7 +58,7 @@ public:
   }
 
   __attribute__((always_inline))
-  void append(T value) {
+  void append(const T& value) {
     int k = container_.size() - 1;
     PRAGMA_LDTC_BEGIN(k, next_k<T>, this);
     container_[k].push_back(value);
