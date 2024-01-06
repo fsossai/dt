@@ -29,16 +29,13 @@ struct PrinterPass : public FunctionPass {
   PrinterPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) {
-    bool show = true;
     for (auto &I : instructions(F)) {
       if (auto C = dyn_cast<CallInst>(&I)) {
         auto callee = C->getCalledFunction();
-        if (callee && callee->getName().startswith("_Z9__dt_ldtc")) {
-          if (show) {
-            errs() << "In " << F.getName() << ":\n";
-            show = false;
-          }
-          errs() << I << "\n";
+        if (callee && callee->getName().startswith("_Z15__dt_ldtc_begin")) {
+          errs() << "DepedenceTerminator: Printer: Has clauses: "
+                 << F.getName() << "\n";
+          return false;
         }
       }
     }
