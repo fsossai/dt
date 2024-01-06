@@ -12,7 +12,6 @@ targets:
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
 	$(CC) $(STD) $(INCLUDE_DIRS) -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
-	#opt --mem2reg $@.bc -o $@.bc
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc
 	llvm-dis $@.bc
