@@ -3,5 +3,6 @@
 noelle-load \
   -load @CMAKE_CURRENT_BINARY_DIR@/Printer.so \
   -load @CMAKE_CURRENT_BINARY_DIR@/Analysis.so \
+  -load @CMAKE_CURRENT_BINARY_DIR@/InvokeToCall.so \
   $@
 
