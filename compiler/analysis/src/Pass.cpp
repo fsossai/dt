@@ -20,6 +20,7 @@
 #include "noelle/core/LoopCarriedUnknownSCC.hpp"
 #include "noelle/core/Noelle.hpp"
 
+using namespace std;
 using namespace llvm;
 using namespace arcana::noelle;
 
@@ -179,7 +180,7 @@ struct AnalysisPass : public ModulePass {
           // Filtering out control dependences
           for (auto it = LCDs.begin(); it != LCDs.end();) {
             auto dep = *it;
-            if (dep->isControlDependence()) {
+            if (isa<ControlDependence<Value, Value>>(dep)) {
               it = LCDs.erase(it);
             }
             else {
