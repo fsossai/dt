@@ -2,10 +2,13 @@ compile: build
 	cmake --build build
 
 build:
-	cmake -B build -S . # -DALL=1
+	cmake -B build -S . -DCMAKE_INSTALL_PREFIX=install
+
+install: build
+	cmake --build build
+	cmake --install build
 
 clean:
 	rm -rf build
-	rm -f enable
 
 .PHONY: compile clean

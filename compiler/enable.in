@@ -1,3 +1,0 @@
-#!/bin/bash
-
-alias dt-opt="@CMAKE_CURRENT_BINARY_DIR@/dt-opt"

@@ -1,6 +1,6 @@
 build
-compiler/build
-**.ll
-**.bc
-**.out
+install
 enable
+test/**/*.bc
+test/**/*.ll
+test/**/*.out
