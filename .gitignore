@@ -1,4 +1,5 @@
-build/**
+build
+compiler/build
 **.ll
 **.bc
 **.out

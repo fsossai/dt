@@ -1,6 +1,6 @@
 -include Makefile.defaults
 
-SINGLE_FILE_TARGETS= $(patsubst %.cpp,%,$(wildcard *.cpp))
+SINGLE_FILE_TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
 DIRS=
 
 all: targets $(SINGLE_FILE_TARGETS)
