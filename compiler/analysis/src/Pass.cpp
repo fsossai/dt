@@ -24,7 +24,7 @@ using namespace std;
 using namespace llvm;
 using namespace arcana::noelle;
 
-namespace {
+namespace arcana::terminator {
 
 class Clause {
 public:
@@ -35,11 +35,11 @@ public:
   }
 
   void print() const {
-    //errs() << "DependenceTerminator: Clause: Begin: "
+    //errs() << "DTAnalysis: Clause: Begin: "
     //       << begin << "\n";
-    //errs() << "DependenceTerminator: Clause: End: "
+    //errs() << "DTAnalysis: Clause: End: "
     //       << end << "\n";
-    errs() << "DependenceTerminator: Clause: Function: "
+    errs() << "DTAnalysis: Clause: Function: "
            << function->getName() << "\n";
   }
 
@@ -78,14 +78,14 @@ public:
   Instruction *end;
 };
 
-struct AnalysisPass : public ModulePass {
+struct DTAnalysis : public ModulePass {
   static char ID;
 
   using Dependence = DGEdge<Value, Value>;
 
-  AnalysisPass() : ModulePass(ID) { }
+  DTAnalysis() : ModulePass(ID) { }
 
-  ~AnalysisPass() {
+  ~DTAnalysis() {
     for (auto *C : clauses_) {
       delete C;
     }
@@ -111,9 +111,9 @@ struct AnalysisPass : public ModulePass {
   void printDependence(const Dependence *LCD) const {
     auto srcValue = LCD->getSrcNode()->getT();
     auto dstValue = LCD->getDstNode()->getT();
-    errs() << "DependenceTerminator: [src] "
+    errs() << "DTAnalysis: [src] "
            << *srcValue << "\n";
-    errs() << "DependenceTerminator: [dst] "
+    errs() << "DTAnalysis: [dst] "
            << *dstValue << "\n";
   }
 
@@ -191,7 +191,7 @@ struct AnalysisPass : public ModulePass {
           candidateLSs_.insert(LS);
 
           for (auto LCD : LCDs) {
-            errs() << "DependenceTerminator: Dependece: In "
+            errs() << "DTAnalysis: Dependece: In "
                    << LS->getFunction()->getName() << "\n";
             printDependence(LCD);
           }
@@ -199,9 +199,9 @@ struct AnalysisPass : public ModulePass {
       }
     }
 
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << candidateLCDs_.size() << " candidate LCDs\n";
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << candidateLSs_.size() << " candidate loops\n";
 
     for (auto LS : candidateLSs_) {
@@ -209,11 +209,11 @@ struct AnalysisPass : public ModulePass {
       if (pragmas.size() > 0) {
         targetLSs_.insert(LS);
         loopToPragmas_[LS] = pragmas;
-        errs() << "DependenceTerminator: Header: Target loop header:\n";
+        errs() << "DTAnalysis: Header: Target loop header:\n";
         errs() << *LS->getHeader() << "\n";
       }
     }
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << targetLSs_.size() << " target loops\n";
   }
 
@@ -360,7 +360,7 @@ struct AnalysisPass : public ModulePass {
     }
     loopToClauses_[LS] = foundClauses;
     clauses_.insert(foundClauses.begin(), foundClauses.end());
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << clauses_.size() << " clauses\n";
   }
 
@@ -433,19 +433,19 @@ struct AnalysisPass : public ModulePass {
         }
       }
       if (tag != "fully-covered") {
-        errs() << "DependenceTerminator: Dependence: Found " << tag << " LCD\n";
+        errs() << "DTAnalysis: Dependence: Found " << tag << " LCD\n";
         printDependence(LCD);
       }
     }
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << notCovered << " uncovered LCDs\n";
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << fullyCovered << " fully-covered LCDs\n";
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << crossCovered << " cross-covered LCDs\n";
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << onlySrcCovered << " source-only-covered LCDs\n";
-    errs() << "DependenceTerminator: Info: Found "
+    errs() << "DTAnalysis: Info: Found "
            << onlyDstCovered << " destination-only-covered LCDs\n";
   }
 
@@ -477,15 +477,17 @@ private:
 
 // Registering pass
 
-char AnalysisPass::ID = 0;
-static RegisterPass<AnalysisPass> X("dt-analysis", "Identifies opportunities for dependences termination");
+using namespace arcana::terminator;
 
-static AnalysisPass *_PassMaker = NULL;
+char DTAnalysis::ID = 0;
+static RegisterPass<DTAnalysis> X("dt-analysis", "Identifies opportunities for dependences termination");
+
+static DTAnalysis *_PassMaker = NULL;
 static RegisterStandardPasses _RegPass1(PassManagerBuilder::EP_OptimizerLast,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
       PM.add(_PassMaker =
-      new AnalysisPass());
+      new DTAnalysis());
     }
   }
 );
@@ -494,7 +496,7 @@ static RegisterStandardPasses _RegPass2(
   PassManagerBuilder::EP_EnabledOnOptLevel0,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
-      PM.add(_PassMaker = new AnalysisPass());
+      PM.add(_PassMaker = new DTAnalysis());
     }
   }
 );
