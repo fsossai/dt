@@ -45,6 +45,8 @@ include_directories(
 configure_file(dt-opt.in dt-opt @ONLY)
 configure_file(enable.in enable @ONLY)
 
-add_subdirectory(printer)
 add_subdirectory(analysis)
-add_subdirectory(invoke_to_call)
+if (ALL)
+  add_subdirectory(printer)
+  add_subdirectory(invoke_to_call)
+endif()
