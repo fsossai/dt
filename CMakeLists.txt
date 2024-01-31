@@ -18,7 +18,6 @@ execute_process(
 if(return_code AND (NOT return_code EQUAL 1))
   message(FATAL_ERROR "Please source NOELLE. 'noelle-config' must be available")
 else()
-  # string(STRIP ${NOELLE_INSTALL_DIR} NOELLE_INSTALL_DIR)
   message(STATUS "Found NOELLE at: " ${NOELLE_INSTALL_DIR})
 endif()
 
