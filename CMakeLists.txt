@@ -2,12 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 
 project(dependence-terminator)
 
-get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
-set(DT_CONFIG_VERSION 0.1.0)
-set(DT_CONFIG_LIB ${DT_CONFIG_PREFIX}/lib)
-set(DT_CONFIG_BIN ${DT_CONFIG_PREFIX}/bin)
-set(DT_CONFIG_INCLUDE ${DT_CONFIG_PREFIX}/include)
-
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(LLVM 9 REQUIRED CONFIG)
@@ -18,13 +12,13 @@ execute_process(
     COMMAND noelle-config --prefix
     OUTPUT_VARIABLE NOELLE_INSTALL_DIR
     RESULT_VARIABLE return_code
-    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
 )
 
 if(return_code AND (NOT return_code EQUAL 1))
   message(FATAL_ERROR "Please source NOELLE. 'noelle-config' must be available")
 else()
-  string(STRIP ${NOELLE_INSTALL_DIR} NOELLE_INSTALL_DIR)
+  # string(STRIP ${NOELLE_INSTALL_DIR} NOELLE_INSTALL_DIR)
   message(STATUS "Found NOELLE at: " ${NOELLE_INSTALL_DIR})
 endif()
 
@@ -37,6 +31,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(HandleLLVMOptions)
 include(AddLLVM)
+
+get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
+set(DT_CONFIG_VERSION 0.1.0)
+set(DT_CONFIG_LIB ${DT_CONFIG_PREFIX}/lib)
+set(DT_CONFIG_BIN ${DT_CONFIG_PREFIX}/bin)
+set(DT_CONFIG_INCLUDE ${DT_CONFIG_PREFIX}/include)
+
+execute_process(
+  COMMAND git log -1 --format=%H
+  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+  OUTPUT_VARIABLE DT_CONFIG_COMMIT
+  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+)
+execute_process(
+  COMMAND git remote get-url origin
+  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+  OUTPUT_VARIABLE DT_CONFIG_ORIGIN
+  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+)
 
 configure_file(enable.in ${CMAKE_SOURCE_DIR}/enable @ONLY)
 

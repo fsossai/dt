@@ -9,8 +9,8 @@ function show_help() {
   echo "  --prefix        Print the installation directory path"
   echo "  --loads         Print the parameters required by 'opt' to use this library"
   echo "  --includedir    Print the include directory"
-  # echo "  --git-commit    Print the hash of the commit the project was built from"
-  # echo "  --git-origin    Print the remote origin the project was built from"
+  echo "  --git-commit    Print the hash of the commit the project was built from"
+  echo "  --git-origin    Print the remote origin the project was built from"
 }
 
 if [[ $# < 1 ]]; then
