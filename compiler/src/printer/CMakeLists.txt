@@ -1,4 +1,4 @@
-set(pass_name DTPrinter)
+set(pass_name Printer)
 
 add_llvm_library(
   ${pass_name}

@@ -1,4 +1,4 @@
-set(pass_name DTAnalysis)
+set(pass_name Analysis)
 
 add_llvm_library(
   ${pass_name}

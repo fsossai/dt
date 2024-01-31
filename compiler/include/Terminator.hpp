@@ -5,10 +5,7 @@
 #include <set>
 
 #include "llvm/IR/Instructions.h"
-
 #include "noelle/core/Noelle.hpp"
-
-#include "DependenceTerminator.hpp"
 
 namespace arcana::terminator {
 
@@ -26,14 +23,14 @@ public:
   llvm::Instruction *end;
 };
 
-struct DTAnalysis : public llvm::ModulePass {
+struct Analysis : public llvm::ModulePass {
   static char ID;
 
   using Dependence = noelle::DGEdge<llvm::Value, llvm::Value>;
 
-  DTAnalysis();
+  Analysis();
 
-  ~DTAnalysis();
+  ~Analysis();
 
   bool doInitialization(Module &M) override;
 

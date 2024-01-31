@@ -5,11 +5,10 @@
 #include <stack>
 
 #include "llvm/IR/Instructions.h"
-
 #include "noelle/core/LoopCarriedUnknownSCC.hpp"
 #include "noelle/core/Noelle.hpp"
 
-#include "DependenceTerminator.hpp"
+#include "Terminator.hpp"
 
 using namespace std;
 using namespace llvm;
@@ -24,7 +23,7 @@ Clause::Clause(Instruction *begin, Instruction *end)
 }
 
 void Clause::print() const {
-  errs() << "DTAnalysis: Clause: Function: "
+  errs() << "Terminator: Analysis: Clause: Function: "
          << function->getName() << "\n";
 }
 
@@ -57,21 +56,21 @@ void Clause::extractClauseOperands() {
   }
 }
 
-DTAnalysis::DTAnalysis()
+Analysis::Analysis()
     : ModulePass(ID) {
 }
 
-DTAnalysis::~DTAnalysis() {
+Analysis::~Analysis() {
   for (auto *C : clauses_) {
     delete C;
   }
 }
 
-bool DTAnalysis::doInitialization(Module &M) {
+bool Analysis::doInitialization(Module &M) {
   return false;
 }
 
-bool DTAnalysis::runOnModule(Module &M) {
+bool Analysis::runOnModule(Module &M) {
   findCandidates();
   resolveClauses();
   printClauses();
@@ -80,20 +79,20 @@ bool DTAnalysis::runOnModule(Module &M) {
   return false;
 }
 
-void DTAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void Analysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<Noelle>();
 }
 
-void DTAnalysis::printDependence(const Dependence *LCD) const {
+void Analysis::printDependence(const Dependence *LCD) const {
   auto srcValue = LCD->getSrcNode()->getT();
   auto dstValue = LCD->getDstNode()->getT();
-  errs() << "DTAnalysis: [src] "
+  errs() << "Terminator: Analysis: [src] "
          << *srcValue << "\n";
-  errs() << "DTAnalysis: [dst] "
+  errs() << "Terminator: Analysis: [dst] "
          << *dstValue << "\n";
 }
 
-bool DTAnalysis::isLDTCBegin(const Instruction *I) const {
+bool Analysis::isLDTCBegin(const Instruction *I) const {
   if (auto *CI = dyn_cast<CallInst>(I)) {
     auto callee = CI->getCalledFunction();
     if (callee) {
@@ -105,7 +104,7 @@ bool DTAnalysis::isLDTCBegin(const Instruction *I) const {
   return false;
 }
 
-bool DTAnalysis::isLDTCEnd(const Instruction *I) const {
+bool Analysis::isLDTCEnd(const Instruction *I) const {
   if (auto *CI = dyn_cast<CallInst>(I)) {
     auto callee = CI->getCalledFunction();
     if (callee) {
@@ -117,11 +116,11 @@ bool DTAnalysis::isLDTCEnd(const Instruction *I) const {
   return false;
 }
 
-bool DTAnalysis::isLDTC(const Instruction *I) const {
+bool Analysis::isLDTC(const Instruction *I) const {
   return isLDTCBegin(I) || isLDTCEnd(I);
 }
 
-set<Instruction*> DTAnalysis::getPragmasInLoop(LoopStructure *LS) const {
+set<Instruction*> Analysis::getPragmasInLoop(LoopStructure *LS) const {
   auto &noelle = getAnalysis<Noelle>();
   auto LF = noelle.getLoopNestingForest();
   set<Instruction*> pragmas;
@@ -137,7 +136,7 @@ set<Instruction*> DTAnalysis::getPragmasInLoop(LoopStructure *LS) const {
   return pragmas;
 }
 
-void DTAnalysis::findCandidates() {
+void Analysis::findCandidates() {
   auto &noelle = getAnalysis<Noelle>();
   auto LSs = noelle.getLoopStructures();
 
@@ -167,7 +166,7 @@ void DTAnalysis::findCandidates() {
         candidateLSs_.insert(LS);
 
         for (auto LCD : LCDs) {
-          errs() << "DTAnalysis: Dependece: In "
+          errs() << "Terminator: Analysis: Dependece: In "
                  << LS->getFunction()->getName() << "\n";
           printDependence(LCD);
         }
@@ -175,9 +174,9 @@ void DTAnalysis::findCandidates() {
     }
   }
 
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << candidateLCDs_.size() << " candidate LCDs\n";
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << candidateLSs_.size() << " candidate loops\n";
 
   for (auto LS : candidateLSs_) {
@@ -185,19 +184,19 @@ void DTAnalysis::findCandidates() {
     if (pragmas.size() > 0) {
       targetLSs_.insert(LS);
       loopToPragmas_[LS] = pragmas;
-      errs() << "DTAnalysis: Header: Target loop header:\n";
+      errs() << "Terminator: Analysis: Header: Target loop header:\n";
       errs() << *LS->getHeader() << "\n";
     }
   }
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << targetLSs_.size() << " target loops\n";
 }
 
-bool DTAnalysis::isUnmatched(Instruction *begin) const {
+bool Analysis::isUnmatched(Instruction *begin) const {
   return matchedBegins_.find(begin) == matchedBegins_.end();
 }
 
-Instruction *DTAnalysis::findUnmatchedBegin(BasicBlock *BB) const {
+Instruction *Analysis::findUnmatchedBegin(BasicBlock *BB) const {
   stack<Instruction*> begins;
   for (auto &I : *BB) {
     if (isLDTCBegin(&I) && isUnmatched(&I)) {
@@ -214,7 +213,7 @@ Instruction *DTAnalysis::findUnmatchedBegin(BasicBlock *BB) const {
   return begins.top();
 }
 
-Instruction *DTAnalysis::findMatchingBeginSingleBlock(Instruction *end) const {
+Instruction *Analysis::findMatchingBeginSingleBlock(Instruction *end) const {
   stack<Instruction*> ends;
   ends.push(end);
   auto BB = end->getParent();
@@ -235,7 +234,7 @@ Instruction *DTAnalysis::findMatchingBeginSingleBlock(Instruction *end) const {
   return nullptr;
 }
 
-set<Instruction*> DTAnalysis::findMatchingBegin(Instruction *end, Instruction **beginFound) {
+set<Instruction*> Analysis::findMatchingBegin(Instruction *end, Instruction **beginFound) {
   auto &noelle = getAnalysis<Noelle>();
   auto F = end->getParent()->getParent();
   auto DS = noelle.getDominators(F);
@@ -311,7 +310,7 @@ set<Instruction*> DTAnalysis::findMatchingBegin(Instruction *end, Instruction **
 
 }
 
-void DTAnalysis::resolveClauses(LoopStructure *LS) {
+void Analysis::resolveClauses(LoopStructure *LS) {
   auto &pragmas = loopToPragmas_[LS];
 
   // Find `end` pragmas
@@ -336,23 +335,23 @@ void DTAnalysis::resolveClauses(LoopStructure *LS) {
   }
   loopToClauses_[LS] = foundClauses;
   clauses_.insert(foundClauses.begin(), foundClauses.end());
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << clauses_.size() << " clauses\n";
 }
 
-void DTAnalysis::resolveClauses() {
+void Analysis::resolveClauses() {
   for (auto LS : targetLSs_) {
     resolveClauses(LS);
   }
 }
 
-void DTAnalysis::printClauses() const {
+void Analysis::printClauses() const {
   for (auto C : clauses_) {
     C->print();
   }
 }
 
-set<const Clause*> DTAnalysis::canBeTerminated(Dependence *LCD) const {
+set<const Clause*> Analysis::canBeTerminated(Dependence *LCD) const {
   auto none = instToClause_.end();
   auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
   auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
@@ -374,7 +373,7 @@ set<const Clause*> DTAnalysis::canBeTerminated(Dependence *LCD) const {
   }
 }
 
-void DTAnalysis::categorizeDependences() {
+void Analysis::categorizeDependences() {
   // here we use being `covered` meaning that an instruction
   // is in a region of code that belongs to a clause
   int notCovered = 0;
@@ -409,23 +408,23 @@ void DTAnalysis::categorizeDependences() {
       }
     }
     if (tag != "fully-covered") {
-      errs() << "DTAnalysis: Dependence: Found " << tag << " LCD\n";
+      errs() << "Terminator: Analysis: Dependence: Found " << tag << " LCD\n";
       printDependence(LCD);
     }
   }
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << notCovered << " uncovered LCDs\n";
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << fullyCovered << " fully-covered LCDs\n";
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << crossCovered << " cross-covered LCDs\n";
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << onlySrcCovered << " source-only-covered LCDs\n";
-  errs() << "DTAnalysis: Info: Found "
+  errs() << "Terminator: Analysis: Info: Found "
          << onlyDstCovered << " destination-only-covered LCDs\n";
 }
 
-void DTAnalysis::sanityChecks() {
+void Analysis::sanityChecks() {
   // `begin` and `end` instructions must belong to one and only one clause
   set<Instruction*> beginSeen;
   set<Instruction*> endSeen;
@@ -442,15 +441,15 @@ void DTAnalysis::sanityChecks() {
 
 using namespace arcana::terminator;
 
-char DTAnalysis::ID = 0;
-static RegisterPass<DTAnalysis> X("dt-analysis", "Identifies opportunities for dependences termination");
+char Analysis::ID = 0;
+static RegisterPass<Analysis> X("dt-analysis", "Identifies opportunities for dependences termination");
 
-static DTAnalysis *_PassMaker = NULL;
+static Analysis *_PassMaker = NULL;
 static RegisterStandardPasses _RegPass1(PassManagerBuilder::EP_OptimizerLast,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
       PM.add(_PassMaker =
-      new DTAnalysis());
+      new Analysis());
     }
   }
 );
@@ -459,7 +458,7 @@ static RegisterStandardPasses _RegPass2(
   PassManagerBuilder::EP_EnabledOnOptLevel0,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
-      PM.add(_PassMaker = new DTAnalysis());
+      PM.add(_PassMaker = new Analysis());
     }
   }
 );
