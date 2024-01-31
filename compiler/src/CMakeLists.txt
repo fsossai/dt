@@ -2,6 +2,7 @@ include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${NOELLE_INSTALL_DIR}/include
   ${NOELLE_INSTALL_DIR}/include/svf
+  ${CMAKE_SOURCE_DIR}/compiler/include
 )
 
 add_subdirectory(analysis)
