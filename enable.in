@@ -1,3 +1,4 @@
 #!/bin/bash
 
-source @CMAKE_BINARY_DIR@/compiler/enable
+export PATH="@DT_CONFIG_BIN@:$PATH"
+export PKG_CONFIG_PATH="@DT_CONFIG_LIB@/pkgconfig:$PKG_CONFIG_PATH"

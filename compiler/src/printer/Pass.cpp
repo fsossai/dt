@@ -23,17 +23,17 @@ using namespace arcana::noelle;
 
 namespace {
 
-struct PrinterPass : public FunctionPass {
+struct DTPrinter : public FunctionPass {
   static char ID;
 
-  PrinterPass() : FunctionPass(ID) {}
+  DTPrinter() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) {
     for (auto &I : instructions(F)) {
       if (auto C = dyn_cast<CallInst>(&I)) {
         auto callee = C->getCalledFunction();
         if (callee && callee->getName().startswith("_Z15__dt_ldtc_begin")) {
-          errs() << "DepedenceTerminator: Printer: Has clauses: "
+          errs() << "DTPrinter: Has clauses: "
                  << F.getName() << "\n";
           return false;
         }
@@ -52,15 +52,15 @@ struct PrinterPass : public FunctionPass {
 
 // Registering pass
 
-char PrinterPass::ID = 0;
-static RegisterPass<PrinterPass> X("dt-printer", "Print functions that contain clauses");
+char DTPrinter::ID = 0;
+static RegisterPass<DTPrinter> X("dt-printer", "Print functions that contain clauses");
 
-static PrinterPass *_PassMaker = NULL;
+static DTPrinter *_PassMaker = NULL;
 static RegisterStandardPasses _RegPass1(PassManagerBuilder::EP_OptimizerLast,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
       PM.add(_PassMaker =
-      new PrinterPass());
+      new DTPrinter());
     }
   }
 );
@@ -69,7 +69,7 @@ static RegisterStandardPasses _RegPass2(
   PassManagerBuilder::EP_EnabledOnOptLevel0,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
-      PM.add(_PassMaker = new PrinterPass());
+      PM.add(_PassMaker = new DTPrinter());
     }
   }
 );

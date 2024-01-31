@@ -1,7 +1,9 @@
+set(pass_name DTAnalysis)
+
 add_llvm_library(
-  DTAnalysis
+  ${pass_name}
   MODULE
   Pass.cpp
 )
 
-install(TARGETS DTAnalysis DESTINATION lib)
+install(TARGETS ${pass_name} DESTINATION ${DT_CONFIG_LIB})

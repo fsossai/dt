@@ -1,7 +1,9 @@
+set(pass_name DTPrinter)
+
 add_llvm_library(
-  Printer
+  ${pass_name}
   MODULE
   Pass.cpp
 )
 
-install(TARGETS Printer DESTINATION lib)
+install(TARGETS ${pass_name} DESTINATION ${DT_CONFIG_LIB})

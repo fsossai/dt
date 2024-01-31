@@ -1,7 +1,9 @@
+set(pass_name InvokeToCall)
+
 add_llvm_library(
-  InvokeToCall
+  ${pass_name}
   MODULE
   Pass.cpp
 )
 
-install(TARGETS InvokeToCall DESTINATION lib)
+install(TARGETS ${pass_name} DESTINATION ${DT_CONFIG_LIB})

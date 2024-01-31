@@ -1,0 +1,51 @@
+#!/bin/bash
+
+function show_help() {
+  echo "usage: $(basename $0) [OPTIONS]..."
+  echo
+  echo "Options"
+  echo "  --help          Print this help message"
+  echo "  --version       Print the library version"
+  echo "  --prefix        Print the installation directory path"
+  echo "  --loads         Print the parameters required by 'opt' to use this library"
+  echo "  --includedir    Print the include directory"
+  # echo "  --git-commit    Print the hash of the commit the project was built from"
+  # echo "  --git-origin    Print the remote origin the project was built from"
+}
+
+if [[ $# < 1 ]]; then
+  show_help
+  exit 0
+fi
+
+for arg in "$@"; do
+  case $arg in
+    -h | --help ) 
+      show_help
+      break
+      ;;
+    --version)
+      echo "@DT_CONFIG_VERSION@"
+      ;;
+    --prefix) 
+      echo "@DT_CONFIG_PREFIX@"
+      ;;
+    --loads) 
+      echo "@DT_CONFIG_LOADS@"
+      ;;
+    --includedir)
+      echo "@DT_CONFIG_INCLUDE@"
+      ;;
+    --git-commit)
+      echo "@DT_CONFIG_COMMIT@"
+      ;;
+    --git-origin)
+      echo "@DT_CONFIG_ORIGIN@"
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      show_help
+      exit 1
+      ;;
+  esac
+done
