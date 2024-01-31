@@ -9,10 +9,10 @@ find_program(CLANG_PATH clang)
 find_program(CLANGXX_PATH clang++)
 
 execute_process(
-    COMMAND noelle-config --prefix
-    OUTPUT_VARIABLE NOELLE_INSTALL_DIR
-    RESULT_VARIABLE return_code
-    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+  COMMAND noelle-config --prefix
+  OUTPUT_VARIABLE NOELLE_INSTALL_DIR
+  RESULT_VARIABLE return_code
+  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
 )
 
 if(return_code AND (NOT return_code EQUAL 1))
