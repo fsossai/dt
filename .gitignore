@@ -1,6 +1,6 @@
 build
 install
 enable
-test/**/*.bc
-test/**/*.ll
-test/**/*.out
+tests/**/*.bc
+tests/**/*.ll
+tests/**/*.out
