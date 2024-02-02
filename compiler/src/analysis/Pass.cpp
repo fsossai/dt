@@ -16,6 +16,53 @@ using namespace arcana::noelle;
 
 namespace arcana::terminator {
 
+class Arnold : public DependenceAnalysis {
+public:
+  Arnold(const string& name) : DependenceAnalysis(name) { }
+
+  ~Arnold() = default;
+
+  bool canThereBeAMemoryDataDependence(Instruction *fromInst,
+                                       Instruction *toInst) {
+    errs() << "Debug: canThereBeAMemoryDataDependence()\n";
+    return false;
+  }
+
+  bool canThisDependenceBeLoopCarried(DGEdge<Value, Value> *dep,
+                                      LoopStructure &loop) override {
+    errs() << "Debug: canThisDependenceBeLoopCarried()\n";
+    return false;
+  }
+
+  // bool canThereBeAMemoryDataDependence(Instruction *fromInst,
+  //                                      Instruction *toInst,
+  //                                      Function &function) override {
+  //   return true;
+  // }
+// 
+  // virtual bool canThereBeAMemoryDataDependence(Instruction *fromInst,
+  //                                              Instruction *toInst,
+  //                                              LoopStructure &loop);
+
+  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+  //     DataDependenceType t,
+  //     Instruction *fromInst,
+  //     Instruction *toInst);
+// 
+  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+  //     DataDependenceType t,
+  //     Instruction *fromInst,
+  //     Instruction *toInst,
+  //     Function &function);
+// 
+  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+  //     DataDependenceType t,
+  //     Instruction *fromInst,
+  //     Instruction *toInst,
+  //     LoopStructure &loop);
+// 
+};
+
 Clause::Clause(Instruction *begin, Instruction *end)
     : begin(begin)
     , end(end) {
@@ -72,10 +119,11 @@ bool Analysis::doInitialization(Module &M) {
 
 bool Analysis::runOnModule(Module &M) {
   findCandidates();
-  resolveClauses();
-  printClauses();
-  sanityChecks();
-  categorizeDependences();
+  // resolveClauses();
+  // printClauses();
+  // sanityChecks();
+  // categorizeDependences();
+  recomputeLDG();
   return false;
 }
 
@@ -137,7 +185,10 @@ set<Instruction*> Analysis::getPragmasInLoop(LoopStructure *LS) const {
 }
 
 void Analysis::findCandidates() {
+  // auto &noelle = getAnalysis<Noelle>();
+  Arnold arnold("Arnold");
   auto &noelle = getAnalysis<Noelle>();
+  noelle.addAnalysis(&arnold);
   auto LSs = noelle.getLoopStructures();
 
   for (auto LS : *LSs) {
@@ -166,7 +217,7 @@ void Analysis::findCandidates() {
         candidateLSs_.insert(LS);
 
         for (auto LCD : LCDs) {
-          errs() << "Terminator: Analysis: Dependece: In "
+          errs() << "Terminator: Analysis: Dependence: In "
                  << LS->getFunction()->getName() << "\n";
           printDependence(LCD);
         }
@@ -435,6 +486,44 @@ void Analysis::sanityChecks() {
     assert(!duplicatedEnd);
   }
 }
+
+
+void Analysis::recomputeLDG() {
+  errs() << "Terminator: Analysis: recomputeLDG()\n";
+  Arnold arnold("Arnold");
+  auto &noelle = getAnalysis<Noelle>();
+  noelle.addAnalysis(&arnold);
+
+  auto beg = std::begin(targetLSs_);
+  auto LS = *beg;
+  auto LC = noelle.getLoopContent(LS);
+  auto sccManager = LC->getSCCManager();
+  auto SCCDAG = sccManager->getSCCDAG();
+
+  for (auto sccNode : SCCDAG->getSCCs()) {
+    auto genericSCC = sccManager->getSCCAttrs(sccNode);
+    if (auto LCU = dyn_cast<LoopCarriedUnknownSCC>(genericSCC)) {
+      auto LCDs = LCU->getLoopCarriedDependences();
+      // Filtering out control dependences
+      for (auto it = LCDs.begin(); it != LCDs.end();) {
+        auto dep = *it;
+        if (isa<ControlDependence<Value, Value>>(dep)) {
+          it = LCDs.erase(it);
+        }
+        else {
+          ++it;
+        }
+      }
+
+      for (auto LCD : LCDs) {
+        errs() << "Terminator: Analysis: Arnold: Dependence: In "
+               << LS->getFunction()->getName() << "\n";
+        printDependence(LCD);
+      }
+    } 
+  }
+}
+
 } // namespace arcana::terminator
 
 // Registering pass
