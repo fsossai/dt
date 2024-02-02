@@ -24,42 +24,55 @@ public:
 
   bool canThereBeAMemoryDataDependence(Instruction *fromInst,
                                        Instruction *toInst) {
-    errs() << "Debug: canThereBeAMemoryDataDependence()\n";
-    return false;
+    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
+    return true;
   }
 
   bool canThisDependenceBeLoopCarried(DGEdge<Value, Value> *dep,
                                       LoopStructure &loop) override {
-    errs() << "Debug: canThisDependenceBeLoopCarried()\n";
-    return false;
+    // errs() << "Terminator: Analysis: Arnold: canThisDependenceBeLoopCarried()\n";
+    return true;
   }
 
-  // bool canThereBeAMemoryDataDependence(Instruction *fromInst,
-  //                                      Instruction *toInst,
-  //                                      Function &function) override {
-  //   return true;
-  // }
+  bool canThereBeAMemoryDataDependence(Instruction *fromInst,
+                                       Instruction *toInst,
+                                       Function &function) override {
+    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
+    return true;
+  }
 // 
-  // virtual bool canThereBeAMemoryDataDependence(Instruction *fromInst,
-  //                                              Instruction *toInst,
-  //                                              LoopStructure &loop);
+  virtual bool canThereBeAMemoryDataDependence(Instruction *fromInst,
+                                               Instruction *toInst,
+                                               LoopStructure &loop) override {
+    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
+    return true;
+  }
 
-  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-  //     DataDependenceType t,
-  //     Instruction *fromInst,
-  //     Instruction *toInst);
-// 
-  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-  //     DataDependenceType t,
-  //     Instruction *fromInst,
-  //     Instruction *toInst,
-  //     Function &function);
-// 
-  // virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-  //     DataDependenceType t,
-  //     Instruction *fromInst,
-  //     Instruction *toInst,
-  //     LoopStructure &loop);
+  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+      DataDependenceType t,
+      Instruction *fromInst,
+      Instruction *toInst) override {
+    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
+    return MAY_EXIST;
+  }
+
+  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+      DataDependenceType t,
+      Instruction *fromInst,
+      Instruction *toInst,
+      Function &function) override {
+    // errs() << "Terminator: Analysis: Arnold: isThereThisMemoryDataDependenceType()\n";
+    return MAY_EXIST;
+  }
+
+  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
+      DataDependenceType t,
+      Instruction *fromInst,
+      Instruction *toInst,
+      LoopStructure &loop) override {
+    // errs() << "Terminator: Analysis: Arnold: isThereThisMemoryDataDependenceType()\n";
+    return MAY_EXIST;
+  }
 // 
 };
 
@@ -189,6 +202,7 @@ void Analysis::findCandidates() {
   Arnold arnold("Arnold");
   auto &noelle = getAnalysis<Noelle>();
   noelle.addAnalysis(&arnold);
+  auto PDG = noelle.getProgramDependenceGraph();
   auto LSs = noelle.getLoopStructures();
 
   for (auto LS : *LSs) {
@@ -515,11 +529,11 @@ void Analysis::recomputeLDG() {
         }
       }
 
-      for (auto LCD : LCDs) {
-        errs() << "Terminator: Analysis: Arnold: Dependence: In "
-               << LS->getFunction()->getName() << "\n";
-        printDependence(LCD);
-      }
+      // for (auto LCD : LCDs) {
+      //   errs() << "Terminator: Analysis: Arnold: Dependence: In "
+      //          << LS->getFunction()->getName() << "\n";
+      //   printDependence(LCD);
+      // }
     } 
   }
 }
