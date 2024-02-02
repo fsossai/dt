@@ -1,5 +1,5 @@
-#ifndef __DEPENDENCE_TERMINATOR_HPP__
-#define __DEPENDENCE_TERMINATOR_HPP__
+#ifndef __TERMINATOR_HPP__
+#define __TERMINATOR_HPP__
 
 #include <map>
 #include <set>
@@ -84,4 +84,4 @@ private:
 };
 } // namespace arcana::terminator
 
-#endif // __DEPENDENCE_TERMINATOR_HPP__
+#endif // __TERMINATOR_HPP__
