@@ -70,8 +70,6 @@ struct Analysis : public llvm::ModulePass {
 
   void sanityChecks();
 
-  void recomputeLDG();
-
 private:
   std::set<Clause*> clauses_;
   std::map<noelle::LoopStructure*, std::set<Clause*>> loopToClauses_;

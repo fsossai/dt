@@ -24,27 +24,23 @@ public:
 
   bool canThereBeAMemoryDataDependence(Instruction *fromInst,
                                        Instruction *toInst) {
-    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
     return true;
   }
 
   bool canThisDependenceBeLoopCarried(DGEdge<Value, Value> *dep,
                                       LoopStructure &loop) override {
-    // errs() << "Terminator: Analysis: Arnold: canThisDependenceBeLoopCarried()\n";
     return true;
   }
 
   bool canThereBeAMemoryDataDependence(Instruction *fromInst,
                                        Instruction *toInst,
                                        Function &function) override {
-    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
     return true;
   }
-// 
+ 
   virtual bool canThereBeAMemoryDataDependence(Instruction *fromInst,
                                                Instruction *toInst,
                                                LoopStructure &loop) override {
-    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
     return true;
   }
 
@@ -52,7 +48,6 @@ public:
       DataDependenceType t,
       Instruction *fromInst,
       Instruction *toInst) override {
-    // errs() << "Terminator: Analysis: Arnold: canThereBeAMemoryDataDependence()\n";
     return MAY_EXIST;
   }
 
@@ -61,7 +56,6 @@ public:
       Instruction *fromInst,
       Instruction *toInst,
       Function &function) override {
-    // errs() << "Terminator: Analysis: Arnold: isThereThisMemoryDataDependenceType()\n";
     return MAY_EXIST;
   }
 
@@ -70,10 +64,9 @@ public:
       Instruction *fromInst,
       Instruction *toInst,
       LoopStructure &loop) override {
-    // errs() << "Terminator: Analysis: Arnold: isThereThisMemoryDataDependenceType()\n";
     return MAY_EXIST;
   }
-// 
+
 };
 
 Clause::Clause(Instruction *begin, Instruction *end)
@@ -132,11 +125,9 @@ bool Analysis::doInitialization(Module &M) {
 
 bool Analysis::runOnModule(Module &M) {
   findCandidates();
-  // resolveClauses();
+  resolveClauses();
   // printClauses();
   // sanityChecks();
-  // categorizeDependences();
-  recomputeLDG();
   return false;
 }
 
@@ -498,43 +489,6 @@ void Analysis::sanityChecks() {
     assert(!duplicatedBegin);
     bool duplicatedEnd = !endSeen.insert(C->end).second;
     assert(!duplicatedEnd);
-  }
-}
-
-
-void Analysis::recomputeLDG() {
-  errs() << "Terminator: Analysis: recomputeLDG()\n";
-  Arnold arnold("Arnold");
-  auto &noelle = getAnalysis<Noelle>();
-  noelle.addAnalysis(&arnold);
-
-  auto beg = std::begin(targetLSs_);
-  auto LS = *beg;
-  auto LC = noelle.getLoopContent(LS);
-  auto sccManager = LC->getSCCManager();
-  auto SCCDAG = sccManager->getSCCDAG();
-
-  for (auto sccNode : SCCDAG->getSCCs()) {
-    auto genericSCC = sccManager->getSCCAttrs(sccNode);
-    if (auto LCU = dyn_cast<LoopCarriedUnknownSCC>(genericSCC)) {
-      auto LCDs = LCU->getLoopCarriedDependences();
-      // Filtering out control dependences
-      for (auto it = LCDs.begin(); it != LCDs.end();) {
-        auto dep = *it;
-        if (isa<ControlDependence<Value, Value>>(dep)) {
-          it = LCDs.erase(it);
-        }
-        else {
-          ++it;
-        }
-      }
-
-      // for (auto LCD : LCDs) {
-      //   errs() << "Terminator: Analysis: Arnold: Dependence: In "
-      //          << LS->getFunction()->getName() << "\n";
-      //   printDependence(LCD);
-      // }
-    } 
   }
 }
 
