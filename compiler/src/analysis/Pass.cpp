@@ -96,6 +96,10 @@ void TerminatorAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD, LoopStructure &LS) {
+  auto coverage = getCoverage(LCD);
+  if (coverage == FULL) {
+    return false;
+  }
   return true;
 }
 
