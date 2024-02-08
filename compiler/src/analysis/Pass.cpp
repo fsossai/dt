@@ -17,13 +17,13 @@ using namespace arcana::noelle;
 namespace arcana::terminator {
 
 Clause::Clause(Instruction *begin, Instruction *end)
-    : begin(begin)
-    , end(end) {
+    : begin_(begin)
+    , end_(end) {
   auto CI = cast<CallInst>(begin);
-  variable = CI->getArgOperand(0);
+  variable_ = CI->getArgOperand(0);
   auto f = CI->getArgOperand(1);
   if (auto fp = dyn_cast<Function>(f)) {
-    function = fp;
+    function_ = fp;
     return;
   }
 
@@ -40,7 +40,7 @@ Clause::Clause(Instruction *begin, Instruction *end)
       if (store->getPointerOperand() == alloca) {
         auto ptr = cast<User>(store->getValueOperand())->getOperand(0);
         auto fPtr = cast<PtrToIntOperator>(ptr)->getPointerOperand();
-        function = cast<Function>(fPtr);
+        function_ = cast<Function>(fPtr);
         return;
       }
     }
@@ -49,7 +49,23 @@ Clause::Clause(Instruction *begin, Instruction *end)
 
 void Clause::print() const {
   errs() << "Terminator: Analysis: Clause: Function: "
-         << function->getName() << "\n";
+         << function_->getName() << "\n";
+}
+
+Value *Clause::getVariable() const {
+  return variable_;
+}
+
+Function *Clause::getFunction() const {
+  return function_;
+}
+
+Instruction *Clause::getBegin() const {
+  return begin_;
+}
+
+Instruction *Clause::getEnd() const {
+  return end_;
 }
 
 TerminatorAnalysis::TerminatorAnalysis()
@@ -430,9 +446,9 @@ void TerminatorAnalysis::sanityChecks() {
   set<Instruction*> beginSeen;
   set<Instruction*> endSeen;
   for (auto C : clauses_) {
-    bool duplicatedBegin = !beginSeen.insert(C->begin).second;
+    bool duplicatedBegin = !beginSeen.insert(C->getBegin()).second;
     assert(!duplicatedBegin);
-    bool duplicatedEnd = !endSeen.insert(C->end).second;
+    bool duplicatedEnd = !endSeen.insert(C->getEnd()).second;
     assert(!duplicatedEnd);
   }
 }

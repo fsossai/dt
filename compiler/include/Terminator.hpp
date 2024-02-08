@@ -15,10 +15,16 @@ public:
 
   void print() const;
 
-  llvm::Value *variable;
-  llvm::Function *function;
-  llvm::Instruction *begin;
-  llvm::Instruction *end;
+  llvm::Value *getVariable() const;
+  llvm::Function *getFunction() const;
+  llvm::Instruction *getBegin() const;
+  llvm::Instruction *getEnd() const;
+
+private:
+  llvm::Value *variable_;
+  llvm::Function *function_;
+  llvm::Instruction *begin_;
+  llvm::Instruction *end_;
 };
 
 struct TerminatorAnalysis : public llvm::ModulePass,
