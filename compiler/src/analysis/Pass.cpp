@@ -16,71 +16,9 @@ using namespace arcana::noelle;
 
 namespace arcana::terminator {
 
-class Arnold : public DependenceAnalysis {
-public:
-  Arnold(const string& name) : DependenceAnalysis(name) { }
-
-  ~Arnold() = default;
-
-  bool canThereBeAMemoryDataDependence(Instruction *fromInst,
-                                       Instruction *toInst) {
-    return true;
-  }
-
-  bool canThisDependenceBeLoopCarried(DGEdge<Value, Value> *dep,
-                                      LoopStructure &loop) override {
-    return true;
-  }
-
-  bool canThereBeAMemoryDataDependence(Instruction *fromInst,
-                                       Instruction *toInst,
-                                       Function &function) override {
-    return true;
-  }
- 
-  virtual bool canThereBeAMemoryDataDependence(Instruction *fromInst,
-                                               Instruction *toInst,
-                                               LoopStructure &loop) override {
-    return true;
-  }
-
-  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-      DataDependenceType t,
-      Instruction *fromInst,
-      Instruction *toInst) override {
-    return MAY_EXIST;
-  }
-
-  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-      DataDependenceType t,
-      Instruction *fromInst,
-      Instruction *toInst,
-      Function &function) override {
-    return MAY_EXIST;
-  }
-
-  virtual MemoryDataDependenceStrength isThereThisMemoryDataDependenceType(
-      DataDependenceType t,
-      Instruction *fromInst,
-      Instruction *toInst,
-      LoopStructure &loop) override {
-    return MAY_EXIST;
-  }
-
-};
-
 Clause::Clause(Instruction *begin, Instruction *end)
     : begin(begin)
     , end(end) {
-  extractClauseOperands();
-}
-
-void Clause::print() const {
-  errs() << "Terminator: Analysis: Clause: Function: "
-         << function->getName() << "\n";
-}
-
-void Clause::extractClauseOperands() {
   auto CI = cast<CallInst>(begin);
   variable = CI->getArgOperand(0);
   auto f = CI->getArgOperand(1);
@@ -109,33 +47,43 @@ void Clause::extractClauseOperands() {
   }
 }
 
-Analysis::Analysis()
-    : ModulePass(ID) {
+void Clause::print() const {
+  errs() << "Terminator: Analysis: Clause: Function: "
+         << function->getName() << "\n";
 }
 
-Analysis::~Analysis() {
+TerminatorAnalysis::TerminatorAnalysis()
+    : ModulePass(ID) 
+    , DependenceAnalysis("Terminator") {
+}
+
+TerminatorAnalysis::~TerminatorAnalysis() {
   for (auto *C : clauses_) {
     delete C;
   }
 }
 
-bool Analysis::doInitialization(Module &M) {
+bool TerminatorAnalysis::doInitialization(Module &M) {
   return false;
 }
 
-bool Analysis::runOnModule(Module &M) {
+bool TerminatorAnalysis::runOnModule(Module &M) {
   findCandidates();
   resolveClauses();
-  // printClauses();
-  // sanityChecks();
+  printClauses();
+  sanityChecks();
   return false;
 }
 
-void Analysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void TerminatorAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<Noelle>();
 }
 
-void Analysis::printDependence(const Dependence *LCD) const {
+bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD, LoopStructure &LS) {
+  return true;
+}
+
+void TerminatorAnalysis::printDependence(const Dependence *LCD) const {
   auto srcValue = LCD->getSrcNode()->getT();
   auto dstValue = LCD->getDstNode()->getT();
   errs() << "Terminator: Analysis: [src] "
@@ -144,7 +92,7 @@ void Analysis::printDependence(const Dependence *LCD) const {
          << *dstValue << "\n";
 }
 
-bool Analysis::isLDTCBegin(const Instruction *I) const {
+bool TerminatorAnalysis::isLDTCBegin(const Instruction *I) const {
   if (auto *CI = dyn_cast<CallInst>(I)) {
     auto callee = CI->getCalledFunction();
     if (callee) {
@@ -156,7 +104,7 @@ bool Analysis::isLDTCBegin(const Instruction *I) const {
   return false;
 }
 
-bool Analysis::isLDTCEnd(const Instruction *I) const {
+bool TerminatorAnalysis::isLDTCEnd(const Instruction *I) const {
   if (auto *CI = dyn_cast<CallInst>(I)) {
     auto callee = CI->getCalledFunction();
     if (callee) {
@@ -168,11 +116,11 @@ bool Analysis::isLDTCEnd(const Instruction *I) const {
   return false;
 }
 
-bool Analysis::isLDTC(const Instruction *I) const {
+bool TerminatorAnalysis::isLDTC(const Instruction *I) const {
   return isLDTCBegin(I) || isLDTCEnd(I);
 }
 
-set<Instruction*> Analysis::getPragmasInLoop(LoopStructure *LS) const {
+set<Instruction*> TerminatorAnalysis::getPragmasInLoop(LoopStructure *LS) const {
   auto &noelle = getAnalysis<Noelle>();
   auto LF = noelle.getLoopNestingForest();
   set<Instruction*> pragmas;
@@ -188,11 +136,8 @@ set<Instruction*> Analysis::getPragmasInLoop(LoopStructure *LS) const {
   return pragmas;
 }
 
-void Analysis::findCandidates() {
-  // auto &noelle = getAnalysis<Noelle>();
-  Arnold arnold("Arnold");
+void TerminatorAnalysis::findCandidates() {
   auto &noelle = getAnalysis<Noelle>();
-  noelle.addAnalysis(&arnold);
   auto PDG = noelle.getProgramDependenceGraph();
   auto LSs = noelle.getLoopStructures();
 
@@ -218,7 +163,7 @@ void Analysis::findCandidates() {
             ++it;
           }
         }
-        candidateLCDs_.insert(LCDs.begin(), LCDs.end());
+        unknownLCDs_.insert(LCDs.begin(), LCDs.end());
         candidateLSs_.insert(LS);
 
         for (auto LCD : LCDs) {
@@ -231,7 +176,7 @@ void Analysis::findCandidates() {
   }
 
   errs() << "Terminator: Analysis: Info: Found "
-         << candidateLCDs_.size() << " candidate LCDs\n";
+         << unknownLCDs_.size() << " candidate LCDs\n";
   errs() << "Terminator: Analysis: Info: Found "
          << candidateLSs_.size() << " candidate loops\n";
 
@@ -248,11 +193,11 @@ void Analysis::findCandidates() {
          << targetLSs_.size() << " target loops\n";
 }
 
-bool Analysis::isUnmatched(Instruction *begin) const {
+bool TerminatorAnalysis::isUnmatched(Instruction *begin) const {
   return matchedBegins_.find(begin) == matchedBegins_.end();
 }
 
-Instruction *Analysis::findUnmatchedBegin(BasicBlock *BB) const {
+Instruction *TerminatorAnalysis::findUnmatchedBegin(BasicBlock *BB) const {
   stack<Instruction*> begins;
   for (auto &I : *BB) {
     if (isLDTCBegin(&I) && isUnmatched(&I)) {
@@ -269,7 +214,7 @@ Instruction *Analysis::findUnmatchedBegin(BasicBlock *BB) const {
   return begins.top();
 }
 
-Instruction *Analysis::findMatchingBeginSingleBlock(Instruction *end) const {
+Instruction *TerminatorAnalysis::findMatchingBeginSingleBlock(Instruction *end) const {
   stack<Instruction*> ends;
   ends.push(end);
   auto BB = end->getParent();
@@ -290,7 +235,7 @@ Instruction *Analysis::findMatchingBeginSingleBlock(Instruction *end) const {
   return nullptr;
 }
 
-set<Instruction*> Analysis::findMatchingBegin(Instruction *end, Instruction **beginFound) {
+set<Instruction*> TerminatorAnalysis::findMatchingBegin(Instruction *end, Instruction **beginFound) {
   auto &noelle = getAnalysis<Noelle>();
   auto F = end->getParent()->getParent();
   auto DS = noelle.getDominators(F);
@@ -366,7 +311,7 @@ set<Instruction*> Analysis::findMatchingBegin(Instruction *end, Instruction **be
 
 }
 
-void Analysis::resolveClauses(LoopStructure *LS) {
+void TerminatorAnalysis::resolveClauses(LoopStructure *LS) {
   auto &pragmas = loopToPragmas_[LS];
 
   // Find `end` pragmas
@@ -395,19 +340,19 @@ void Analysis::resolveClauses(LoopStructure *LS) {
          << clauses_.size() << " clauses\n";
 }
 
-void Analysis::resolveClauses() {
+void TerminatorAnalysis::resolveClauses() {
   for (auto LS : targetLSs_) {
     resolveClauses(LS);
   }
 }
 
-void Analysis::printClauses() const {
+void TerminatorAnalysis::printClauses() const {
   for (auto C : clauses_) {
     C->print();
   }
 }
 
-set<const Clause*> Analysis::canBeTerminated(Dependence *LCD) const {
+set<const Clause*> TerminatorAnalysis::canBeTerminated(Dependence *LCD) const {
   auto none = instToClause_.end();
   auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
   auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
@@ -429,7 +374,7 @@ set<const Clause*> Analysis::canBeTerminated(Dependence *LCD) const {
   }
 }
 
-void Analysis::categorizeDependences() {
+void TerminatorAnalysis::categorizeDependences() {
   // here we use being `covered` meaning that an instruction
   // is in a region of code that belongs to a clause
   int notCovered = 0;
@@ -438,7 +383,7 @@ void Analysis::categorizeDependences() {
   int fullyCovered = 0;
   int crossCovered = 0;
   const auto none = instToClause_.end();
-  for (auto LCD : candidateLCDs_) {
+  for (auto LCD : unknownLCDs_) {
     auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
     auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
     auto srcClause = instToClause_.find(srcValue);
@@ -480,7 +425,7 @@ void Analysis::categorizeDependences() {
          << onlyDstCovered << " destination-only-covered LCDs\n";
 }
 
-void Analysis::sanityChecks() {
+void TerminatorAnalysis::sanityChecks() {
   // `begin` and `end` instructions must belong to one and only one clause
   set<Instruction*> beginSeen;
   set<Instruction*> endSeen;
@@ -498,15 +443,15 @@ void Analysis::sanityChecks() {
 
 using namespace arcana::terminator;
 
-char Analysis::ID = 0;
-static RegisterPass<Analysis> X("dt-analysis", "Identifies opportunities for dependences termination");
+char TerminatorAnalysis::ID = 0;
+static RegisterPass<TerminatorAnalysis> X("dt-analysis", "Identifies opportunities for dependences termination");
 
-static Analysis *_PassMaker = NULL;
+static TerminatorAnalysis *_PassMaker = NULL;
 static RegisterStandardPasses _RegPass1(PassManagerBuilder::EP_OptimizerLast,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
       PM.add(_PassMaker =
-      new Analysis());
+      new TerminatorAnalysis());
     }
   }
 );
@@ -515,7 +460,7 @@ static RegisterStandardPasses _RegPass2(
   PassManagerBuilder::EP_EnabledOnOptLevel0,
   [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
     if (!_PassMaker) {
-      PM.add(_PassMaker = new Analysis());
+      PM.add(_PassMaker = new TerminatorAnalysis());
     }
   }
 );

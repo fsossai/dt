@@ -15,28 +15,29 @@ public:
 
   void print() const;
 
-  void extractClauseOperands();
-
   llvm::Value *variable;
   llvm::Function *function;
   llvm::Instruction *begin;
   llvm::Instruction *end;
 };
 
-struct Analysis : public llvm::ModulePass {
+struct TerminatorAnalysis : public llvm::ModulePass,
+                            public noelle::DependenceAnalysis {
   static char ID;
 
   using Dependence = noelle::DGEdge<llvm::Value, llvm::Value>;
 
-  Analysis();
+  TerminatorAnalysis();
 
-  ~Analysis();
+  ~TerminatorAnalysis();
 
   bool doInitialization(Module &M) override;
 
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool canThisDependenceBeLoopCarried(Dependence *LCD, noelle::LoopStructure &LS) override;
 
   void printDependence(const Dependence *LCD) const;
 
@@ -77,7 +78,7 @@ private:
   std::map<Clause*, std::set<llvm::Instruction*>> clauseToInsts_;
   std::set<noelle::LoopStructure*> candidateLSs_;
   std::set<noelle::LoopStructure*> targetLSs_;
-  std::set<Dependence*> candidateLCDs_;
+  std::set<Dependence*> unknownLCDs_;
   std::map<noelle::LoopStructure*, std::set<llvm::Instruction*>> loopToPragmas_;
   std::set<llvm::Instruction*> matchedBegins_;
 
