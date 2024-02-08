@@ -9,6 +9,14 @@
 
 namespace arcana::terminator {
 
+enum Coverage {
+  NONE = 0b00001,
+  SRC_ONLY = 0b10,
+  DST_ONLY = 0b100,
+  CROSS = 0b1000,
+  FULL = 0b10000
+};
+
 class Clause {
 public:
   Clause(llvm::Instruction *begin, llvm::Instruction *end);
@@ -73,7 +81,11 @@ struct TerminatorAnalysis : public llvm::ModulePass,
 
   std::set<const Clause*> canBeTerminated(Dependence *LCD) const;
 
-  void categorizeDependences();
+  std::string coverageToString(Coverage coverage);
+
+  Coverage getCoverage(Dependence *LCD);
+
+  void printCoverage();
 
   void sanityChecks();
 

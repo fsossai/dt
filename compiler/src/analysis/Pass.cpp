@@ -390,45 +390,85 @@ set<const Clause*> TerminatorAnalysis::canBeTerminated(Dependence *LCD) const {
   }
 }
 
-void TerminatorAnalysis::categorizeDependences() {
+Coverage TerminatorAnalysis::getCoverage(Dependence *LCD) {
+  const auto none = instToClause_.end();
+  auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
+  auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
+  auto srcClause = instToClause_.find(srcValue);
+  auto dstClause = instToClause_.find(dstValue);
+
+  Coverage coverage;
+  if (srcClause == none && dstClause == none) {
+    return NONE;
+  }
+  if (srcClause != none && dstClause == none) {
+    return SRC_ONLY;
+  }
+  if (srcClause == none && dstClause != none) {
+    return DST_ONLY;
+  }
+  if (srcClause != none && dstClause != none) {
+    if (srcClause->second == dstClause->second) {
+      return FULL;
+    }
+    return CROSS;
+  }
+}
+
+string TerminatorAnalysis::coverageToString(Coverage coverage) {
+  switch (coverage) {
+  case NONE:
+    return "uncovered";
+    break;
+  case SRC_ONLY:
+    return "source-only-covered";
+    break;
+  case DST_ONLY:
+    return "destination-only-covered";
+    break;
+  case CROSS:
+    return "cross-covered";
+    break;
+  case FULL:
+    return "cross-covered";
+    break;
+  }
+}
+
+void TerminatorAnalysis::printCoverage() {
   // here we use being `covered` meaning that an instruction
   // is in a region of code that belongs to a clause
   int notCovered = 0;
   int onlySrcCovered = 0;
   int onlyDstCovered = 0;
-  int fullyCovered = 0;
   int crossCovered = 0;
-  const auto none = instToClause_.end();
-  for (auto LCD : unknownLCDs_) {
-    auto srcValue = cast<Instruction>(LCD->getSrcNode()->getT());
-    auto dstValue = cast<Instruction>(LCD->getDstNode()->getT());
-    auto srcClause = instToClause_.find(srcValue);
-    auto dstClause = instToClause_.find(dstValue);
+  int fullyCovered = 0;
 
-    char *tag;
-    if (srcClause == none && dstClause == none) {
-      tag = "uncovered";
+  for (auto LCD : unknownLCDs_) {
+    auto coverage = getCoverage(LCD);
+    switch (coverage) {
+    case NONE:
       notCovered++;
-    } else if (srcClause != none && dstClause == none) {
-      tag = "source-only-covered";
+      break;
+    case SRC_ONLY:
       onlySrcCovered++;
-    } else if (srcClause == none && dstClause != none) {
-      tag = "destination-only-covered";
+      break;
+    case DST_ONLY:
       onlyDstCovered++;
-    } else if (srcClause != none && dstClause != none) {
-      if (srcClause->second == dstClause->second) {
-        tag = "fully-covered";
-        fullyCovered++;
-      } else {
-        tag = "cross-covered";
-        crossCovered++;
-      }
+      break;
+    case CROSS:
+      crossCovered++;
+      break;
+    case FULL:
+      fullyCovered++;
+      break;
     }
-    if (tag != "fully-covered") {
-      errs() << "Terminator: Analysis: Dependence: Found " << tag << " LCD\n";
+    if (coverage != FULL) {
+      errs() << "Terminator: Analysis: Dependence: Found " << coverageToString(coverage) << " LCD\n";
       printDependence(LCD);
     }
   }
+
   errs() << "Terminator: Analysis: Info: Found "
          << notCovered << " uncovered LCDs\n";
   errs() << "Terminator: Analysis: Info: Found "
