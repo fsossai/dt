@@ -187,9 +187,9 @@ void TerminatorAnalysis::findCandidates() {
         candidateLSs_.insert(LS);
 
         for (auto LCD : LCDs) {
-          errs() << "Terminator: Analysis: Dependence: In "
-                 << LS->getFunction()->getName() << "\n";
-          printDependence(LCD);
+          // errs() << "Terminator: Analysis: Dependence: In "
+          //        << LS->getFunction()->getName() << "\n";
+          // printDependence(LCD);
         }
       } 
     }
@@ -303,7 +303,12 @@ set<Instruction*> TerminatorAnalysis::findMatchingBegin(Instruction *end, Instru
           q.push(BB);
         }
       } else {
-        assert(beginBB == nullptr);
+        if (beginBB != nullptr) {
+          // In case another potential beginBB was found before, it must be the same
+          // one that we just rediscovered. This happens for example with diamond-shaped CFGs
+          // with a `begin` at the top and an `end` at the bottom.
+          assert(beginBB == BB);
+        }
         beginBB = BB;
         *beginFound = begin;
       }
