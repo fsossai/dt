@@ -11,7 +11,7 @@ targets:
 	done
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
-	$(CC) $(STD) $(INCLUDE_DIRS) -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
+	$(CC) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc
 	$(CC) $(OPT) $(FLAGS) $@.bc -o $@.out
