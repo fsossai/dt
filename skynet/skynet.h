@@ -35,7 +35,8 @@ public:
     }
 
     T operator*() {
-      return (*base)[idx];
+      auto coord = base->getCoordinate(idx);
+      return base->container_[coord.first][coord.second];
     }
 
     Iterator& operator++() {
