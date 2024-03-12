@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.13)
 project(dependence-terminator)
 
 set(CMAKE_CXX_STANDARD 17)
+set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(LLVM 9 REQUIRED CONFIG)
 find_program(CLANG_PATH clang)
@@ -51,5 +52,12 @@ execute_process(
 )
 
 configure_file(enable.in ${CMAKE_SOURCE_DIR}/enable @ONLY)
+
+add_custom_target(
+  CompileCommands ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+    ${DT_CMAKE_ROOT}/compile_commands.json
+)
 
 add_subdirectory(compiler)

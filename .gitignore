@@ -1,6 +1,5 @@
 build
 install
 enable
-tests/**/*.bc
-tests/**/*.ll
-tests/**/*.out
+compile_commands.json
+.clangd
