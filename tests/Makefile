@@ -1,4 +1,9 @@
--include Makefile.defaults
+CC=clang++
+STD=-std=c++17
+OPT=-O3
+INCLUDE_DIRS=-I../skynet -I../compiler
+OPENMP=-fopenmp
+FLAGS=
 
 SINGLE_FILE_TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
 DIRS=
@@ -11,10 +16,10 @@ targets:
 	done
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
-	$(CC) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
+	$(CC) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc
-	$(CC) $(OPT) $(FLAGS) $@.bc -o $@.out
+	$(CC) $(OPENMP) $(OPT) $@.bc -o $@.out
 
 clean:
 	rm -f *.out *.bc *.ll
