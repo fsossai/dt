@@ -142,6 +142,7 @@ template<typename T>
 int array_next_k(Array<T> *array) {
   array->k_++;
   array->container_.emplace_back();
+  array->container_[array->k_].resize(array->size_);
   return array->k_;
 }
 
