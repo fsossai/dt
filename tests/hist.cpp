@@ -30,9 +30,14 @@ void printHist(hist_t &hist) {
   }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   int N = 100'000;
   int M = 10;
+
+  if (argc > 1) {
+    M = atoi(argv[1]);
+  }
+
   auto values = generate(N, M);
 
   auto hist = computeFiniteDomainHistogram(values, M);
