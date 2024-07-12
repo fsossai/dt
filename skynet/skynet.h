@@ -62,7 +62,7 @@ public:
   __attribute__((always_inline))
   void append(T value) {
     int k = container_.size() - 1;
-    PRAGMA_LDTC_BEGIN(k, next_k<T>, this);
+    PRAGMA_LDTC_BEGIN(k, 0, next_k<T>, this);
     container_[k].push_back(value);
     PRAGMA_LDTC_END();
   }
@@ -190,7 +190,7 @@ public:
 
   void add(size_t idx, T value) {
     int k = container_.size() - 1;
-    PRAGMA_LDTC_BEGIN(k, array_next_k<T>, this);
+    PRAGMA_LDTC_BEGIN(k, 0, array_next_k<T>, this);
     container_[k][idx] += value;
     PRAGMA_LDTC_END();
   }
