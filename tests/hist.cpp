@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "skynet.h"
+#include "ScopeTimer.h"
 
 using namespace std;
 
@@ -31,16 +32,30 @@ void printHist(hist_t &hist) {
 }
 
 int main(int argc, char *argv[]) {
-  int N = 100'000;
-  int M = 10;
-
+  int64_t N = 0;
   if (argc > 1) {
-    M = atoi(argv[1]);
+    N = atoi(argv[1]) * 1'000'000;
+  }
+  if (N == 0) {
+    fprintf(stderr, "ERROR: missing input size\n");
+    return 1;
   }
 
-  auto values = generate(N, M);
+  printf("N = %liM\n", N / 1'000'000);
 
+  int64_t M = 1 << 8;
+  
+  TIMER_START("Total");
+
+  TIMER_START("Generation");
+  auto values = generate(N, M);
+  TIMER_STOP();
+
+  TIMER_START("Kernel");
   auto hist = computeFiniteDomainHistogram(values, M);
+  TIMER_STOP();
+
+  TIMER_STOP();
 
   printHist(hist);
 

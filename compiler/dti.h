@@ -8,7 +8,7 @@
 
 #ifdef DT_ENABLE
 
-#define PRAGMA_LDTC_BEGIN(var, def, func, ...) __dt_ldtc_begin(&var, def, &func, __VA_ARGS__)
+#define PRAGMA_LDTC_BEGIN(var, def, func, ...) __dt_ldtc_begin(&var, def, &func, ##__VA_ARGS__)
 #define PRAGMA_LDTC_END() __dt_ldtc_end()
 
 #else
