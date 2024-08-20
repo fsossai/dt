@@ -1,11 +1,11 @@
-#ifndef __SKYNET__
-#define __SKYNET__
+#pragma once
 
 #include <vector>
 #include <iostream>
 #include <cassert>
 
-#include "dti.h"
+#include "dti.hpp"
+#include "Set.hpp"
 
 namespace skynet {
 
@@ -236,5 +236,3 @@ private:
 };
 
 }
-
-#endif // __SKYNET__
