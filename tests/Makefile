@@ -1,5 +1,5 @@
-CC=clang++
-STD=-std=c++17
+CXX=clang++
+STD=-std=c++20
 OPT=-O3
 INCLUDE_DIRS=-I../skynet -I../compiler
 OPENMP=-fopenmp
@@ -16,11 +16,11 @@ targets:
 	done
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
-	$(CC) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O0 -g -o $@.debug.out $^
-	$(CC) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
+	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O0 -g -o $@.debug.out $^
+	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc
-	$(CC) $(OPENMP) $(OPT) $@.bc -o $@.out
+	$(CXX) $(OPENMP) $(OPT) $@.bc -o $@.out
 
 clean:
 	rm -f *.out *.bc *.ll

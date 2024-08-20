@@ -18,31 +18,26 @@ int main(int argc, char *argv[]) {
   std::vector<int> elements;
 
   cout << "N = " << N << "\n";
-  cout << "Generation: ";
 
+  // cout << "Generation: ";
   for (int i = 0; i < N; i++) {
     auto e = rand() % N;
     elements.push_back(e);
-    cout << e << " ";
+    // cout << e << " ";
   }
-  cout << "\n";
+  // cout << "\n";
 
   // Kernel
   skynet::set_clause_insert(&set);
-  skynet::set_clause_insert(&set);
-  skynet::set_clause_insert(&set);
+  // skynet::set_clause_insert(&set);
+  // skynet::set_clause_insert(&set);
   for (auto e : elements) {
     set.insert(e);
   }
 
-  // Printing
-  cout << "Set: { ";
-  for (auto e : set) {
-    cout << e << " ";
-  }
-  cout << "}\n";
-
-  set.printInternals();
+  // cout << set.toString() << "\n";
+  // set.printInternals();
+  set.printStats();
 
   return 0;
 }

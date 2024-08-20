@@ -1,6 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
 #include <unordered_set>
 
@@ -27,14 +30,12 @@ public:
 
   class Iterator {
   public:
-    Iterator(Set<T> *base, int row_begin, int row_end)
-      : base_(base) {
+    Iterator(Set<T> *base, int row_begin, int row_end) : base_(base) {
       flat_idx_ = row_begin * base->n_cols_;
       flat_end_ = row_end * base->n_cols_;
-      it_ = base->container_[flat_idx_].begin();
-      cell_end_ = base_->container_[flat_idx_].end();
       end_ = base->container_[flat_end_ - 1].end();
-      skip_empty_();
+      reset_cell_iterators_();
+      produce_next_iterator_();
     }
 
     T operator*() {
@@ -43,7 +44,7 @@ public:
 
     Iterator &operator++() {
       it_++;
-      skip_empty_();
+      produce_next_iterator_();
       return *this;
     }
 
@@ -52,11 +53,70 @@ public:
     }
 
   private:
-    void skip_empty_() {
-      while (it_ == cell_end_ && flat_idx_ != flat_end_) {
-        flat_idx_++;
-        it_ = base_->container_[flat_idx_].begin();
-        cell_end_ = base_->container_[flat_idx_].end();
+    bool reached_last_cell_() const {
+      return flat_idx_ == (flat_end_ - 1);
+    }
+
+    bool reached_cell_end_() const {
+      return it_ == cell_end_;
+    }
+
+    bool reached_end_() const {
+      return it_ == end_;
+    }
+
+    bool already_seen_() const {
+      return anti_duplicates_.find(*it_) != anti_duplicates_.end();
+    }
+
+    bool this_is_column_zero_() const {
+      return flat_idx_ % base_->n_cols_ == 0;
+    }
+
+    void reset_seen_set_() {
+      anti_duplicates_.clear();
+    }
+
+    void reset_cell_iterators_() {
+      it_ = base_->container_[flat_idx_].begin();
+      cell_end_ = base_->container_[flat_idx_].end();
+    }
+
+    void mark_current_element_as_seen_() {
+      anti_duplicates_.insert(*it_);
+    }
+
+    void move_to_next_cell_() {
+      flat_idx_++;
+      reset_cell_iterators_();
+    }
+
+    void produce_next_iterator_() {
+      bool moved;
+      do {
+        moved = false;
+
+        // find the next non-empty cell
+        while (reached_cell_end_() && !reached_last_cell_()) {
+          // std::printf("[nc %zu/%zu] ", flat_idx_, flat_end_);
+          move_to_next_cell_();
+          if (this_is_column_zero_()) {
+            reset_seen_set_();
+          }
+        }
+
+        // find the next unseen element
+        if (!reached_cell_end_()) {
+          if (already_seen_()) {
+            it_++;
+            moved = true;
+          } else {
+          }
+        }
+      } while (moved);
+
+      if (!reached_last_cell_() && !reached_end_()) {
+        mark_current_element_as_seen_();
       }
     }
 
@@ -66,9 +126,10 @@ public:
     typename cell_container_t::iterator it_;
     typename cell_container_t::iterator cell_end_;
     typename cell_container_t::iterator end_;
+    cell_container_t anti_duplicates_;
   };
 
-  Set() : n_rows_(1), n_cols_(1) {
+  Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
     container_.resize(n_rows_ * n_cols_);
   }
 
@@ -78,7 +139,7 @@ public:
     // int j = 0;
     auto pair = container_[i * n_cols_ + j].insert(value);
     if (pair.second) { // insertion took place
-      size_++;
+      storage_size_++;
     }
   }
 
@@ -97,15 +158,15 @@ public:
     for (auto &s : container_) {
       s.clear();
     }
-    size_ = 0;
+    storage_size_ = 0;
   }
 
-  size_t size() const {
-    return size_;
+  size_t storageSize() const {
+    return storage_size_;
   }
 
   bool empty() const {
-    return size_ == 0;
+    return storage_size_ == 0;
   }
 
   Iterator begin() {
@@ -114,6 +175,28 @@ public:
 
   Iterator end() {
     return Iterator(this, 0, n_rows_);
+  }
+
+  std::string toString() {
+    std::stringstream ss;
+    ss << "{ ";
+    for (auto e : *this) {
+      ss << e << " ";
+    }
+    ss << "}";
+    return ss.str();
+  }
+
+  size_t size() {
+    size_t rs = 0;
+    for (const auto &e : *this) {
+      rs++;
+    }
+    return rs;
+  }
+
+  double redundancyFactor() {
+    return (double)storageSize() / size();
   }
 
   void printInternals() const {
@@ -129,11 +212,39 @@ public:
     }
   }
 
+  void printStats() {
+    auto size_local = size();
+    auto redundancy = (double)storageSize() / size_local;
+
+    std::cout << "storageSize = " << storageSize() << "\n";
+    std::cout << "size = " << size_local << "\n";
+    std::cout << "redundancyFactor = " << redundancy << "\n";
+
+    for (int i = 0; i < n_rows_; i++) {
+      int count = 0;
+      auto it = Iterator(this, i, i + 1);
+      auto end = it;
+      for (; it != end; ++it) {
+        count++;
+      }
+      std::cout << "row." << i << ".size = " << count << " ";
+      std::printf("(%.1f %%)\n", 100. * count / size_local);
+    }
+    for (int i = 0; i < n_rows_; i++) {
+      size_t count = 0;
+      for (int j = 0; j < n_cols_; j++) {
+        count += container_[i * n_cols_ + j].size();
+      }
+      std::cout << "row." << i << ".storageSize = " << count << " ";
+      std::printf("(%.1f %%)\n", 100. * count / storageSize());
+    }
+  }
+
 private:
   std::vector<cell_container_t> container_;
   size_t n_rows_;
   size_t n_cols_;
-  size_t size_;
+  size_t storage_size_;
 };
 
 } // namespace skynet
