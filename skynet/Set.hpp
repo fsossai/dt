@@ -135,9 +135,12 @@ public:
 
   void insert(T value) {
     int i = value % n_rows_;
-    int j = rand() % n_cols_;
-    // int j = 0;
+    int j = 0;
+
+    PRAGMA_LDTC_BEGIN(j, 0, set_clause_insert<T>, this);
     auto pair = container_[i * n_cols_ + j].insert(value);
+    PRAGMA_LDTC_END();
+
     if (pair.second) { // insertion took place
       storage_size_++;
     }
