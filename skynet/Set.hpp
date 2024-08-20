@@ -133,7 +133,7 @@ public:
     container_.resize(n_rows_ * n_cols_);
   }
 
-  void insert(T value) {
+  __attribute__((always_inline)) void insert(T value) {
     int i = value % n_rows_;
     int j = 0;
 
