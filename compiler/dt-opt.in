@@ -1,4 +1,0 @@
-#!/bin/bash
-
-noelle-load @DT_CONFIG_LOADS@ $@
-

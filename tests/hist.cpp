@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   printf("N = %liM\n", N / 1'000'000);
 
   int64_t M = 1 << 8;
-  
+
   TIMER_START("Total");
 
   TIMER_START("Generation");
@@ -63,4 +63,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

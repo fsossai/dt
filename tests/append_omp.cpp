@@ -1,7 +1,7 @@
 #include <iostream>
 #include <omp.h>
 
-#include "skynet.h"
+#include "Skynet.hpp"
 
 using namespace std;
 
@@ -13,10 +13,10 @@ int main() {
     skynet::next_k(&a);
   }
 
-  #pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
   for (int i = 0; i < 1000; i++) {
     int tid = omp_get_thread_num();
-    #pragma ldtc ispace(tid)
+#pragma ldtc ispace(tid)
     a.append_as(tid, i);
   }
 
@@ -24,4 +24,3 @@ int main() {
 
   return 0;
 }
-

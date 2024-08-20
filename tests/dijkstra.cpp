@@ -3,17 +3,15 @@
 
 unsigned NUM_NODES;
 
-#define NONE                               9999
+#define NONE 9999
 
-struct _NODE
-{
+struct _NODE {
   int iDist;
   int iPrev;
 };
 typedef struct _NODE NODE;
 
-struct _QITEM
-{
+struct _QITEM {
   int iNode;
   int iDist;
   int iPrev;
@@ -23,83 +21,72 @@ typedef struct _QITEM QITEM;
 
 QITEM *qHead = NULL;
 
-
-//int AdjMatrix[NUM_NODES][NUM_NODES];
-//NODE rgnNodes[NUM_NODES];
+// int AdjMatrix[NUM_NODES][NUM_NODES];
+// NODE rgnNodes[NUM_NODES];
 int **AdjMatrix;
 NODE *rgnNodes;
 
-void allocate_matrices()
-{
-  AdjMatrix = (int**) malloc( NUM_NODES * sizeof(int*) );
-  for(int i=0; i<NUM_NODES; ++i)
-    AdjMatrix[i] = (int*) malloc( NUM_NODES * sizeof(int) );
+void allocate_matrices() {
+  AdjMatrix = (int **)malloc(NUM_NODES * sizeof(int *));
+  for (int i = 0; i < NUM_NODES; ++i)
+    AdjMatrix[i] = (int *)malloc(NUM_NODES * sizeof(int));
 
-  rgnNodes = (NODE*) malloc( NUM_NODES * sizeof(NODE) );
+  rgnNodes = (NODE *)malloc(NUM_NODES * sizeof(NODE));
 }
 
-void free_matrices()
-{
-  free( rgnNodes );
+void free_matrices() {
+  free(rgnNodes);
 
-  for(int i=0; i<NUM_NODES; ++i)
-    free( AdjMatrix[i] );
-  free( AdjMatrix );
+  for (int i = 0; i < NUM_NODES; ++i)
+    free(AdjMatrix[i]);
+  free(AdjMatrix);
 }
-
 
 int g_qCount = 0;
 int ch;
 int iPrev, iNode;
 int i, iCost, iDist;
 
-
-void print_path (NODE *rgnNodes, int chNode)
-{
-  if (rgnNodes[chNode].iPrev != NONE)
-  {
+void print_path(NODE *rgnNodes, int chNode) {
+  if (rgnNodes[chNode].iPrev != NONE) {
     print_path(rgnNodes, rgnNodes[chNode].iPrev);
   }
-  printf (" %d", chNode);
+  printf(" %d", chNode);
   fflush(stdout);
 }
 
-
-void enqueue (int iNode, int iDist, int iPrev) //enqueue (i, iDist + iCost, iNode)
+void enqueue(int iNode,
+             int iDist,
+             int iPrev) // enqueue (i, iDist + iCost, iNode)
 {
-  QITEM *qNew = (QITEM *) malloc(sizeof(QITEM));
+  QITEM *qNew = (QITEM *)malloc(sizeof(QITEM));
   QITEM *qLast = qHead;
 
-  if (!qNew)
-  {
+  if (!qNew) {
     fprintf(stderr, "Out of memory.\n");
     exit(1);
   }
-  qNew->iNode = iNode; //store
+  qNew->iNode = iNode; // store
   qNew->iDist = iDist;
   qNew->iPrev = iPrev;
-  qNew->qNext = NULL; //store for while.cond.i lc
+  qNew->qNext = NULL; // store for while.cond.i lc
 
-  if (!qLast)
-  {
-    qHead = qNew; //src
-  }
-  else
-  {
-    while (qLast->qNext) qLast = qLast->qNext; //while.cond.i.i,  load for while.cond.i lc
+  if (!qLast) {
+    qHead = qNew; // src
+  } else {
+    while (qLast->qNext)
+      qLast = qLast->qNext; // while.cond.i.i,  load for while.cond.i lc
     qLast->qNext = qNew;
   }
   g_qCount++;
 }
 
-
-void dequeue (int *piNode, int *piDist, int *piPrev)
-{
+void dequeue(int *piNode, int *piDist, int *piPrev) {
   QITEM *qKill = qHead;
 
-  if (qHead) //dst
+  if (qHead) // dst
   {
-    *piNode = qHead->iNode; //load
+    *piNode = qHead->iNode; // load
     *piDist = qHead->iDist;
     *piPrev = qHead->iPrev;
     qHead = qHead->qNext;
@@ -108,44 +95,35 @@ void dequeue (int *piNode, int *piDist, int *piPrev)
   }
 }
 
-
-int qcount (void)
-{
-  return(g_qCount);
+int qcount(void) {
+  return (g_qCount);
 }
 
-int dijkstra(int chStart, int chEnd)
-{
-  for (ch = 0; ch < NUM_NODES; ch++)
-  {
+int dijkstra(int chStart, int chEnd) {
+  for (ch = 0; ch < NUM_NODES; ch++) {
     rgnNodes[ch].iDist = NONE;
     rgnNodes[ch].iPrev = NONE;
   }
 
-  if (chStart == chEnd)
-  {
+  if (chStart == chEnd) {
     printf("Shortest path is 0 in cost. Just stay where you are.\n");
-  }
-  else
-  {
+  } else {
     rgnNodes[chStart].iDist = 0;
     rgnNodes[chStart].iPrev = NONE;
 
-    enqueue (chStart, 0, NONE);
+    enqueue(chStart, 0, NONE);
 
-    while (qcount() > 0) //while.cond.i
+    while (qcount() > 0) // while.cond.i
     {
-      dequeue (&iNode, &iDist, &iPrev); 
-      for (i = 0; i < NUM_NODES; i++)  //for.cond12.i this loop
+      dequeue(&iNode, &iDist, &iPrev);
+      for (i = 0; i < NUM_NODES; i++) // for.cond12.i this loop
       {
-        if ((iCost = AdjMatrix[iNode][i]) != NONE)
-        {
-          if ((NONE == rgnNodes[i].iDist) || //load, lc
-              (rgnNodes[i].iDist > (iCost + iDist)))
-          {
-            rgnNodes[i].iDist = iDist + iCost; //store, lc
+        if ((iCost = AdjMatrix[iNode][i]) != NONE) {
+          if ((NONE == rgnNodes[i].iDist) || // load, lc
+              (rgnNodes[i].iDist > (iCost + iDist))) {
+            rgnNodes[i].iDist = iDist + iCost; // store, lc
             rgnNodes[i].iPrev = iNode;
-            enqueue (i, iDist + iCost, iNode);
+            enqueue(i, iDist + iCost, iNode);
           }
         }
       }
@@ -160,37 +138,35 @@ int dijkstra(int chStart, int chEnd)
 }
 
 int main(int argc, char *argv[]) {
-  int i,j,k;
+  int i, j, k;
   FILE *fp;
 
-  if (argc<3) {
+  if (argc < 3) {
     fprintf(stderr, "Usage: dijkstra <filename> <size>\n");
   }
 
   /* open the adjacency matrix file */
-  fp = fopen (argv[1],"r");
-  NUM_NODES = atoi( argv[2] );
+  fp = fopen(argv[1], "r");
+  NUM_NODES = atoi(argv[2]);
 
   allocate_matrices();
 
   /* make a fully connected matrix */
-  for (i=0;i<NUM_NODES;i++) {
-    for (j=0;j<NUM_NODES;j++) {
+  for (i = 0; i < NUM_NODES; i++) {
+    for (j = 0; j < NUM_NODES; j++) {
       /* make it more sparce */
-      fscanf(fp,"%d",&k);
-      AdjMatrix[i][j]= k;
+      fscanf(fp, "%d", &k);
+      AdjMatrix[i][j] = k;
     }
   }
 
   /* finds 10 shortest paths between nodes */
   const int N = NUM_NODES;
-  for (i=0,j=N/2;i<N;i++,j++) { //for.cond15
-    j=j%N;
-    dijkstra(i,j);//src
+  for (i = 0, j = N / 2; i < N; i++, j++) { // for.cond15
+    j = j % N;
+    dijkstra(i, j); // src
   }
 
   free_matrices();
   exit(0);
-
-
 }

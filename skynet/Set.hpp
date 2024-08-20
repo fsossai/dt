@@ -6,18 +6,18 @@
 
 namespace skynet {
 
-template<class T>
+template <class T>
 class Set;
 
-template<class T>
-int set_clause_insert(Set<T>* set) {
+template <class T>
+int set_clause_insert(Set<T> *set) {
   set->n_rows_++;
   set->n_cols_++;
   set->container_.resize(set->n_rows_ * set->n_cols_);
   return set->n_rows_ - 1;
 }
 
-template<class T>
+template <class T>
 class Set {
 public:
   using set_container_t = std::unordered_set<T>;
@@ -27,14 +27,13 @@ public:
   class Iterator {
   public:
     Iterator(Set<T> *base, typename set_container_t::iterator it)
-      : base_(base) {
-    }
+      : base_(base) {}
 
     T operator*() {
       return *it_;
     }
 
-    Iterator& operator++() {
+    Iterator &operator++() {
       it_++;
       if (it_ == current_set_->end()) {
         if (col_ == base_->n_cols_ - 1) {
@@ -91,7 +90,7 @@ public:
     for (auto &s : container_) {
       s.clear();
     }
-    size_= 0;
+    size_ = 0;
   }
 
   size_t size() const {
@@ -114,7 +113,7 @@ public:
     for (int i = 0; i < n_rows_; i++) {
       for (int j = 0; j < n_cols_; j++) {
         std::cout << "{ ";
-        for (auto &x : container_[i*n_cols_ + j]) {
+        for (auto &x : container_[i * n_cols_ + j]) {
           std::cout << x << " ";
         }
         std::cout << "}\t";
@@ -130,4 +129,4 @@ private:
   size_t size_;
 };
 
-}
+} // namespace skynet

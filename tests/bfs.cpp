@@ -39,8 +39,8 @@ private:
 
 struct Node {
   int value;
-  std::set<Node*> inEdges;
-  std::set<Node*> outEdges;
+  std::set<Node *> inEdges;
+  std::set<Node *> outEdges;
 };
 
 struct Graph {
@@ -54,7 +54,7 @@ struct Graph {
   void setEdge(int i, int j, bool link);
   void setEdge(int i, int j);
 
-  std::vector<Node*> nodes;
+  std::vector<Node *> nodes;
 };
 
 Graph::Graph(int N) {
@@ -133,8 +133,8 @@ void Graph::setEdge(int i, int j) {
 }
 
 int reduce(const Graph &g, Node *first) {
-  std::queue<Node*> toExplore;
-  std::set<Node*> enqueued;
+  std::queue<Node *> toExplore;
+  std::set<Node *> enqueued;
 
   int t = 0;
   toExplore.push(first);

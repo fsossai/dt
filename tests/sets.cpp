@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#include "skynet.h"
+#include "Skynet.hpp"
 
 using namespace std;
 
@@ -44,7 +44,6 @@ int main(int argc, char *argv[]) {
   cout << "\n";
 
   set.printInternals();
-
 
   return 0;
 }

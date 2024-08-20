@@ -5,7 +5,7 @@ project(dependence-terminator)
 set(CMAKE_CXX_STANDARD 17)
 set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
-find_package(LLVM 9 REQUIRED CONFIG)
+find_package(LLVM 14 REQUIRED CONFIG)
 find_program(CLANG_PATH clang)
 find_program(CLANGXX_PATH clang++)
 
@@ -21,10 +21,6 @@ if(return_code AND (NOT return_code EQUAL 1))
 else()
   message(STATUS "Found NOELLE at: " ${NOELLE_INSTALL_DIR})
 endif()
-
-set(CMAKE_C_COMPILER ${CLANG_PATH})
-set(CMAKE_CXX_COMPILER ${CLANGXX_PATH})
-set(CMAKE_ASM_COMPILER ${CLANG_PATH})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

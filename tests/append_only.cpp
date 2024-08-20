@@ -13,11 +13,10 @@ int main() {
 
   for (int i = 3; i < 10; i++) {
     a.append(i);
-    //skynet::next_k(&a);
+    // skynet::next_k(&a);
   }
 
   a.printInternals();
 
   return 0;
 }
-

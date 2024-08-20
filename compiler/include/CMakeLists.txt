@@ -1,2 +1,0 @@
-file(GLOB HEADERS *.h *.hpp)
-install(FILES ${HEADERS} DESTINATION ${DT_CONFIG_INCLUDE})
