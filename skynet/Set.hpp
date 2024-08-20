@@ -27,60 +27,44 @@ public:
 
   class Iterator {
   public:
-    enum Exclusion { Included, Excluded };
-    Iterator(Set<T> *base, int row, int col, Exclusion exclusion)
+    Iterator(Set<T> *base, int row_begin, int row_end)
       : base_(base) {
-      switch (exclusion) {
-        case Included: {
-          flat_idx_ = row * base->n_cols_ + col;
-          break;
-        }
-        case Excluded: {
-          flat_idx_ = row * base->n_cols_ + col - 1;
-          break;
-        }
-      }
+      flat_idx_ = row_begin * base->n_cols_;
+      flat_end_ = row_end * base->n_cols_;
       it_ = base->container_[flat_idx_].begin();
-      end_ = base->container_[flat_idx_].end();
-      if (it_ == end_) {
-        do {
-          flat_idx_++;
-          it_ = base_->container_[flat_idx_].begin();
-          end_ = base_->container_[flat_idx_].end();
-        } while (it_ == end_);
-      }
-      std::printf("Iterator(%i, %i, %i), flat=%zu\n", row, col, exclusion, flat_idx_);
+      cell_end_ = base_->container_[flat_idx_].end();
+      end_ = base->container_[flat_end_ - 1].end();
+      skip_empty_();
     }
 
     T operator*() {
-      std::cout << "operator*()\n";
       return *it_;
     }
 
     Iterator &operator++() {
-      if (it_ == end_) {
-        do {
-          flat_idx_++;
-          it_ = base_->container_[flat_idx_].begin();
-          end_ = base_->container_[flat_idx_].end();
-        } while (it_ == end_);
-      } else {
-        it_++;
-      }
+      it_++;
+      skip_empty_();
       return *this;
     }
 
     bool operator!=(const Iterator &other) const {
-      std::printf("left(%zu), right(%lu)\n", flat_idx_, other.flat_idx_);
-      return (it_ != other.it_) || (flat_idx_ != other.flat_idx_);
+      return it_ != other.end_;
     }
 
   private:
+    void skip_empty_() {
+      while (it_ == cell_end_ && flat_idx_ != flat_end_) {
+        flat_idx_++;
+        it_ = base_->container_[flat_idx_].begin();
+        cell_end_ = base_->container_[flat_idx_].end();
+      }
+    }
+
     Set<T> *base_;
-    size_t n_rows_;
-    size_t n_cols_;
     size_t flat_idx_;
+    size_t flat_end_;
     typename cell_container_t::iterator it_;
+    typename cell_container_t::iterator cell_end_;
     typename cell_container_t::iterator end_;
   };
 
@@ -90,8 +74,8 @@ public:
 
   void insert(T value) {
     int i = value % n_rows_;
-    // int j = rand() % n_cols_;
-    int j = 0;
+    int j = rand() % n_cols_;
+    // int j = 0;
     auto pair = container_[i * n_cols_ + j].insert(value);
     if (pair.second) { // insertion took place
       size_++;
@@ -125,11 +109,11 @@ public:
   }
 
   Iterator begin() {
-    return Iterator(this, 0, 0, Iterator::Included);
+    return Iterator(this, 0, n_rows_);
   }
 
   Iterator end() {
-    return Iterator(this, n_rows_, 0, Iterator::Excluded);
+    return Iterator(this, 0, n_rows_);
   }
 
   void printInternals() const {

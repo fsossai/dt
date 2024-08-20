@@ -8,11 +8,12 @@ using namespace std;
 int main(int argc, char *argv[]) {
   skynet::Set<int> set;
 
-  int N = 0;
+  int N = 10;
   if (argc > 1) {
-    N = atoi(argv[1]);
+    if (atoi(argv[1]) > 0) {
+      N = atoi(argv[1]);
+    }
   }
-  N = std::max<int>(10, N);
 
   std::vector<int> elements;
 
@@ -35,11 +36,11 @@ int main(int argc, char *argv[]) {
   }
 
   // Printing
-  cout << "Set: ";
+  cout << "Set: { ";
   for (auto e : set) {
     cout << e << " ";
   }
-  cout << "\n";
+  cout << "}\n";
 
   set.printInternals();
 
