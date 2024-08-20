@@ -4,43 +4,41 @@
 #include <iostream>
 #include <cassert>
 
-#include "dti.hpp"
+#include "TCI.hpp"
 #include "Set.hpp"
 
 namespace skynet {
 
 // Foward declarations
 
-template<typename T>
+template <typename T>
 class Sequence;
 
-template<typename T>
+template <typename T>
 int next_k(Sequence<T> *seq) {
   seq->k_++;
   seq->container_.emplace_back();
   return seq->k_;
 }
 
-template<class T>
+template <class T>
 class Sequence {
 public:
-  template<typename U>
+  template <typename U>
   using ContainerType = std::vector<U>;
 
   friend int next_k<T>(Sequence<T> *base);
 
   class Iterator {
   public:
-    Iterator(Sequence<T> *base, int idx)
-      : idx(idx), base(base) {
-    }
+    Iterator(Sequence<T> *base, int idx) : idx(idx), base(base) {}
 
     T operator*() {
       auto coord = base->getCoordinate(idx);
       return base->container_[coord.first][coord.second];
     }
 
-    Iterator& operator++() {
+    Iterator &operator++() {
       idx++;
       return *this;
     }
@@ -59,8 +57,7 @@ public:
     k_ = 0;
   }
 
-  __attribute__((always_inline))
-  void append(T value) {
+  __attribute__((always_inline)) void append(T value) {
     int k = container_.size() - 1;
     PRAGMA_LDTC_BEGIN(k, 0, next_k<T>, this);
     container_[k].push_back(value);
@@ -71,7 +68,7 @@ public:
     container_[k].push_back(value);
   }
 
-  T& operator[](size_t idx) {
+  T &operator[](size_t idx) {
     auto coord = getCoordinate(idx);
     return container_[coord.first][coord.second];
   }
@@ -124,7 +121,7 @@ private:
     } else {
       c2 = idx - (csum - container_[c1].size());
     }
-    
+
     std::pair<size_t, size_t> coord;
     coord.first = c1;
     coord.second = c2;
@@ -135,10 +132,10 @@ private:
   int k_;
 };
 
-template<typename T>
+template <typename T>
 class Array;
 
-template<typename T>
+template <typename T>
 int array_next_k(Array<T> *array) {
   array->k_++;
   array->container_.emplace_back();
@@ -146,25 +143,23 @@ int array_next_k(Array<T> *array) {
   return array->k_;
 }
 
-template<class T>
+template <class T>
 class Array {
 public:
-  template<typename U>
+  template <typename U>
   using ContainerType = std::vector<U>;
 
   friend int array_next_k<T>(Array<T> *base);
 
   class Iterator {
   public:
-    Iterator(Array<T> *base, int idx)
-      : idx_(idx), base_(base) {
-    }
+    Iterator(Array<T> *base, int idx) : idx_(idx), base_(base) {}
 
     T operator*() {
       return base_[idx_];
     }
 
-    Iterator& operator++() {
+    Iterator &operator++() {
       idx_++;
       return *this;
     }
@@ -198,7 +193,7 @@ public:
   T operator[](size_t idx) {
     T v = container_[0][idx];
     for (int i = 1; i <= this->k_; i++) {
-      v += container_[i][idx]; 
+      v += container_[i][idx];
     }
     return v;
   }
@@ -218,7 +213,7 @@ public:
   size_t size() const {
     return size_;
   }
-  
+
   void printInternals() const {
     for (auto c : container_) {
       std::cout << "> ";
@@ -235,4 +230,4 @@ private:
   size_t size_;
 };
 
-}
+} // namespace skynet

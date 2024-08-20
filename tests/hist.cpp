@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "skynet.h"
-#include "ScopeTimer.h"
+#include "Skynet.hpp"
+#include "ScopeTimer.hpp"
 
 using namespace std;
 
