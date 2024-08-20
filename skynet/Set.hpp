@@ -20,46 +20,68 @@ int set_clause_insert(Set<T> *set) {
 template <class T>
 class Set {
 public:
-  using set_container_t = std::unordered_set<T>;
+  using cell_container_t = std::unordered_set<T>;
+  using container_t = std::vector<cell_container_t>;
 
   friend int set_clause_insert<T>(Set<T> *set);
 
   class Iterator {
   public:
-    Iterator(Set<T> *base, typename set_container_t::iterator it)
-      : base_(base) {}
+    enum Exclusion { Included, Excluded };
+    Iterator(Set<T> *base, int row, int col, Exclusion exclusion)
+      : base_(base) {
+      switch (exclusion) {
+        case Included: {
+          flat_idx_ = row * base->n_cols_ + col;
+          break;
+        }
+        case Excluded: {
+          flat_idx_ = row * base->n_cols_ + col - 1;
+          break;
+        }
+      }
+      it_ = base->container_[flat_idx_].begin();
+      end_ = base->container_[flat_idx_].end();
+      if (it_ == end_) {
+        do {
+          flat_idx_++;
+          it_ = base_->container_[flat_idx_].begin();
+          end_ = base_->container_[flat_idx_].end();
+        } while (it_ == end_);
+      }
+      std::printf("Iterator(%i, %i, %i), flat=%zu\n", row, col, exclusion, flat_idx_);
+    }
 
     T operator*() {
+      std::cout << "operator*()\n";
       return *it_;
     }
 
     Iterator &operator++() {
-      it_++;
-      if (it_ == current_set_->end()) {
-        if (col_ == base_->n_cols_ - 1) {
-          // end of the row, go to the next
-          row_++;
-          col_ = 0;
-        } else {
-          col_++;
-        }
-        current_set_ = &base_->container_[row_ * base_->n_cols_];
-        it_ = current_set_->begin();
+      if (it_ == end_) {
+        do {
+          flat_idx_++;
+          it_ = base_->container_[flat_idx_].begin();
+          end_ = base_->container_[flat_idx_].end();
+        } while (it_ == end_);
+      } else {
+        it_++;
       }
-      current_set_++;
       return *this;
     }
 
     bool operator!=(const Iterator &other) const {
-      return it_ != other.it_;
+      std::printf("left(%zu), right(%lu)\n", flat_idx_, other.flat_idx_);
+      return (it_ != other.it_) || (flat_idx_ != other.flat_idx_);
     }
 
   private:
     Set<T> *base_;
-    size_t row_;
-    size_t col_;
-    set_container_t *current_set_;
-    typename set_container_t::iterator it_;
+    size_t n_rows_;
+    size_t n_cols_;
+    size_t flat_idx_;
+    typename cell_container_t::iterator it_;
+    typename cell_container_t::iterator end_;
   };
 
   Set() : n_rows_(1), n_cols_(1) {
@@ -68,7 +90,8 @@ public:
 
   void insert(T value) {
     int i = value % n_rows_;
-    int j = rand() % n_cols_;
+    // int j = rand() % n_cols_;
+    int j = 0;
     auto pair = container_[i * n_cols_ + j].insert(value);
     if (pair.second) { // insertion took place
       size_++;
@@ -102,11 +125,11 @@ public:
   }
 
   Iterator begin() {
-    return Iterator(this, container_[0].begin());
+    return Iterator(this, 0, 0, Iterator::Included);
   }
 
   Iterator end() {
-    return Iterator(this, container_[container_.size() - 1].end());
+    return Iterator(this, n_rows_, 0, Iterator::Excluded);
   }
 
   void printInternals() const {
@@ -123,7 +146,7 @@ public:
   }
 
 private:
-  std::vector<set_container_t> container_;
+  std::vector<cell_container_t> container_;
   size_t n_rows_;
   size_t n_cols_;
   size_t size_;

@@ -16,6 +16,7 @@ targets:
 	done
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
+	$(CC) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O0 -g -o $@.debug.out $^
 	$(CC) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -DDT_ENABLE -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc

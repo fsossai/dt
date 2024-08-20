@@ -34,8 +34,6 @@ int main(int argc, char *argv[]) {
     set.insert(e);
   }
 
-  set.clear();
-
   // Printing
   cout << "Set: ";
   for (auto e : set) {
