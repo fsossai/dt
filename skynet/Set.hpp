@@ -153,6 +153,7 @@ public:
   __attribute__((always_inline)) void insert(T value) {
     int i = value % n_rows_;
     int j = 0;
+    // j = rand() % n_cols_;
 
     PRAGMA_LDTC_BEGIN(j, 0, set_clause_insert<T>, this);
     auto pair = container_[i * n_cols_ + j].insert(value);
