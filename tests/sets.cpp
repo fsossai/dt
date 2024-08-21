@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
   // cout << "\n";
 
   // Kernel
-  for (auto e : elements) {
-    set.insert(e);
+  for (int i = 0; i < elements.size(); i++) {
+    set.insert(elements[i]);
   }
 
   cout << "Set:\n" << set.toString() << "\n\n";

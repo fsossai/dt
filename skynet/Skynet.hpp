@@ -6,6 +6,7 @@
 
 #include "TCI.hpp"
 #include "Set.hpp"
+#include "Scalar.hpp"
 
 namespace skynet {
 

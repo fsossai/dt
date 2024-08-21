@@ -7,6 +7,9 @@
 #include <vector>
 #include <unordered_set>
 
+#include "TCI.hpp"
+#include "Scalar.hpp"
+
 namespace skynet {
 
 template <class T>
@@ -21,6 +24,12 @@ int set_clause_insert(Set<T> *set) {
 }
 
 template <class T>
+int set_clause_op_plusplus(typename Set<T>::Iterator *it) {
+  // TODO
+  return 0;
+}
+
+template <class T>
 class Set {
 public:
   using cell_container_t = std::unordered_set<T>;
@@ -30,7 +39,12 @@ public:
 
   class Iterator {
   public:
-    Iterator(Set<T> *base, int row_begin, int row_end) : base_(base) {
+    friend int set_clause_op_plusplus<T>(typename Set<T>::Iterator *it);
+
+    Iterator(Set<T> *base, int row_begin, int row_end)
+      : base_(base),
+        row_begin_(0) {
+
       flat_idx_ = row_begin * base->n_cols_;
       flat_end_ = row_end * base->n_cols_;
       end_ = base->container_[flat_end_ - 1].end();
@@ -42,9 +56,12 @@ public:
       return *it_;
     }
 
-    Iterator &operator++() {
+    __attribute__((always_inline)) Iterator &operator++() {
+      // TODO
+      // PRAGMA_LDTC_BEGIN(row_begin_, 0, set_clause_op_plusplus<T>, this);
       it_++;
       produce_next_iterator_();
+      // PRAGMA_LDTC_END();
       return *this;
     }
 
@@ -98,7 +115,6 @@ public:
 
         // find the next non-empty cell
         while (reached_cell_end_() && !reached_last_cell_()) {
-          // std::printf("[nc %zu/%zu] ", flat_idx_, flat_end_);
           move_to_next_cell_();
           if (this_is_column_zero_()) {
             reset_seen_set_();
@@ -127,6 +143,7 @@ public:
     typename cell_container_t::iterator cell_end_;
     typename cell_container_t::iterator end_;
     cell_container_t anti_duplicates_;
+    int row_begin_;
   };
 
   Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
@@ -142,7 +159,7 @@ public:
     PRAGMA_LDTC_END();
 
     if (pair.second) { // insertion took place
-      storage_size_++;
+      storage_size_.sum(1);
     }
   }
 
@@ -165,11 +182,11 @@ public:
   }
 
   size_t storageSize() const {
-    return storage_size_;
+    return storage_size_.get();
   }
 
   bool empty() const {
-    return storage_size_ == 0;
+    return storage_size_.get() == 0;
   }
 
   Iterator begin() {
@@ -247,7 +264,7 @@ private:
   std::vector<cell_container_t> container_;
   size_t n_rows_;
   size_t n_cols_;
-  size_t storage_size_;
+  Scalar<size_t> storage_size_;
 };
 
 } // namespace skynet
