@@ -7,7 +7,6 @@
 #include <unordered_set>
 
 #include "ScopeTimer.hpp"
-#include "Set.hpp"
 #include "Skynet.hpp"
 
 using namespace std;
@@ -151,12 +150,14 @@ int bfs_tc(const Graph &g, Node *root) {
     for (auto n : *currentFrontier) {
       t += n->value;
 
-      for (auto &m : n->outEdges) {
+      for (auto m : n->outEdges) {
         if (!enqueued.contains(m)) {
           nextFrontier->insert(m);
-          enqueued.insert(m);
         }
       }
+    }
+    for (auto m : *nextFrontier) {
+      enqueued.insert(m);
     }
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
