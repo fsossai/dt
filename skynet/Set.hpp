@@ -4,8 +4,9 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <vector>
+#include <type_traits>
 #include <unordered_set>
+#include <vector>
 
 #include "TCI.hpp"
 #include "Scalar.hpp"
@@ -29,10 +30,15 @@ int set_clause_op_plusplus(typename Set<T>::Iterator *it) {
   return 0;
 }
 
-template <class T>
-int hasher(T val) {
+template <typename T>
+typename std::enable_if<std::is_pointer<T>::value, int>::type hasher(T val) {
   return (reinterpret_cast<uint64_t>(val) * 14695981039346656037ULL)
          >> (64 - 11);
+};
+
+template <typename T>
+typename std::enable_if<std::is_arithmetic<T>::value, int>::type hasher(T val) {
+  return val;
 };
 
 template <class T>
