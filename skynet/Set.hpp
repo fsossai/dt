@@ -30,6 +30,12 @@ int set_clause_op_plusplus(typename Set<T>::Iterator *it) {
 }
 
 template <class T>
+int hasher(T val) {
+  return (reinterpret_cast<uint64_t>(val) * 14695981039346656037ULL)
+         >> (64 - 11);
+};
+
+template <class T>
 class Set {
 public:
   using cell_container_t = std::unordered_set<T>;
@@ -151,7 +157,7 @@ public:
   }
 
   __attribute__((always_inline)) void insert(T value) {
-    int i = value % n_rows_;
+    int i = hasher(value) % n_rows_;
     int j = 0;
     // j = rand() % n_cols_;
 
@@ -165,7 +171,7 @@ public:
   }
 
   bool contains(T value) {
-    int i = value % n_rows_;
+    int i = hasher(value) % n_rows_;
     for (int j = 0; j < n_cols_; j++) {
       auto &s = container_[i * n_cols_ + j];
       if (s.find(value) != s.end()) {

@@ -1,41 +1,16 @@
 #include <iostream>
+#include <iterator>
 #include <set>
 #include <queue>
 #include <chrono>
 #include <stack>
+#include <unordered_set>
+
+#include "ScopeTimer.hpp"
+#include "Set.hpp"
+#include "Skynet.hpp"
 
 using namespace std;
-
-#define TIMER_START(x)                                                         \
-  do {                                                                         \
-    __stimers.push(new STimer(x));                                             \
-  } while (false)
-#define TIMER_STOP()                                                           \
-  do {                                                                         \
-    delete __stimers.top();                                                    \
-    __stimers.pop();                                                           \
-  } while (false)
-
-class STimer;
-
-static stack<STimer *> __stimers;
-
-class STimer {
-public:
-  STimer(string prefix) : prefix(prefix) {
-    tstart = chrono::steady_clock::now();
-  }
-
-  ~STimer() {
-    auto tstop = chrono::steady_clock::now();
-    chrono::duration<double> elapsed_s = tstop - tstart;
-    cout << prefix << " time: " << elapsed_s.count() * 1e3 << " ms" << endl;
-  }
-
-private:
-  chrono::time_point<chrono::steady_clock> tstart;
-  string prefix;
-};
 
 struct Node {
   int value;
@@ -132,27 +107,63 @@ void Graph::setEdge(int i, int j) {
   setEdge(i, j, true);
 }
 
-int reduce(const Graph &g, Node *first) {
-  std::queue<Node *> toExplore;
-  std::set<Node *> enqueued;
+int bfs_frontier(const Graph &g, Node *root) {
+  unordered_set<Node *> enqueued;
+  auto currentFrontier = new vector<Node*>();
+  auto nextFrontier = new vector<Node*>();
 
   int t = 0;
-  toExplore.push(first);
-  enqueued.insert(first);
+  currentFrontier->push_back(root);
+  enqueued.insert(root);
 
-  while (!toExplore.empty()) {
-    auto n = toExplore.front();
-    toExplore.pop();
-    t += n->value;
+  while (!currentFrontier->empty()) {
+    for (auto n : *currentFrontier) {
+      t += n->value;
 
-    for (auto &m : n->outEdges) {
-      bool toEnqueue = enqueued.find(m) == enqueued.end();
-      if (toEnqueue) {
-        toExplore.push(m);
-        enqueued.insert(m);
+      for (auto &m : n->outEdges) {
+        bool notEnqueued = enqueued.find(m) == enqueued.end();
+        if (notEnqueued) {
+          nextFrontier->push_back(m);
+          enqueued.insert(m);
+        }
       }
     }
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
   }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+  return t;
+}
+
+int bfs_tc(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node*>();
+  auto nextFrontier = new skynet::Set<Node*>();
+
+  int t = 0;
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  while (!currentFrontier->empty()) {
+    for (auto n : *currentFrontier) {
+      t += n->value;
+
+      for (auto &m : n->outEdges) {
+        if (!enqueued.contains(m)) {
+          nextFrontier->insert(m);
+          enqueued.insert(m);
+        }
+      }
+    }
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
 
   return t;
 }
@@ -176,12 +187,11 @@ int main(int argc, char *argv[]) {
   TIMER_STOP();
 
   TIMER_START("Kernel");
-  cout << "res = " << reduce(*g, g->nodes[0]) << endl;
+  // cout << "res = " << bfs_frontier(*g, g->nodes[0]) << endl;
+  cout << "res = " << bfs_tc(*g, g->nodes[0]) << endl;
   TIMER_STOP();
 
-  TIMER_START("Destruction");
   delete g;
-  TIMER_STOP();
 
   TIMER_STOP();
 
