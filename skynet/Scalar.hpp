@@ -11,7 +11,7 @@ template <class T>
 class Scalar;
 
 template <class T>
-size_t scalar_clause_sum(Scalar<T> *s) {
+size_t clause_scalar_sum(Scalar<T> *s) {
   s->container_.resize(s->container_.size() + 1);
   return s->container_.size() - 1;
 }
@@ -19,7 +19,7 @@ size_t scalar_clause_sum(Scalar<T> *s) {
 template <class T>
 class Scalar {
 public:
-  friend size_t scalar_clause_sum<T>(Scalar<T> *s);
+  friend size_t clause_scalar_sum<T>(Scalar<T> *s);
 
   Scalar() : container_(1) {}
 
@@ -29,7 +29,7 @@ public:
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
-    noelle_pragma_begin("ldtc", &k, (size_t)0, scalar_clause_sum<T>, this);
+    noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
     container_[k] += x;
     noelle_pragma_end("ldtc");
   }
