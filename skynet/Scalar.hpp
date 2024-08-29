@@ -1,8 +1,9 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 
-#include "TCI.hpp"
+#include "arcana/noelle/core/Pragmas.hpp"
 
 namespace skynet {
 
@@ -28,9 +29,9 @@ public:
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
-    PRAGMA_LDTC_BEGIN(k, (size_t)0, scalar_clause_sum<T>, this);
+    noelle_pragma_begin("ldtc", &k, (size_t)0, scalar_clause_sum<T>, this);
     container_[k] += x;
-    PRAGMA_LDTC_END();
+    noelle_pragma_end("ldtc");
   }
 
   T get() const {

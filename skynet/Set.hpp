@@ -8,7 +8,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "TCI.hpp"
+#include "arcana/noelle/core/Pragmas.hpp"
+
 #include "Scalar.hpp"
 
 namespace skynet {
@@ -17,7 +18,7 @@ template <class T>
 class Set;
 
 template <class T>
-int set_clause_insert(Set<T> *set) {
+int clause_set_insert(Set<T> *set) {
   set->n_rows_++;
   set->n_cols_++;
   set->container_.resize(set->n_rows_ * set->n_cols_);
@@ -25,7 +26,7 @@ int set_clause_insert(Set<T> *set) {
 }
 
 template <class T>
-int set_clause_op_plusplus(typename Set<T>::Iterator *it) {
+int clause_set_op_plusplus(typename Set<T>::Iterator *it) {
   // TODO
   return 0;
 }
@@ -47,11 +48,11 @@ public:
   using cell_container_t = std::unordered_set<T>;
   using container_t = std::vector<cell_container_t>;
 
-  friend int set_clause_insert<T>(Set<T> *set);
+  friend int clause_set_insert<T>(Set<T> *set);
 
   class Iterator {
   public:
-    friend int set_clause_op_plusplus<T>(typename Set<T>::Iterator *it);
+    friend int clause_set_op_plusplus<T>(typename Set<T>::Iterator *it);
 
     Iterator(Set<T> *base, int row_begin, int row_end)
       : base_(base),
@@ -70,10 +71,10 @@ public:
 
     __attribute__((always_inline)) Iterator &operator++() {
       // TODO
-      // PRAGMA_LDTC_BEGIN(row_begin_, 0, set_clause_op_plusplus<T>, this);
+      // noelle_pragma_begin("ldtc", &row_begin_, 0, set_clause_op_plusplus<T>, this);
       it_++;
       produce_next_iterator_();
-      // PRAGMA_LDTC_END();
+      // noelle_pragma_end("ldtc");
       return *this;
     }
 
@@ -167,9 +168,9 @@ public:
     int j = 0;
     // j = rand() % n_cols_;
 
-    PRAGMA_LDTC_BEGIN(j, 0, set_clause_insert<T>, this);
+    noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T>, this);
     auto pair = container_[i * n_cols_ + j].insert(value);
-    PRAGMA_LDTC_END();
+    noelle_pragma_end("ldtc");
 
     if (pair.second) { // insertion took place
       storage_size_.sum(1);
