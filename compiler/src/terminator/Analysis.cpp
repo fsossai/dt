@@ -1,0 +1,275 @@
+#include <algorithm>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <tuple>
+#include <unordered_set>
+#include <vector>
+
+#include "llvm/IR/Instructions.h"
+
+#include "arcana/noelle/core/LoopCarriedUnknownSCC.hpp"
+#include "arcana/noelle/core/LoopContent.hpp"
+#include "arcana/noelle/core/Noelle.hpp"
+
+#include "Analysis.hpp"
+
+using namespace std;
+using namespace llvm;
+using namespace arcana::noelle;
+
+namespace arcana::dt {
+
+TerminatorAnalysis::TerminatorAnalysis(
+    Noelle &noelle,
+    LoopForest *LF,
+    Function &F,
+    unordered_set<LoopContentOptimization> optimizations)
+  : DependenceAnalysis("Terminator"),
+    details(false),
+    prefix("Terminator: Analysis: "),
+    noelle(noelle),
+    LF(LF),
+    F(F),
+    PF(F, "ldtc") {
+
+  // We only care about loops with clauses. It is not the job of this analysis
+  // to study loops that are unrelated to clauses even though they may be
+  // parallel `TargetLSs` represents all loops that contain at least one clause.
+  // Keep in mind that if a loop contains a clause all ancestors will too.
+
+  this->MM = noelle.getMetadataManager();
+  this->PF.print(errs(), this->prefix + "Pragmas: ");
+
+  this->PF.visitPreOrder([&, this](PragmaTree *T, auto) -> bool {
+    auto Begin = T->getBeginDelimiter();
+    auto newClause = new TClause(*T);
+    this->clauses.insert(newClause);
+    errs() << this->prefix << "Found: ";
+    newClause->print(errs()) << "\n";
+
+    auto InnerLT = LF->getInnermostLoopThatContains(Begin);
+    if (InnerLT != nullptr) {
+      // Build the ancestral path
+      do {
+        auto LS = InnerLT->getLoop();
+        auto ID = LS->getID().value();
+        this->relevantLoops.insert(LS);
+        this->loopIdToClauses[ID].insert(newClause);
+        InnerLT = InnerLT->getParent();
+      } while (InnerLT != nullptr);
+    }
+    return false;
+  });
+
+  // Print relation among loops and clauses
+  for (auto LS : this->relevantLoops) {
+    auto ID = LS->getID().value();
+    auto clauses = this->loopIdToClauses[ID];
+    errs()
+        << this->prefix << "Loop " << getLoopDescription(LS) << ": Clauses: { ";
+    for (auto clause : clauses) {
+      errs() << clause->getUniqueName() << " ";
+    }
+    errs() << "}\n";
+  }
+
+  // We keep the set of dependencies for which at least on instruction that
+  // composes it is in contained in a clause. We call these `relevant` LCDs.
+
+  for (auto LS : this->relevantLoops) {
+    auto LC = noelle.getLoopContent(LS, optimizations);
+    this->collectRelevantLCDs(LC);
+  }
+}
+
+TerminatorAnalysis::~TerminatorAnalysis() {
+  for (auto clause : this->clauses) {
+    delete clause;
+  }
+}
+
+bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
+                                                        LoopStructure &LS) {
+  auto coverageType = this->getCoverageType(LCD);
+  if (coverageType & (FULL | SRC_ONLY | DST_ONLY | CROSS)) {
+    return false;
+  }
+  return true;
+}
+
+void TerminatorAnalysis::printDependence(const Dependence *LCD) const {
+  auto srcValue = LCD->getSrc();
+  auto dstValue = LCD->getDst();
+  errs() << this->prefix << "Dependence: [src] " << *srcValue << "\n";
+  errs() << this->prefix << "Dependence: [dst] " << *dstValue << "\n";
+}
+
+CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
+  for (auto &[currentLCD, coverageType] : this->relevantLCDs) {
+    if (currentLCD->getSrc() == LCD->getSrc()
+        && currentLCD->getDst() == LCD->getDst()) {
+      return coverageType;
+    }
+  }
+  return NONE;
+}
+
+CoverageType TerminatorAnalysis::getCoverageTypeFromPragmaTree(
+    Dependence *LCD) {
+  auto srcValue = cast<Instruction>(LCD->getSrc());
+  auto dstValue = cast<Instruction>(LCD->getDst());
+
+  auto srcClause = this->PF.findInnermostPragmaFor(srcValue);
+  auto dstClause = this->PF.findInnermostPragmaFor(dstValue);
+
+  if (srcClause != nullptr && dstClause == nullptr) {
+    return SRC_ONLY;
+  }
+  if (srcClause == nullptr && dstClause != nullptr) {
+    return DST_ONLY;
+  }
+  if (srcClause != nullptr && dstClause != nullptr) {
+    if (srcClause == dstClause) {
+      return FULL;
+    }
+    return CROSS;
+  }
+  return NONE;
+}
+
+string TerminatorAnalysis::coverageToString(CoverageType coverageType) {
+  switch (coverageType) {
+    case NONE:
+      return "uncovered";
+    case SRC_ONLY:
+      return "source-only-covered";
+    case DST_ONLY:
+      return "destination-only-covered";
+    case CROSS:
+      return "cross-covered";
+    case FULL:
+      return "fully-covered";
+  }
+}
+
+int TerminatorAnalysis::getCoverageCount(LoopStructure *LS,
+                                         CoverageType coverageType) {
+  auto ID = LS->getID().value();
+  auto coverageSummary = this->loopIdToCoverageSummary[ID];
+  switch (coverageType) {
+    case NONE:
+      return coverageSummary.notCovered;
+    case SRC_ONLY:
+      return coverageSummary.srcOnlyCovered;
+    case DST_ONLY:
+      return coverageSummary.dstOnlyCovered;
+    case CROSS:
+      return coverageSummary.crossCovered;
+    case FULL:
+      return coverageSummary.fullyCovered;
+  }
+}
+
+void TerminatorAnalysis::printCoverageSummary(LoopStructure *LS) {
+  auto cTypes = vector{ NONE, SRC_ONLY, DST_ONLY, CROSS, FULL };
+
+  for (auto cType : cTypes) {
+    errs() << this->prefix << "Loop" << getLoopDescription(LS) << ": "
+           << getCoverageCount(LS, cType) << " " << coverageToString(cType)
+           << "\n";
+  }
+}
+
+void TerminatorAnalysis::collectRelevantLCDs(noelle::LoopContent *LC) {
+  int lcdCounter = 0;
+
+  auto LS = LC->getLoopStructure();
+  auto ID = LS->getID().value();
+  auto sccManager = LC->getSCCManager();
+  auto SCCDAG = sccManager->getSCCDAG();
+
+  CoverageSummary coverageSummary;
+
+  for (auto sccNode : SCCDAG->getSCCs()) {
+    auto genericSCC = sccManager->getSCCAttrs(sccNode);
+    if (auto LCU = dyn_cast<LoopCarriedUnknownSCC>(genericSCC)) {
+      auto LCDs = LCU->getLoopCarriedDependences();
+
+      // Filtering out control dependencies
+      for (auto LCD : LCDs) {
+        if (!isa<ControlDependence<Value, Value>>(LCD)) {
+          lcdCounter++;
+          auto coverageType = this->getCoverageTypeFromPragmaTree(LCD);
+          this->relevantLCDs[LCD] = coverageType;
+
+          switch (coverageType) {
+            case NONE:
+              coverageSummary.notCovered++;
+              break;
+            case SRC_ONLY:
+              coverageSummary.srcOnlyCovered++;
+              break;
+            case DST_ONLY:
+              coverageSummary.dstOnlyCovered++;
+              break;
+            case CROSS:
+              coverageSummary.crossCovered++;
+              break;
+            case FULL:
+              coverageSummary.fullyCovered++;
+              break;
+          }
+        }
+      }
+    }
+  }
+
+  this->loopIdToCoverageSummary[ID] = coverageSummary;
+  this->loopIdToContent[ID] = LC;
+
+  errs() << this->prefix << "Loop" << getLoopDescription(LS) << ": Found "
+         << lcdCounter << " unknown LCDs\n";
+  this->printCoverageSummary(LS);
+}
+
+unordered_set<LoopStructure *> TerminatorAnalysis::getRelevantLoopStructures() {
+  return this->relevantLoops;
+}
+
+bool TerminatorAnalysis::isRelevant(noelle::LoopStructure *LS) const {
+  auto ID = LS->getID().value();
+  if (this->loopIdToCoverageSummary.find(ID)
+      != this->loopIdToCoverageSummary.end()) {
+    return true;
+  }
+  return false;
+}
+
+LoopContent *TerminatorAnalysis::fetchLoopContent(noelle::LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  auto it = this->loopIdToContent.find(ID);
+  if (it != this->loopIdToContent.end()) {
+    return get<LoopContent *>(*it);
+  }
+  return nullptr;
+}
+
+unordered_set<TClause *> TerminatorAnalysis::getClausesOf(
+    noelle::LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  auto it = this->loopIdToClauses.find(ID);
+  if (it != this->loopIdToClauses.end()) {
+    return it->second;
+  }
+  assert(false && "Cannot get claues for non relevant loops");
+}
+
+string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
+  return "(id=" + to_string(ID) + ", order=" + order + ")";
+}
+
+} // namespace arcana::gino

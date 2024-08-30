@@ -15,6 +15,7 @@ execute_process(
   RESULT_VARIABLE return_code
   OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
 )
+set(GINO_INSTALL_DIR "/nfs-scratch/fsv1684/gino-dt-14/install")
 
 if(return_code AND (NOT return_code EQUAL 1))
   message(FATAL_ERROR "Please source NOELLE. 'noelle-config' must be available")
@@ -57,3 +58,4 @@ add_custom_target(
 )
 
 add_subdirectory(compiler)
+add_subdirectory(bin)

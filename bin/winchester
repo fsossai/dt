@@ -1,0 +1,100 @@
+#!/bin/bash -e
+
+trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
+
+if [[ $# < 2 ]]; then
+  echo "usage: `basename $0` <SOURCE> <N_CORES>"
+  exit 1
+fi
+
+input=$1
+n_cores=$2
+
+installDir=$(dirname $(dirname $(realpath $0))/..)
+ginoSrc=/nfs-scratch/fsv1684/gino
+
+################################################################################
+stage=0
+echo "Winchester: Stage $stage"
+source /project/gllvm/enable
+gclang++ \
+  -O1 \
+  -Xclang \
+  -disable-llvm-passes \
+  -I $(noelle-config --include) \
+  -I/nfs-scratch/fsv1684/noelle-pragma/install/include \
+  -I/nfs-scratch/fsv1684/repo/dt/skynet \
+  -fno-exceptions \
+  -o s$((stage))_input.out \
+  $input
+get-bc s$((stage))_input.out s$((stage))_input.bc
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+opt --inline s$((stage-1))_input.bc -o s$((stage))_inlined.bc
+noelle-norm s$((stage))_inlined.bc -o s$((stage))_inlined.bc
+# noelle-meta-scc-embed s$((stage))_inlined.bc -o scc.s$((stage))_inlined.bc &
+clang++ \
+  -std=c++17 \
+  -c \
+  -emit-llvm \
+  -O3 \
+  -I $ginoSrc/tests/include/threadpool/include \
+  -I /nfs-scratch/fsv1684/repo/dt/skynet \
+  -o Parallelizer_utils.bc \
+  $ginoSrc/src/core/runtime/Parallelizer_utils.cpp \
+  2>&1
+clang \
+  -c \
+  -emit-llvm \
+  -O3 \
+  -I $ginoSrc/tests/include/threadpool/include \
+  -I /nfs-scratch/fsv1684/repo/dt/skynet \
+  -o NOELLE_APIs.bc \
+  $ginoSrc/src/core/runtime/NOELLE_APIs.c \
+  2>&1
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+gino-load  \
+  -noelle-disable-dswp \
+  -noelle-disable-helix \
+  -load $installDir/lib/LoopBlocker.so \
+  -load $installDir/lib/Terminator.so \
+  -Terminator \
+  --terminator-craft-plan \
+  --terminator-breaks=$((n_cores-1)) \
+  --noelle-verbose=2 \
+  s$((stage-1))_inlined.bc -o s$((stage))_terminated.bc
+
+noelle-norm s$((stage))_terminated.bc -o s$((stage))_terminated.bc
+# noelle-meta-scc-embed s$((stage))_terminated.bc -o scc.s$((stage))_terminated.bc &
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+llvm-link \
+  s$((stage-1))_terminated.bc \
+  Parallelizer_utils.bc \
+  NOELLE_APIs.bc \
+  -o s$((stage))_linked.bc
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+noelle-norm s$((stage-1))_linked.bc -o s$((stage))_renormalized.bc
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+gino-loops s$((stage-1))_renormalized.bc -o s$((stage))_parallelized.bc
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+clang++ -pthreads s$((stage-1))_parallelized.bc -o s$((stage))_exe.out
+
+wait
+echo "Winchester: Done"

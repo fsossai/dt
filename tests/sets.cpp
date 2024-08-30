@@ -17,19 +17,16 @@ int main(int argc, char *argv[]) {
 
   std::vector<int> elements;
 
-  cout << "N = " << N << "\n";
   const int M = N;
+  cout << "N = " << N << "\n";
+  cout << "M = " << M << "\n";
 
-  // cout << "Generation: ";
   for (int i = 0; i < N; i++) {
-    auto e = rand() % M;
-    elements.push_back(e);
-    // cout << e << " ";
+    elements.push_back(rand() % M);
   }
-  // cout << "\n";
 
   // Kernel
-  for (int i = 0; i < elements.size(); i++) {
+  for (int i = 0; i < N; i++) {
     set.insert(elements[i]);
   }
 

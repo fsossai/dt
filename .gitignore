@@ -1,6 +1,10 @@
+*.bc
 build
-install
-enable
-compile_commands.json
-.clangd
 .cache
+.clangd
+compile_commands.json
+enable
+install
+*.ll
+*.o
+*.out
