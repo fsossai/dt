@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "arcana/noelle/core/Pragmas.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
 
@@ -56,9 +56,9 @@ public:
 
   __attribute__((always_inline)) void append(T value) {
     int k = container_.size() - 1;
-    noelle_pragma_begin("ldtc", &k, 0, clause_sequence_append<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_sequence_append<T>, this);
     container_[k].push_back(value);
-    noelle_pragma_end("ldtc");
+    noelle_pragma_end(_p);
   }
 
   void append_as(int k, T value) {

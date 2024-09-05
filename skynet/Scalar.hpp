@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "arcana/noelle/core/Pragmas.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
 
@@ -29,9 +29,9 @@ public:
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
-    noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
     container_[k] += x;
-    noelle_pragma_end("ldtc");
+    noelle_pragma_end(_p);
   }
 
   T get() const {

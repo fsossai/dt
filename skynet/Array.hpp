@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "arcana/noelle/core/Pragmas.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
 
@@ -60,9 +60,9 @@ public:
 
   void add(size_t idx, T value) {
     int k = container_.size() - 1;
-    noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
     container_[k][idx] += value;
-    noelle_pragma_end("ldtc");
+    noelle_pragma_end(_p);
   }
 
   T operator[](size_t idx) {

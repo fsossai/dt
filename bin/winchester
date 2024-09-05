@@ -10,24 +10,26 @@ fi
 input=$1
 n_cores=$2
 
-installDir=$(dirname $(dirname $(realpath $0))/..)
-ginoSrc=/nfs-scratch/fsv1684/gino
+installDir=$(realpath $(dirname $(realpath $0))/..)
+ginoSrc=/nfs-scratch/fsv1684/gino-shortcut
+source $ginoSrc/enable
 
 ################################################################################
 stage=0
 echo "Winchester: Stage $stage"
 source /project/gllvm/enable
 gclang++ \
+  -c \
+  -DNOELLE_PRAGMA_ENABLE \
   -O1 \
   -Xclang \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
-  -I/nfs-scratch/fsv1684/noelle-pragma/install/include \
-  -I/nfs-scratch/fsv1684/repo/dt/skynet \
+  -I /nfs-scratch/fsv1684/repo/dt/skynet \
   -fno-exceptions \
-  -o s$((stage))_input.out \
+  -o s$((stage))_input.o \
   $input
-get-bc s$((stage))_input.out s$((stage))_input.bc
+get-bc -o s$((stage))_input.bc s$((stage))_input.o
 
 ################################################################################
 ((stage+=1))
@@ -67,7 +69,8 @@ gino-load  \
   --terminator-craft-plan \
   --terminator-breaks=$((n_cores-1)) \
   --noelle-verbose=2 \
-  s$((stage-1))_inlined.bc -o s$((stage))_terminated.bc
+  -o s$((stage))_terminated.bc \
+  s$((stage-1))_inlined.bc
 
 noelle-norm s$((stage))_terminated.bc -o s$((stage))_terminated.bc
 # noelle-meta-scc-embed s$((stage))_terminated.bc -o scc.s$((stage))_terminated.bc &
@@ -94,7 +97,12 @@ gino-loops s$((stage-1))_renormalized.bc -o s$((stage))_parallelized.bc
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-clang++ -pthreads s$((stage-1))_parallelized.bc -o s$((stage))_exe.out
+noelle-load -PragmaEraser s$((stage-1))_parallelized.bc -o s$((stage))_nopragma.bc
+
+################################################################################
+((stage+=1))
+echo "Winchester: Stage $stage"
+clang++ -pthreads s$((stage-1))_nopragma.bc -o s$((stage))_exe.out
 
 wait
 echo "Winchester: Done"

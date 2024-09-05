@@ -10,7 +10,6 @@
 
 #include "arcana/noelle/core/LoopContent.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
-#include "arcana/noelle/core/PragmaManager.hpp"
 
 #include "TClause.hpp"
 

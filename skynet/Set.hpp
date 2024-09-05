@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -8,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "arcana/noelle/core/Pragmas.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 #include "Scalar.hpp"
 
@@ -168,9 +169,9 @@ public:
     int j = 0;
     // j = rand() % n_cols_;
 
-    noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T>, this);
     auto pair = container_[i * n_cols_ + j].insert(value);
-    noelle_pragma_end("ldtc");
+    noelle_pragma_end(_p);
 
     if (pair.second) { // insertion took place
       storage_size_.sum(1);

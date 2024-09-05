@@ -16,10 +16,10 @@ targets:
 	done
 
 $(SINGLE_FILE_TARGETS): % : %.cpp
-	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -O1 -Xclang -disable-llvm-passes $(FLAGS) -c -emit-llvm $^
+	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) -fno-exceptions -O1 -Xclang -disable-llvm-passes $(FLAGS) -DNOELLE_PRAGMA_ENABLE -c -emit-llvm $^
 	opt --inline $@.bc -o $@.bc
 	noelle-norm $@.bc -o $@.bc
-	$(CXX) $(OPENMP) $(OPT) $@.bc -o $@.out
+	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) $(OPT) $^ -o $@.out
 
 clean:
 	rm -f *.out *.bc *.ll
