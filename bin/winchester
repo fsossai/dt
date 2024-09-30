@@ -20,7 +20,6 @@ echo "Winchester: Stage $stage"
 source /project/gllvm/enable
 gclang++ \
   -c \
-  -DNOELLE_PRAGMA_ENABLE \
   -O1 \
   -Xclang \
   -disable-llvm-passes \
