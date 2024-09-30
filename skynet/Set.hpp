@@ -27,7 +27,7 @@ int clause_set_insert(Set<T> *set) {
 }
 
 template <class T>
-int clause_set_op_plusplus(typename Set<T>::Iterator *it) {
+int clause_set_op_plusplus(typename Set<T>::Range *range) {
   // TODO
   return 0;
 }
@@ -53,8 +53,6 @@ public:
 
   class Iterator {
   public:
-    friend int clause_set_op_plusplus<T>(typename Set<T>::Iterator *it);
-
     Iterator(Set<T> *base, int row_begin, int row_end)
       : base_(base),
         row_begin_(0) {
@@ -71,11 +69,8 @@ public:
     }
 
     __attribute__((always_inline)) Iterator &operator++() {
-      // TODO
-      // noelle_pragma_begin("ldtc", &row_begin_, 0, set_clause_op_plusplus<T>, this);
       it_++;
       produce_next_iterator_();
-      // noelle_pragma_end("ldtc");
       return *this;
     }
 
@@ -160,6 +155,45 @@ public:
     int row_begin_;
   };
 
+  class Range {
+    friend int clause_set_op_plusplus<T>(typename Set<T>::Range *range);
+
+  public:
+    Range(Set<T> *base, Iterator begin, Iterator end)
+      : base_(base),
+        it_(begin),
+        end_(end) {}
+
+    Range begin() {
+      return *this;
+    }
+
+    Range end() {
+      return *this;
+    }
+
+    bool operator!=(const Range & /*other*/) const {
+      return it_ != end_;
+    }
+
+    T operator*() {
+      return *it_;
+    }
+
+    __attribute__((always_inline)) void operator++() {
+      int i;
+      auto _p =
+          noelle_pragma_begin("ldtc", &i, 0, clause_set_op_plusplus<T>, this);
+      ++it_;
+      noelle_pragma_end(_p);
+    }
+
+  private:
+    Set<T> *base_;
+    Iterator it_;
+    Iterator end_;
+  };
+
   Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
     container_.resize(n_rows_ * n_cols_);
   }
@@ -212,10 +246,14 @@ public:
     return Iterator(this, 0, n_rows_);
   }
 
+  Range all() {
+    return Range(this, begin(), end());
+  }
+
   std::string toString() {
     std::stringstream ss;
     ss << "{ ";
-    for (auto e : *this) {
+    for (auto e : this->all()) {
       ss << e << " ";
     }
     ss << "}";

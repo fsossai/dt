@@ -32,6 +32,12 @@ int main(int argc, char *argv[]) {
 
   cout << "Set:\n" << set.toString() << "\n\n";
 
+  int sum = 0;
+  for (auto x : set.all()) {
+    sum += x;
+  }
+  cout << "Sum = " << sum << "\n";
+
   cout << "Internal representation:\n";
   set.printInternals();
   cout << "\n";
