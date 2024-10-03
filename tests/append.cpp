@@ -13,8 +13,15 @@ int main() {
 
   for (int i = 3; i < 10; i++) {
     a.append(i);
-    // skynet::next_k(&a);
   }
+
+  int sum = 0;
+  for (auto x : a) {
+    sum += x;
+  }
+
+  cout << "Sum = " << sum << "\n";
+  assert(sum == 45);
 
   a.printInternals();
 
