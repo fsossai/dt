@@ -65,6 +65,7 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
+  --terminator-details \
   --terminator-craft-plan \
   --terminator-breaks=$((n_cores-1)) \
   --noelle-verbose=2 \
