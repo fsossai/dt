@@ -15,13 +15,13 @@ int main() {
     a.append(i);
   }
 
-  skynet::Scalar<int> sum;
+  skynet::Scalar<int> result;
   for (auto x : a) {
-    sum.sum(x);
+    result.sum(x);
   }
 
-  cout << "Sum = " << sum.get() << "\n";
-  assert(sum.get() == 45);
+  cout << "Sum = " << result.get() << "\n";
+  assert(result.get() == 45);
 
   a.printInternals();
 
