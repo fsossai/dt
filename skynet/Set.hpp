@@ -22,7 +22,10 @@ template <class T>
 int clause_set_insert(Set<T> *set) {
   set->n_rows_++;
   set->n_cols_++;
-  set->container_.resize(set->n_rows_ * set->n_cols_);
+  set->container_.resize(set->n_rows_);
+  for (auto &row : set->container_) {
+    row.resize(set->n_cols_);
+  }
   return set->n_rows_ - 1;
 }
 
@@ -55,11 +58,14 @@ public:
   public:
     Iterator(Set<T> *base, int row_begin, int row_end)
       : base_(base),
-        row_begin_(0) {
-
-      flat_idx_ = row_begin * base->n_cols_;
-      flat_end_ = row_end * base->n_cols_;
-      end_ = base->container_[flat_end_ - 1].end();
+        row_idx_(row_begin),
+        col_idx_(0),
+        n_rows_(base->n_rows_),
+        n_cols_(base->n_cols_),
+        row_begin_(0),
+        row_end_(row_end) {
+      row_ = &base->container_[0];
+      end_ = base->container_[row_end - 1][n_cols_ - 1].end();
       reset_cell_iterators_();
       produce_next_iterator_();
     }
@@ -80,7 +86,7 @@ public:
 
   private:
     bool reached_last_cell_() const {
-      return flat_idx_ == (flat_end_ - 1);
+      return (row_idx_ == row_end_ - 1) && (col_idx_ == n_cols_ - 1);
     }
 
     bool reached_cell_end_() const {
@@ -95,17 +101,15 @@ public:
       return anti_duplicates_.find(*it_) != anti_duplicates_.end();
     }
 
-    bool this_is_column_zero_() const {
-      return flat_idx_ % base_->n_cols_ == 0;
-    }
-
     void reset_seen_set_() {
       anti_duplicates_.clear();
     }
 
     void reset_cell_iterators_() {
-      it_ = base_->container_[flat_idx_].begin();
-      cell_end_ = base_->container_[flat_idx_].end();
+      row_ = &base_->container_[row_idx_];
+      auto& cell = (*row_).at(col_idx_);
+      it_ = cell.begin();
+      cell_end_ = cell.end();
     }
 
     void mark_current_element_as_seen_() {
@@ -113,7 +117,11 @@ public:
     }
 
     void move_to_next_cell_() {
-      flat_idx_++;
+      if (col_idx_ == n_cols_ - 1) {
+        col_idx_ = 0;
+        row_idx_++;
+      }
+      col_idx_++;
       reset_cell_iterators_();
     }
 
@@ -125,7 +133,7 @@ public:
         // find the next non-empty cell
         while (reached_cell_end_() && !reached_last_cell_()) {
           move_to_next_cell_();
-          if (this_is_column_zero_()) {
+          if (col_idx_ == 0) {
             reset_seen_set_();
           }
         }
@@ -146,13 +154,17 @@ public:
     }
 
     Set<T> *base_;
-    size_t flat_idx_;
-    size_t flat_end_;
+    size_t row_idx_;
+    size_t col_idx_;
+    size_t n_rows_;
+    size_t n_cols_;
+    std::vector<cell_container_t> *row_;
     typename cell_container_t::iterator it_;
     typename cell_container_t::iterator cell_end_;
     typename cell_container_t::iterator end_;
     cell_container_t anti_duplicates_;
     int row_begin_;
+    int row_end_;
   };
 
   class Range {
@@ -204,7 +216,7 @@ public:
     // j = rand() % n_cols_;
 
     auto _p = noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T>, this);
-    auto pair = container_[i * n_cols_ + j].insert(value);
+    auto pair = container_[i][j].insert(value);
     noelle_pragma_end(_p);
 
     if (pair.second) { // insertion took place
@@ -215,7 +227,7 @@ public:
   bool contains(T value) {
     int i = hasher(value) % n_rows_;
     for (int j = 0; j < n_cols_; j++) {
-      auto &s = container_[i * n_cols_ + j];
+      auto &s = container_[i][j];
       if (s.find(value) != s.end()) {
         return true;
       }
@@ -224,8 +236,10 @@ public:
   }
 
   void clear() {
-    for (auto &s : container_) {
-      s.clear();
+    for (auto &row : container_) {
+      for (auto &cell : row) {
+        cell.clear();
+      }
     }
     storage_size_ = 0;
   }
@@ -273,10 +287,10 @@ public:
   }
 
   void printInternals() const {
-    for (int i = 0; i < n_rows_; i++) {
-      for (int j = 0; j < n_cols_; j++) {
+    for (auto &row : container_) {
+      for (auto &cell : row) {
         std::cout << "{ ";
-        for (auto &x : container_[i * n_cols_ + j]) {
+        for (auto &x : cell) {
           std::cout << x << " ";
         }
         std::cout << "}\t";
@@ -306,7 +320,7 @@ public:
     for (int i = 0; i < n_rows_; i++) {
       size_t count = 0;
       for (int j = 0; j < n_cols_; j++) {
-        count += container_[i * n_cols_ + j].size();
+        count += container_[i][j].size();
       }
       std::cout << "row." << i << ".storageSize = " << count << " ";
       std::printf("(%.1f %%)\n", 100. * count / storageSize());
@@ -314,7 +328,7 @@ public:
   }
 
 private:
-  std::vector<cell_container_t> container_;
+  std::vector<std::vector<cell_container_t>> container_;
   size_t n_rows_;
   size_t n_cols_;
   Scalar<size_t> storage_size_;
