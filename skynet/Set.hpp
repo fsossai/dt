@@ -208,6 +208,9 @@ public:
 
   Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
     container_.resize(n_rows_ * n_cols_);
+    for (auto& row : container_) {
+      row.resize(n_cols_);
+    }
   }
 
   __attribute__((always_inline)) void insert(T value) {
