@@ -67,9 +67,17 @@ void TerminatorPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool TerminatorPass::runOnModule(Module &M) {
   auto &noelle = getAnalysis<NoellePass>().getNoelle();
   auto &LF = *noelle.getLoopNestingForest();
-  // for (auto &F : M) {
-  //   TerminatorAnalysis TA(noelle, &LF, F);
-  // }
+
+  for (auto &F : M) {
+    if (!F.empty()) {
+      runOnFunction(noelle, LF, F);
+    }
+  }
+
+  return true;
+}
+
+bool TerminatorPass::runOnFunction(Noelle &noelle, LoopForest &LF, Function &F) {
   auto MM = noelle.getMetadataManager();
 
   if (EraseClauses) {
@@ -78,11 +86,10 @@ bool TerminatorPass::runOnModule(Module &M) {
 
   // Phase 1
   // Indentifying which loops to analyze
-  auto &MainF = *M.getFunction("main");
 
   // Collecting the embedded parallel plan
   set<LoopStructure *> loopsInPlan;
-  for (auto LS : *noelle.getLoopStructures(&MainF)) {
+  for (auto LS : *noelle.getLoopStructures(&F)) {
     if (MM->doesHaveMetadata(LS, "noelle.parallelizer.looporder")) {
       loopsInPlan.insert(LS);
     }
@@ -91,7 +98,7 @@ bool TerminatorPass::runOnModule(Module &M) {
   auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
 
-  TerminatorAnalysis TA(noelle, &LF, MainF, optimizations);
+  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
   TA.details = Details;
 
   auto relevantLoops = TA.getRelevantLoopStructures();
@@ -175,7 +182,7 @@ bool TerminatorPass::runOnModule(Module &M) {
   // Applying loop blocking transformation to the termination targets.
   // This phase only applies to the collected DOALL loops
 
-  IRBuilder<> Builder(M.getContext());
+  IRBuilder<> Builder(F.getContext());
   const int NumBlocks = NumBreaks + 1;
 
   for (auto LC : terminationTargetLCs) {
