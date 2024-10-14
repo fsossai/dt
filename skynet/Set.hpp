@@ -107,7 +107,7 @@ public:
 
     void reset_cell_iterators_() {
       row_ = &base_->container_[row_idx_];
-      auto& cell = (*row_).at(col_idx_);
+      auto &cell = (*row_).at(col_idx_);
       it_ = cell.begin();
       cell_end_ = cell.end();
     }
@@ -120,8 +120,9 @@ public:
       if (col_idx_ == n_cols_ - 1) {
         col_idx_ = 0;
         row_idx_++;
+      } else {
+        col_idx_++;
       }
-      col_idx_++;
       reset_cell_iterators_();
     }
 
@@ -208,7 +209,7 @@ public:
 
   Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
     container_.resize(n_rows_ * n_cols_);
-    for (auto& row : container_) {
+    for (auto &row : container_) {
       row.resize(n_cols_);
     }
   }

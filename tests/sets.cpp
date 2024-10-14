@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 
+#include "Set.hpp"
 #include "Skynet.hpp"
 
 using namespace std;
@@ -26,6 +27,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Kernel
+  // skynet::clause_set_insert(&set);
   for (int i = 0; i < N; i++) {
     set.insert(elements[i]);
   }
