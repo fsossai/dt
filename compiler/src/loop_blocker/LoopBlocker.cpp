@@ -15,14 +15,17 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
   auto LS = LC->getLoopStructure();
   auto IVM = LC->getInductionVariableManager();
   auto LGIV = IVM->getLoopGoverningInductionVariable(*LC->getLoopStructure());
-  auto LGInnerPHI = LGIV->getInductionVariable()->getLoopEntryPHI();
+  auto LGInnerPHI =
+      LGIV ? LGIV->getInductionVariable()->getLoopEntryPHI() : nullptr;
   auto InnerLatches = LS->getLatches();
 
   auto F = LS->getFunction();
   auto &Context = F->getContext();
   IRBuilder<> Builder(Context);
 
-  auto ExitBB = LGIV->getExitBlockFromHeader();
+  assert(LS->numberOfExitBasicBlocks() == 1);
+
+  auto ExitBB = LS->getLoopExitBasicBlocks()[0];
   auto InnerHeader = LS->getHeader();
   auto InnerPreheader = LS->getPreHeader();
 
@@ -32,19 +35,21 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
 
   Value *InnerOriginalStartIdx = nullptr;
 
-  // TODO can be simplified through the use of the preheader
-  // All predecessors of the original header (InnerHeader) must
-  // now branch to the new header
-  for (size_t i = 0; i < LGInnerPHI->getNumIncomingValues(); i++) {
-    auto BB = LGInnerPHI->getIncomingBlock(i);
-    if (InnerLatches.find(BB) == InnerLatches.end()) {
-      // BB is not a latch of the loop.
-      // It needs to be rewired to the new header
-      BB->getTerminator()->replaceSuccessorWith(InnerHeader, OuterHeader);
+  if (LGInnerPHI) {
+    // TODO can be simplified through the use of the preheader
+    // All predecessors of the original header (InnerHeader) must
+    // now branch to the new header
+    for (size_t i = 0; i < LGInnerPHI->getNumIncomingValues(); i++) {
+      auto BB = LGInnerPHI->getIncomingBlock(i);
+      if (InnerLatches.find(BB) == InnerLatches.end()) {
+        // BB is not a latch of the loop.
+        // It needs to be rewired to the new header
+        BB->getTerminator()->replaceSuccessorWith(InnerHeader, OuterHeader);
 
-      // The induction variable must have only one initial value
-      assert(InnerOriginalStartIdx == nullptr);
-      InnerOriginalStartIdx = LGInnerPHI->getIncomingValue(i);
+        // The induction variable must have only one initial value
+        assert(InnerOriginalStartIdx == nullptr);
+        InnerOriginalStartIdx = LGInnerPHI->getIncomingValue(i);
+      }
     }
   }
 
@@ -101,18 +106,36 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
     }
   }
 
-  //
+  // If there's no LGOuterPHI at this point, it means that the inner most loop
+  // didn't have one. But we need one.
+  if (!LGOuterPHI) {
+    Builder.SetInsertPoint(OuterHeader);
+    auto OuterTy = Type::getInt32Ty(Context);
+    auto Zero = ConstantInt::get(OuterTy, 0);
+    LGOuterPHI = Builder.CreatePHI(OuterTy, pred_size(InnerPreheader) + 1);
+    for (auto BB : predecessors(InnerPreheader)) {
+      LGOuterPHI->addIncoming(Zero, BB);
+      BB->getTerminator()->replaceSuccessorWith(InnerPreheader, OuterHeader);
+    }
 
-  // Adjusting PHIs in the exit block
+    // This has a wrong value. It will be patched as soon as we have the
+    // `OuterIncrement`
+    LGOuterPHI->addIncoming(Zero, OuterLatch);
+    LGOuterPHI->addIncoming(Zero, InnerPreheader);
+    InnerPreheader->getTerminator()->replaceSuccessorWith(InnerHeader,
+                                                          OuterHeader);
+  }
+
+  // Adjusting (presumaby LCSSA) PHIs in the exit block
   for (auto &I : *ExitBB) {
-    if (auto *InnerPHI = dyn_cast<PHINode>(&I)) {
-      // TODO ?
-      InnerPHI->replaceIncomingBlockWith(InnerHeader, OuterHeader);
+    if (auto *PHI = dyn_cast<PHINode>(&I)) {
+      PHI->replaceIncomingBlockWith(InnerHeader, OuterHeader);
     } else {
       break;
     }
   }
 
+  // IV increment for the outermost loop
   Builder.SetInsertPoint(OuterLatch);
   auto OuterTy = LGOuterPHI->getType();
   auto OuterIncrement =
@@ -122,39 +145,41 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
   LGOuterPHI->setIncomingValueForBlock(InnerPreheader,
                                        ConstantInt::get(OuterTy, 0));
 
-  auto InnerCmp = LGIV->getHeaderCompareInstructionToComputeExitCondition();
+  if (LGIV) {
+    auto InnerCmp = LGIV->getHeaderCompareInstructionToComputeExitCondition();
 
-  Builder.SetInsertPoint(OuterHeader);
+    Builder.SetInsertPoint(OuterHeader);
 
-  // N - InnerOriginalStartIdx
-  auto NumIterations =
-      Builder.CreateSub(InnerCmp->getOperand(1), InnerOriginalStartIdx);
+    // N - InnerOriginalStartIdx
+    auto NumIterations =
+        Builder.CreateSub(InnerCmp->getOperand(1), InnerOriginalStartIdx);
 
-  // InnerNewStartIdx = i * (N - i_start) / numBlocks + i_start
-  auto InnerNewStartIdx = Builder.CreateAdd(
-      Builder.CreateSDiv(Builder.CreateMul(LGOuterPHI, NumIterations),
-                         ConstantInt::get(OuterTy, numBlocks)),
-      InnerOriginalStartIdx);
+    // InnerNewStartIdx = i * (N - i_start) / numBlocks + i_start
+    auto InnerNewStartIdx = Builder.CreateAdd(
+        Builder.CreateSDiv(Builder.CreateMul(LGOuterPHI, NumIterations),
+                           ConstantInt::get(OuterTy, numBlocks)),
+        InnerOriginalStartIdx);
 
-  // InnerNewEndIdx = (i + 1) * (N - i_start) / numBlocks + i_start
-  auto InnerNewEndIdx = Builder.CreateAdd(
-      Builder.CreateSDiv(
-          Builder.CreateMul(
-              Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1)),
-              NumIterations),
-          ConstantInt::get(OuterTy, numBlocks)),
-      InnerOriginalStartIdx);
+    // InnerNewEndIdx = (i + 1) * (N - i_start) / numBlocks + i_start
+    auto InnerNewEndIdx = Builder.CreateAdd(
+        Builder.CreateSDiv(
+            Builder.CreateMul(
+                Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1)),
+                NumIterations),
+            ConstantInt::get(OuterTy, numBlocks)),
+        InnerOriginalStartIdx);
 
-  // for (...; j < InnerNewEndIdx; ...)
-  LGInnerPHI->setIncomingValueForBlock(OuterHeader, InnerNewStartIdx);
-  InnerCmp->setOperand(1, InnerNewEndIdx);
+    // for (...; j < InnerNewEndIdx; ...)
+    LGInnerPHI->setIncomingValueForBlock(OuterHeader, InnerNewStartIdx);
+    InnerCmp->setOperand(1, InnerNewEndIdx);
+  }
 
   Builder.SetInsertPoint(OuterHeader);
   auto OuterCmp =
       Builder.CreateICmpSLT(LGOuterPHI, ConstantInt::get(OuterTy, numBlocks));
   Builder.CreateCondBr(OuterCmp, InnerHeader, ExitBB);
 
-  // errs() << *F << "\n";
+  errs() << *F << "\n";
 
   return OuterHeader;
 }

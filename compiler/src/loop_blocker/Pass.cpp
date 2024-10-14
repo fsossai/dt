@@ -65,7 +65,7 @@ bool LoopBlockerPass::runOnModule(Module &M) {
     }
   }
 
-  return false;
+  return true;
 }
 
 char LoopBlockerPass::ID = 0;
