@@ -56,6 +56,16 @@ int clause_set_op_plusplus(SetIterator<T> *mit) {
   return 0;
 }
 
+template <class T>
+int clause_set_op_neq(SetIterator<T> *mit) {
+  return mit->limits_.size() - 1;
+}
+
+template <class T>
+int clause_set_op_star(SetIterator<T> *mit) {
+  return mit->limits_.size() - 1;
+}
+
 template <typename T>
 typename std::enable_if<std::is_pointer<T>::value, int>::type hasher(T val) {
   return (reinterpret_cast<uint64_t>(val) * 14695981039346656037ULL)
@@ -321,6 +331,8 @@ private:
 template <class T>
 class SetIterator {
   friend int clause_set_op_plusplus<T>(SetIterator<T> *range);
+  friend int clause_set_op_neq<T>(SetIterator<T> *range);
+  friend int clause_set_op_star<T>(SetIterator<T> *range);
 
 public:
   SetIterator(Set<T> *base) : base_(base) {
@@ -337,20 +349,23 @@ public:
     return *this;
   }
 
-  bool operator!=(const SetIterator & /*other*/) const {
+  __attribute__((always_inline)) bool operator!=(
+      const SetIterator & /*other*/) const {
     int k = 0;
     auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T>, this);
-    return limits_[k].first != limits_[k].second;
+        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T>, this);
+    auto result = limits_[k].first != limits_[k].second;
     noelle_pragma_end(_p);
+    return result;
   }
 
   T operator*() {
     int k = 0;
     auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T>, this);
-    return *limits_[k].first;
+        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T>, this);
+    auto result = *limits_[k].first;
     noelle_pragma_end(_p);
+    return result;
   }
 
   __attribute__((always_inline)) void operator++() {
