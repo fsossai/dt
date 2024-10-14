@@ -156,7 +156,9 @@ bool TerminatorPass::runOnModule(Module &M) {
   for (auto *LS : retryLSs) {
     auto LC = noelle.getLoopContent(LS, optimizations);
     auto LD = TA.getLoopDescription(LS);
-    bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
+    auto cert = doall.getCertificate(LC, heuristics);
+    bool isDOALL =
+        cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
 
     errs() << this->prefix << "Loop" << LD
            << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
