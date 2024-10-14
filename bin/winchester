@@ -12,13 +12,16 @@ n_cores=$2
 
 installDir=$(realpath $(dirname $(realpath $0))/..)
 ginoSrc=/nfs-scratch/fsv1684/gino-shortcut
+noelleSrc=/nfs-scratch/fsv1684/noelle-dt
 source $ginoSrc/enable
+source $noelleSrc/enable
 
 ################################################################################
 stage=0
 echo "Winchester: Stage $stage"
 source /project/gllvm/enable
 gclang++ \
+  -std=c++17 \
   -c \
   -O1 \
   -Xclang \

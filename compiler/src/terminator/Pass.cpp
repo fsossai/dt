@@ -133,8 +133,8 @@ bool TerminatorPass::runOnModule(Module &M) {
     auto LD = TA.getLoopDescription(LS);
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
 
-    errs() << this->prefix << "Loop" << LD << " is " << (isDOALL ? "" : "not ")
-           << "DOALL\n";
+    errs() << this->prefix << "Loop" << LD
+           << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
 
     if (isDOALL) {
       MM->addMetadata(LS, "gino.doall", "yes");
