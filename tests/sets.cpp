@@ -35,8 +35,11 @@ int main(int argc, char *argv[]) {
   cout << "Set:\n" << set.toString() << "\n\n";
 
   int sum = 0;
-  for (auto x : set.all()) {
-    sum += x;
+  auto _it = set.begin();
+  auto _end = set.end();
+  // skynet::clause_set_op_plusplus<int>(&_it);
+  for (; _it != _end; ++_it) {
+    sum += *_it;
   }
   cout << "Sum = " << sum << "\n";
 
