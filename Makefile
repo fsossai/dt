@@ -8,7 +8,9 @@ compile: $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j$(JOBS)
 
 $(BUILD_DIR):
-	cmake -B $(BUILD_DIR) -S . -DCMAKE_INSTALL_PREFIX=install
+	cmake -B $(BUILD_DIR) -S . \
+		-DCMAKE_INSTALL_PREFIX=install \
+		-DCMAKE_BUILD_TYPE=Debug
 
 format:
 	find ./compiler ./skynet ./tests -regex '.*\.[c|h]pp' | xargs clang-format -i
