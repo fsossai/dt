@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 
-#include "Set.hpp"
 #include "Skynet.hpp"
 
 using namespace std;
@@ -23,14 +22,10 @@ int main(int argc, char *argv[]) {
   cout << "M = " << M << "\n";
 
   for (int i = 0; i < N; i++) {
-    auto x = rand() % M;
-    // cout << "  e = " << x << "\n";
-    elements.push_back(x);
+    elements.push_back(rand() % M);
   }
 
   // Kernel
-  skynet::clause_set_insert(&set);
-  skynet::clause_set_insert(&set);
   for (int i = 0; i < N; i++) {
     set.insert(elements[i]);
   }
@@ -38,8 +33,7 @@ int main(int argc, char *argv[]) {
   cout << "Set:\n" << set.toString() << "\n\n";
 
   int sum = 0;
-  for (auto x : set) {
-    // cout << "  x = " << x << "\n";
+  for (auto x : set.all()) {
     sum += x;
   }
   cout << "Sum = " << sum << "\n";
