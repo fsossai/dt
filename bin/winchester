@@ -11,7 +11,7 @@ input=$1
 n_cores=$2
 
 installDir=$(realpath $(dirname $(realpath $0))/..)
-ginoSrc=/nfs-scratch/fsv1684/gino-shortcut
+ginoSrc=/nfs-scratch/fsv1684/gino-dt
 noelleSrc=/nfs-scratch/fsv1684/noelle-dt
 source $ginoSrc/enable
 source $noelleSrc/enable

@@ -68,7 +68,7 @@ TerminatorAnalysis::TerminatorAnalysis(
     auto ID = LS->getID().value();
     auto clauses = this->loopIdToClauses[ID];
     errs()
-        << this->prefix << "Loop " << getLoopDescription(LS) << ": Clauses: { ";
+        << this->prefix << "Loop" << getLoopDescription(LS) << ": Clauses: { ";
     for (auto clause : clauses) {
       errs() << clause->getUniqueName() << " ";
     }
