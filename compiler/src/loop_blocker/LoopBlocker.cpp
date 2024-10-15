@@ -31,13 +31,13 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
   auto InnerHeader = LS->getHeader();
   auto InnerPreheader = LS->getPreHeader();
 
-  errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
 
   auto OuterHeader = BasicBlock::Create(Context, "", F);
 
   Value *InnerOriginalStartIdx = nullptr;
 
   if (LGInnerPHI) {
+    errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
     // TODO can be simplified through the use of the preheader
     // All predecessors of the original header (InnerHeader) must
     // now branch to the new header
@@ -53,6 +53,8 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
         InnerOriginalStartIdx = LGInnerPHI->getIncomingValue(i);
       }
     }
+  } else {
+    errs() << "LoopBlocker: No LGInnerPHI\n";
   }
 
   auto OuterLatch = BasicBlock::Create(Context, "", F);
