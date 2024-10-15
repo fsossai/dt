@@ -26,10 +26,6 @@ int main(int argc, char *argv[]) {
     elements.push_back(rand() % M);
   }
 
-  // Kernel
-  // for (int i = 0; i < 2; i++) {
-  //   skynet::clause_set_insert(&set);
-  // }
   for (int i = 0; i < N; i++) {
     set.insert(elements[i]);
   }
@@ -37,15 +33,8 @@ int main(int argc, char *argv[]) {
   cout << "Set:\n" << set.toString() << "\n\n";
 
   int sum = 0;
-  auto _it = set.begin();
-  auto _end = set.end();
-  // for (int i = 0; i < 2; i++) {
-  //   skynet::clause_set_op_plusplus<int>(&_it);
-  //   skynet::clause_set_op_neq<int>(&_it);
-  //   skynet::clause_set_op_star<int>(&_it);
-  // }
-  for (; _it != _end; ++_it) {
-    sum += *_it;
+  for (auto x : set) {
+    sum += x;
   }
   cout << "Sum = " << sum << "\n";
 
