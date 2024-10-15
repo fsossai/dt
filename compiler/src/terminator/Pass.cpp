@@ -30,6 +30,11 @@ static cl::opt<int> NumBreaks("terminator-breaks",
                               cl::Hidden,
                               cl::desc("Number of times we break a LCD"));
 
+static cl::opt<string> TargetFunc("terminator-func",
+                                  cl::init(""),
+                                  cl::Hidden,
+                                  cl::desc("Run only on one function"));
+
 static cl::opt<bool> EraseClauses("erase-clauses",
                                   cl::ZeroOrMore,
                                   cl::init(false),
@@ -67,17 +72,28 @@ void TerminatorPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool TerminatorPass::runOnModule(Module &M) {
   auto &noelle = getAnalysis<NoellePass>().getNoelle();
   auto &LF = *noelle.getLoopNestingForest();
+  int lastLoopOrder = 0;
 
-  for (auto &F : M) {
+  if (TargetFunc != "") {
+    auto &F = *M.getFunction(TargetFunc);
     if (!F.empty()) {
-      runOnFunction(noelle, LF, F);
+      runOnFunction(noelle, LF, F, lastLoopOrder);
+    }
+  } else {
+    for (auto &F : M) {
+      if (!F.empty()) {
+        runOnFunction(noelle, LF, F, lastLoopOrder);
+      }
     }
   }
 
   return true;
 }
 
-bool TerminatorPass::runOnFunction(Noelle &noelle, LoopForest &LF, Function &F) {
+bool TerminatorPass::runOnFunction(Noelle &noelle,
+                                   LoopForest &LF,
+                                   Function &F,
+                                   int &lastLoopOrder) {
   auto MM = noelle.getMetadataManager();
 
   if (EraseClauses) {
@@ -102,16 +118,18 @@ bool TerminatorPass::runOnFunction(Noelle &noelle, LoopForest &LF, Function &F) 
   TA.details = Details;
 
   auto relevantLoops = TA.getRelevantLoopStructures();
+  if (relevantLoops.size() == 0) {
+    return false;
+  }
 
   // A new plan may or may not be crafted
   if (loopsInPlan.size() == 0) {
     // Analyze all loops that contain termination clauses
     if (CraftPlan) {
-      int order = 0;
       for (auto LS : relevantLoops) {
         MM->addMetadata(LS,
                         "noelle.parallelizer.looporder",
-                        to_string(order++));
+                        to_string(lastLoopOrder++));
       }
     }
 

@@ -16,7 +16,10 @@ public:
   TerminatorPass();
   bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
-  bool runOnFunction(Noelle &noelle, LoopForest &LF, Function &F);
+  bool runOnFunction(Noelle &noelle,
+                     LoopForest &LF,
+                     Function &F,
+                     int &lastLoopOrder);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:

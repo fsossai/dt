@@ -40,7 +40,9 @@ TerminatorAnalysis::TerminatorAnalysis(
   // Keep in mind that if a loop contains a clause all ancestors will too.
 
   this->MM = noelle.getMetadataManager();
-  this->PF.print(errs(), this->prefix + "Pragmas: ");
+  if (this->PF.getTrees().size() != 0) {
+    this->PF.print(errs(), this->prefix + "Pragmas: ");
+  }
 
   this->PF.visitPreOrder([&, this](PragmaTree *T, auto) -> bool {
     auto Begin = T->getBeginDelimiter();

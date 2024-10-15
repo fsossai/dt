@@ -1,4 +1,4 @@
 install(
-  PROGRAMS winchester
+  PROGRAMS winchester dt-opt
   DESTINATION bin
 )
