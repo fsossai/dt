@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
+
+installDir=$(realpath $(dirname $(realpath $0))/..)
+ginoSrc=/nfs-scratch/fsv1684/gino-dt
+noelleSrc=/nfs-scratch/fsv1684/noelle-dt
+source $ginoSrc/enable
+source $noelleSrc/enable
+
+gino-load  \
+  -noelle-disable-dswp \
+  -noelle-disable-helix \
+  -load $installDir/lib/LoopBlocker.so \
+  -load $installDir/lib/Terminator.so \
+  --terminator-details \
+  --terminator-craft-plan \
+  --noelle-verbose=2 \
+  $@
+
