@@ -46,14 +46,12 @@ int clause_set_op_plusplus(SetIterator<T> *mit) {
   for (int i = 0; i < M; i++) {
     int row_begin = i * N / M;
     int row_end = (i + 1) * N / M;
-    // std::printf("clause_set_op_plusplus: (%i, %i)\n", i, row_begin, row_end);
     mit->limits_.emplace_back(
         std::make_pair(SetSubIterator(set, row_begin, row_end),
                        SetSubIterator(set, row_begin, row_end)));
   }
-  // std::cout << "\n";
 
-  return 0;
+  return M - 1;
 }
 
 template <class T>
@@ -247,7 +245,7 @@ public:
   }
 
   SetSubIterator &operator++() {
-    it_++;
+    ++it_;
     produce_next_iterator_();
     return *this;
   }

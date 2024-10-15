@@ -32,17 +32,17 @@ int main(int argc, char *argv[]) {
     elements.push_back(rand() % M);
   }
 
-  int TCV_1_insert[T];
+  int V1_insert[T];
   for (int t = 0; t < T; t++) {
     if (t == 0) {
-      TCV_1_insert[t] = 0; // default
+      V1_insert[t] = 0; // default
     } else {
-      TCV_1_insert[t] = skynet::clause_set_insert(&set);
+      V1_insert[t] = skynet::clause_set_insert(&set);
     }
   }
   for (int t = 0; t < T; t++) {
     for (int i = t * N / T; i < (t + 1) * N / T; i++) {
-      set.__insert(t, elements[i]);
+      set.__insert(V1_insert[t], elements[i]);
     }
   }
 
@@ -52,23 +52,24 @@ int main(int argc, char *argv[]) {
   auto _it = set.begin();
   auto _end = set.end();
 
-  int TCV_2_plusplus[T];
-  int TCV_2_neq[T];
-  int TCV_2_star[T];
+  int V2_plusplus[T];
+  int V2_neq[T];
+  int V2_star[T];
   for (int t = 0; t < T; t++) {
     if (t == 0) {
-      TCV_2_plusplus[t] = 0; // default
-      TCV_2_neq[t] = 0;      // default
-      TCV_2_star[t] = 0;     // default
+      V2_plusplus[t] = 0; // default
+      V2_neq[t] = 0;      // default
+      V2_star[t] = 0;     // default
     } else {
-      TCV_2_plusplus[t] = skynet::clause_set_op_plusplus<int>(&_it);
-      TCV_2_neq[t] = skynet::clause_set_op_neq<int>(&_it);
-      TCV_2_star[t] = skynet::clause_set_op_star<int>(&_it);
+      V2_plusplus[t] = skynet::clause_set_op_plusplus<int>(&_it);
+      V2_neq[t] = skynet::clause_set_op_neq<int>(&_it);
+      V2_star[t] = skynet::clause_set_op_star<int>(&_it);
     }
   }
   for (int t = 0; t < T; t++) {
-    for (; _it.__op_neq(t, _end); _it.__op_plusplus(t)) {
-      sum += _it.__op_star(t);
+    for (; _it.__op_neq(V2_neq[t], _end);
+         _it.__op_plusplus(V2_plusplus[t])) {
+      sum += _it.__op_star(V2_star[t]);
     }
   }
   cout << "Sum = " << sum << "\n";
