@@ -25,11 +25,13 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
 
   assert(LS->numberOfExitBasicBlocks() == 1);
 
+  auto IVs = IVM->getInductionVariables();
+
   auto ExitBB = LS->getLoopExitBasicBlocks()[0];
   auto InnerHeader = LS->getHeader();
   auto InnerPreheader = LS->getPreHeader();
 
-  // errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
+  errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
 
   auto OuterHeader = BasicBlock::Create(Context, "", F);
 
@@ -73,13 +75,14 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
       // Rewiring new InnerPHI with old ones
       for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
         auto BB = InnerPHI->getIncomingBlock(i);
+        // If BB is a latch of the inner loop
         if (InnerLatches.find(BB) != InnerLatches.end()) {
-          // BB is a latch of the inner loop.
           // It should now be replaced with the latch of the outer loop
           OuterPHI->setIncomingValueForBlock(BB, InnerPHI);
           OuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
         } else {
-          // BB is not related to any latch of the inner loop
+          // BB is not a latch. This means that now `InnerPHI` must the value
+          // from the `OuterPHI`, that now represents `InnerPHI`
           InnerPHI->setIncomingValueForBlock(BB, OuterPHI);
           InnerPHI->replaceIncomingBlockWith(BB, OuterHeader);
         }
@@ -90,6 +93,7 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
 
       // The original induction variable might me used outside the loop.
       // We need to track its last value
+      // TODO is this really necessary?
       auto OuterLastValuePHI = OuterPHI->clone();
       OuterLastValuePHI->insertAfter(OuterPHI);
 
@@ -112,18 +116,13 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
     Builder.SetInsertPoint(OuterHeader);
     auto OuterTy = Type::getInt32Ty(Context);
     auto Zero = ConstantInt::get(OuterTy, 0);
-    LGOuterPHI = Builder.CreatePHI(OuterTy, pred_size(InnerPreheader) + 1);
-    for (auto BB : predecessors(InnerPreheader)) {
-      LGOuterPHI->addIncoming(Zero, BB);
-      BB->getTerminator()->replaceSuccessorWith(InnerPreheader, OuterHeader);
-    }
-
+    LGOuterPHI = Builder.CreatePHI(OuterTy, pred_size(InnerHeader) + 1);
+    InnerPreheader->getTerminator()->replaceSuccessorWith(InnerHeader,
+                                                          OuterHeader);
     // This has a wrong value. It will be patched as soon as we have the
     // `OuterIncrement`
     LGOuterPHI->addIncoming(Zero, OuterLatch);
     LGOuterPHI->addIncoming(Zero, InnerPreheader);
-    InnerPreheader->getTerminator()->replaceSuccessorWith(InnerHeader,
-                                                          OuterHeader);
   }
 
   // Adjusting (presumaby LCSSA) PHIs in the exit block
@@ -179,7 +178,7 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
       Builder.CreateICmpSLT(LGOuterPHI, ConstantInt::get(OuterTy, numBlocks));
   Builder.CreateCondBr(OuterCmp, InnerHeader, ExitBB);
 
-  errs() << *F << "\n";
+  // errs() << *F << "\n";
 
   return OuterHeader;
 }
