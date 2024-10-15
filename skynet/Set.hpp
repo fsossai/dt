@@ -207,6 +207,17 @@ public:
     }
   }
 
+  void __insert(int t, T value) {
+    int i = hasher(value) % n_rows_;
+    int j = t;
+
+    auto pair = container_[i][j].insert(value);
+
+    if (pair.second) { // insertion took place
+      storage_size_.sum(1);
+    }
+  }
+
 private:
   std::vector<std::vector<cell_container_t>> container_;
   size_t n_rows_;
@@ -235,7 +246,7 @@ public:
     return *it_;
   }
 
-  __attribute__((always_inline)) SetSubIterator &operator++() {
+  SetSubIterator &operator++() {
     it_++;
     produce_next_iterator_();
     return *this;
@@ -352,17 +363,15 @@ public:
   __attribute__((always_inline)) bool operator!=(
       const SetIterator & /*other*/) const {
     int k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T>, this);
     auto result = limits_[k].first != limits_[k].second;
     noelle_pragma_end(_p);
     return result;
   }
 
-  T operator*() {
+  __attribute__((always_inline)) T operator*() {
     int k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T>, this);
     auto result = *limits_[k].first;
     noelle_pragma_end(_p);
     return result;
@@ -374,6 +383,19 @@ public:
         noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T>, this);
     ++limits_[k].first;
     noelle_pragma_end(_p);
+  }
+
+  T __op_star(int t) {
+    return *limits_[t].first;
+  }
+
+  void __op_plusplus(int t) {
+    ++limits_[t].first;
+  }
+
+  bool __op_neq(int t, const SetIterator & /*other*/) const {
+    int k = t;
+    return limits_[k].first != limits_[k].second;
   }
 
 private:
