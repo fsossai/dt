@@ -32,11 +32,11 @@ int main(int argc, char *argv[]) {
 
   cout << "Set:\n" << set.toString() << "\n\n";
 
-  int sum = 0;
+  skynet::Scalar<int> result(0);
   for (auto x : set) {
-    sum += x;
+    result.sum(x);
   }
-  cout << "Sum = " << sum << "\n";
+  cout << "Sum = " << result.get() << "\n";
 
   cout << "Internal representation:\n";
   set.printInternals();
