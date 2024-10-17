@@ -65,6 +65,8 @@ TerminatorAnalysis::TerminatorAnalysis(
     return false;
   });
 
+  populateLoopTags();
+
   // Print relation among loops and clauses
   for (auto LS : this->relevantLoops) {
     auto ID = LS->getID().value();
@@ -271,7 +273,22 @@ unordered_set<TClause *> TerminatorAnalysis::getClausesOf(
 string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
   auto ID = LS->getID().value();
   auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
-  return "(id=" + to_string(ID) + ", order=" + order + ")";
+  return "(id=" + to_string(ID) + ", tag=" + to_string(this->loopIdToTag[ID])
+         + ", order=" + order + ")";
 }
 
-} // namespace arcana::gino
+void TerminatorAnalysis::populateLoopTags() {
+  PragmaForest LoopPF(F, "loop.tag");
+
+  for (auto LS : this->relevantLoops) {
+    auto ID = LS->getID().value();
+    auto BranchI = LS->getHeader()->getTerminator();
+    auto p = LoopPF.findInnermostPragmaFor(BranchI);
+    auto args = p->getArguments();
+    assert(args.size() >= 1);
+    auto tag = cast<ConstantInt>(args[0]);
+    this->loopIdToTag[ID] = tag->getZExtValue();
+  }
+}
+
+} // namespace arcana::dt

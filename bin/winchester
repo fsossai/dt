@@ -21,6 +21,7 @@ stage=0
 echo "Winchester: Stage $stage"
 source /project/gllvm/enable
 gclang++ \
+  -DNOELLE_PRAGMA_BODY_DISABLE \
   -std=c++17 \
   -c \
   -O1 \
@@ -68,6 +69,7 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
+  --terminator-func= \
   --terminator-details \
   --terminator-craft-plan \
   --terminator-breaks=$((n_cores-1)) \

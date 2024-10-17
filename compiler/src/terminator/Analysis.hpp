@@ -84,10 +84,13 @@ private:
   std::unordered_map<uint64_t, CoverageSummary> loopIdToCoverageSummary;
   std::unordered_map<uint64_t, noelle::LoopContent *> loopIdToContent;
   std::unordered_map<uint64_t, std::unordered_set<TClause *>> loopIdToClauses;
+  std::unordered_map<uint64_t, uint64_t> loopIdToTag;
 
   void collectRelevantLCDs(noelle::LoopContent *LC);
 
   CoverageType getCoverageTypeFromPragmaTree(Dependence *LCD);
+
+  void populateLoopTags();
 };
 } // namespace arcana::dt
 
