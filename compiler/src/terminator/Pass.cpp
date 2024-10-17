@@ -12,6 +12,7 @@
 #include "arcana/gino/core/HeuristicsPass.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
 #include "arcana/noelle/core/NoellePass.hpp"
+#include "arcana/noelle/core/PragmaAnalysis.hpp"
 
 #include "arcana/dt/LoopBlocker.hpp"
 #include "Analysis.hpp"
@@ -113,6 +114,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
+
+  // Pragma must not interfere with dependences
+  PragmaAnalysis PA;
+  noelle.addAnalysis(&PA);
 
   TerminatorAnalysis TA(noelle, &LF, F, optimizations);
   TA.details = Details;
