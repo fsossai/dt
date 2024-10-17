@@ -8,6 +8,7 @@
 
 #include "ScopeTimer.hpp"
 #include "Skynet.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 using namespace std;
 
@@ -108,8 +109,8 @@ void Graph::setEdge(int i, int j) {
 
 int bfs_frontier(const Graph &g, Node *root) {
   unordered_set<Node *> enqueued;
-  auto currentFrontier = new vector<Node*>();
-  auto nextFrontier = new vector<Node*>();
+  auto currentFrontier = new vector<Node *>();
+  auto nextFrontier = new vector<Node *>();
 
   int t = 0;
   currentFrontier->push_back(root);
@@ -139,34 +140,42 @@ int bfs_frontier(const Graph &g, Node *root) {
 
 int bfs_tc(const Graph &g, Node *root) {
   skynet::Set<Node *> enqueued;
-  auto currentFrontier = new skynet::Set<Node*>();
-  auto nextFrontier = new skynet::Set<Node*>();
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
 
-  int t = 0;
+  skynet::Scalar<int> t(0);
   currentFrontier->insert(root);
   enqueued.insert(root);
 
+  auto p1 = noelle_pragma_begin("loop.tag", 1);
   while (!currentFrontier->empty()) {
+    auto p2 = noelle_pragma_begin("loop.tag", 2);
     for (auto n : *currentFrontier) {
-      t += n->value;
+      t.sum(n->value);
 
+      auto p3 = noelle_pragma_begin("loop.tag", 3);
       for (auto m : n->outEdges) {
         if (!enqueued.contains(m)) {
           nextFrontier->insert(m);
         }
       }
+      noelle_pragma_end(p3);
     }
+    noelle_pragma_end(p2);
+    auto p4 = noelle_pragma_begin("loop.tag", 4);
     for (auto m : *nextFrontier) {
       enqueued.insert(m);
     }
+    noelle_pragma_end(p4);
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
   }
+  noelle_pragma_end(p1);
 
   delete currentFrontier;
   delete nextFrontier;
 
-  return t;
+  return t.get();
 }
 
 int main(int argc, char *argv[]) {
