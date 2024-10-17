@@ -191,7 +191,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
 
     errs() << this->prefix << "Loop" << LD
-           << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
+           << ": DOALL+TC: " << (isDOALL ? "yes" : "no") << "\n";
 
     if (isDOALL) {
       terminationTargetLCs.insert(LC);
