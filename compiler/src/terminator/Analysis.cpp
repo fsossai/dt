@@ -32,7 +32,8 @@ TerminatorAnalysis::TerminatorAnalysis(
     noelle(noelle),
     LF(LF),
     F(F),
-    PF(F, "ldtc") {
+    PF(F, "ldtc"),
+    doallMarkers(F, "loop.doall") {
 
   // We only care about loops with clauses. It is not the job of this analysis
   // to study loops that are unrelated to clauses even though they may be
@@ -275,6 +276,20 @@ string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
   auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
   return "(id=" + to_string(ID) + ", tag=" + to_string(this->loopIdToTag[ID])
          + ", order=" + order + ")";
+}
+
+bool TerminatorAnalysis::isMarkedDoall(LoopStructure *LS) {
+  auto T = this->doallMarkers.findInnermostPragmaFor(LS);
+  if (T != nullptr) {
+    auto args = T->getArguments();
+    assert(args.size() == 1);
+    StringRef str;
+    PragmaTree::getStringFromArg(args[0], str);
+    if (str.equals("yes")) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void TerminatorAnalysis::populateLoopTags() {
