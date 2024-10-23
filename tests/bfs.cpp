@@ -150,17 +150,21 @@ int bfs_tc(const Graph &g, Node *root) {
   auto p1 = noelle_pragma_begin("loop.tag", 1);
   while (!currentFrontier->empty()) {
     auto p2 = noelle_pragma_begin("loop.tag", 2);
+    auto p21 = noelle_pragma_begin("loop.doall", "yes");
     for (auto n : *currentFrontier) {
       t.sum(n->value);
 
       auto p3 = noelle_pragma_begin("loop.tag", 3);
+      auto p31 = noelle_pragma_begin("loop.doall", "maybe");
       for (auto m : n->outEdges) {
         if (!enqueued.contains(m)) {
           nextFrontier->insert(m);
         }
       }
+      noelle_pragma_end(p31);
       noelle_pragma_end(p3);
     }
+    noelle_pragma_end(p21);
     noelle_pragma_end(p2);
     auto p4 = noelle_pragma_begin("loop.tag", 4);
     for (auto m : *nextFrontier) {

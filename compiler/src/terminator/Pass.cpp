@@ -191,9 +191,26 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
 
     errs() << this->prefix << "Loop" << LD
-           << ": DOALL+TC: " << (isDOALL ? "yes" : "no") << "\n";
+           << ": DOALL+TC: ";
+
+    bool treatAsDoall = false;
 
     if (isDOALL) {
+      errs() << "yes";
+      treatAsDoall = true;
+    } else {
+      if (TA.isMarkedDoall(LS)) {
+        errs() << "no (marked yes)";
+        treatAsDoall = true;
+      } else {
+        errs() << "no";
+        treatAsDoall = false;
+      }
+    }
+
+    errs() << "\n";
+
+    if (treatAsDoall) {
       terminationTargetLCs.insert(LC);
     } else {
       // Despite the termination clauses, this loop is stil hopeless
@@ -258,11 +275,11 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
           continue;
         }
         auto CurrentDef = dyn_cast<Instruction>(A);
-        auto DefBB = CurrentDef->getParent();
+        auto ClauseInsertionPoint = NewHeader->getTerminator();
 
         // Construct the def-use chain back to the origin
         stack<Instruction *> defUseChain;
-        while (!DT.dominates(DefBB, NewHeader)) {
+        while (!DT.dominates(CurrentDef, ClauseInsertionPoint)) {
           if (auto GEP = dyn_cast<GetElementPtrInst>(CurrentDef)) {
             defUseChain.push(CurrentDef);
             CurrentDef = cast<Instruction>(GEP->getPointerOperand());
@@ -270,6 +287,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
             break;
           } else {
             errs() << this->prefix << "ERROR: Unhandled\n";
+            errs() << *A << "\n";
             abort();
           }
         }

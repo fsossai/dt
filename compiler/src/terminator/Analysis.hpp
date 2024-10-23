@@ -69,6 +69,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   std::string getLoopDescription(noelle::LoopStructure *LS);
 
+  bool isMarkedDoall(noelle::LoopStructure *LS);
+
   bool details;
 
 private:
@@ -85,6 +87,7 @@ private:
   std::unordered_map<uint64_t, noelle::LoopContent *> loopIdToContent;
   std::unordered_map<uint64_t, std::unordered_set<TClause *>> loopIdToClauses;
   std::unordered_map<uint64_t, uint64_t> loopIdToTag;
+  noelle::PragmaForest doallMarkers;
 
   void collectRelevantLCDs(noelle::LoopContent *LC);
 
