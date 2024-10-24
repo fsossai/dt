@@ -147,8 +147,10 @@ int bfs_tc(const Graph &g, Node *root) {
   currentFrontier->insert(root);
   enqueued.insert(root);
 
+  int f_idx = 0;
   auto p1 = noelle_pragma_begin("loop.tag", 1);
   while (!currentFrontier->empty()) {
+    cout << "--- processing frontier " << f_idx << "\n";
     auto p2 = noelle_pragma_begin("loop.tag", 2);
     auto p21 = noelle_pragma_begin("loop.doall", "yes");
     for (auto n : *currentFrontier) {
@@ -167,12 +169,15 @@ int bfs_tc(const Graph &g, Node *root) {
     noelle_pragma_end(p21);
     noelle_pragma_end(p2);
     auto p4 = noelle_pragma_begin("loop.tag", 4);
+    auto p41 = noelle_pragma_begin("loop.doall", "no");
     for (auto m : *nextFrontier) {
       enqueued.insert(m);
     }
+    noelle_pragma_end(p41);
     noelle_pragma_end(p4);
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
+    ++f_idx;
   }
   noelle_pragma_end(p1);
 
@@ -202,7 +207,8 @@ int main(int argc, char *argv[]) {
 
   TIMER_START("Kernel");
   // cout << "res = " << bfs_frontier(*g, g->nodes[0]) << endl;
-  cout << "res = " << bfs_tc(*g, g->nodes[0]) << endl;
+  auto result = bfs_tc(*g, g->nodes[0]);
+  cout << "res = " << result << "\n";
   TIMER_STOP();
 
   delete g;
