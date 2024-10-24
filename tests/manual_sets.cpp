@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   skynet::Set<int> set;
 
   int N = 10;
-  int T = 11;
+  int T = 2;
   if (argc > 1) {
     if (atoi(argv[1]) > 0) {
       N = atoi(argv[1]);
@@ -42,6 +42,8 @@ int main(int argc, char *argv[]) {
       V1_insert[t] = skynet::clause_set_insert(&set);
     }
   }
+#pragma omp parallel num_threads(T)
+#pragma omp for
   for (int t = 0; t < T; t++) {
     for (int i = t * N / T; i < (t + 1) * N / T; i++) {
       set.__insert(V1_insert[t], elements[i]);
@@ -66,15 +68,15 @@ int main(int argc, char *argv[]) {
       V2_sum[t] = 0;      // default
     } else {
       V2_plusplus[t] = skynet::clause_set_op_plusplus<int>(&_it);
+      V2_sum[t] = skynet::clause_scalar_sum<int>(&result);
       V2_neq[t] = skynet::clause_set_op_neq<int>(&_it);
       V2_star[t] = skynet::clause_set_op_star<int>(&_it);
-      V2_sum[t] = skynet::clause_scalar_sum<int>(&result);
     }
   }
 #pragma omp parallel num_threads(T)
 #pragma omp for
   for (int t = 0; t < T; t++) {
-    for (; _it.__op_neq(V2_neq[t], _end); ) {
+    for (; _it.__op_neq(V2_neq[t], _end);) {
       result.__sum(V2_sum[t], _it.__op_star(V2_star[t]));
 
       _it.__op_plusplus(V2_plusplus[t]);
