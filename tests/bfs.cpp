@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "ScopeTimer.hpp"
+#include "Set.hpp"
 #include "Skynet.hpp"
 #include "arcana/noelle/core/Pragma.h"
 
@@ -138,6 +139,75 @@ int bfs_frontier(const Graph &g, Node *root) {
   return t;
 }
 
+int bfs_tc_manual(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = 2;
+  while (!currentFrontier->empty()) {
+    cout << "--- processing frontier " << f_idx << "\n";
+    auto _it = currentFrontier->begin();
+    auto _end = currentFrontier->end();
+    int L2_plusplus[T];
+    int L2_neq[T];
+    int L2_star[T];
+    int L2_sum[T];
+    int L2_insert[T];
+    for (int t = 0; t < T; t++) {
+      if (t == 0) {
+        L2_plusplus[t] = 0; // default
+        L2_neq[t] = 0;      // default
+        L2_star[t] = 0;     // default
+        L2_sum[t] = 0;      // default
+        L2_insert[t] = 0;   // default
+      } else {
+        skynet::clause_set_insert(currentFrontier);
+        L2_plusplus[t] = skynet::clause_set_op_plusplus(&_it);
+        L2_sum[t] = skynet::clause_scalar_sum(&result);
+        L2_neq[t] = skynet::clause_set_op_neq(&_it);
+        L2_star[t] = skynet::clause_set_op_star(&_it);
+        L2_insert[t] = skynet::clause_set_insert(nextFrontier);
+      }
+    }
+    currentFrontier->printStats();
+#pragma omp parallel num_threads(T)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+#pragma omp critical
+      for (; _it.__op_neq(L2_neq[t], _end);) {
+        auto n = _it.__op_star(L2_star[t]);
+        result.__sum(L2_sum[t], n->value);
+
+        for (auto m : n->outEdges) {
+          if (!enqueued.contains(m)) {
+            nextFrontier->insert(m);
+          }
+        }
+
+        _it.__op_plusplus(L2_plusplus[t]);
+      }
+    }
+
+    for (auto m : *nextFrontier) {
+      enqueued.insert(m);
+    }
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+  return result.get();
+}
+
 int bfs_tc(const Graph &g, Node *root) {
   skynet::Set<Node *> enqueued;
   auto currentFrontier = new skynet::Set<Node *>();
@@ -207,7 +277,7 @@ int main(int argc, char *argv[]) {
 
   TIMER_START("Kernel");
   // cout << "res = " << bfs_frontier(*g, g->nodes[0]) << endl;
-  auto result = bfs_tc(*g, g->nodes[0]);
+  auto result = bfs_tc_manual(*g, g->nodes[0]);
   cout << "res = " << result << "\n";
   TIMER_STOP();
 
