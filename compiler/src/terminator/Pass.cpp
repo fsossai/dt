@@ -187,25 +187,27 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto LC = noelle.getLoopContent(LS, optimizations);
     auto LD = TA.getLoopDescription(LS);
     auto cert = doall.getCertificate(LC, heuristics);
-    bool isDOALL =
+    bool looksDoall =
         cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
 
-    errs() << this->prefix << "Loop" << LD
-           << ": DOALL+TC: ";
+    errs() << this->prefix << "Loop" << LD << ": DOALL+TC: ";
+
+    errs() << (looksDoall ? "yes" : "no");
 
     bool treatAsDoall = false;
-
-    if (isDOALL) {
-      errs() << "yes";
-      treatAsDoall = true;
-    } else {
-      if (TA.isMarkedDoall(LS)) {
-        errs() << "no (marked yes)";
+    auto doallTag = TA.getDoallTag(LS);
+    switch (doallTag) {
+      case YES:
         treatAsDoall = true;
-      } else {
-        errs() << "no";
+        errs() << " (marked yes)";
+        break;
+      case NO:
         treatAsDoall = false;
-      }
+        errs() << " (marked no)";
+        break;
+      case MAYBE:
+        treatAsDoall = looksDoall;
+        break;
     }
 
     errs() << "\n";

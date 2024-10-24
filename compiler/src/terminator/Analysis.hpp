@@ -23,6 +23,8 @@ enum CoverageType {
   FULL = 16
 };
 
+enum DoallTag { YES, NO, MAYBE };
+
 struct TerminatorAnalysis : public noelle::DependenceAnalysis {
   static char ID;
 
@@ -69,7 +71,7 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   std::string getLoopDescription(noelle::LoopStructure *LS);
 
-  bool isMarkedDoall(noelle::LoopStructure *LS);
+  DoallTag getDoallTag(noelle::LoopStructure *LS);
 
   bool details;
 
@@ -95,6 +97,7 @@ private:
 
   void populateLoopTags();
 };
+
 } // namespace arcana::dt
 
 #endif // __TERMINATOR_ANALYSIS_HPP__

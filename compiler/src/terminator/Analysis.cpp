@@ -278,7 +278,7 @@ string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
          + ", order=" + order + ")";
 }
 
-bool TerminatorAnalysis::isMarkedDoall(LoopStructure *LS) {
+DoallTag TerminatorAnalysis::getDoallTag(LoopStructure *LS) {
   auto T = this->doallMarkers.findInnermostPragmaFor(LS);
   if (T != nullptr) {
     auto args = T->getArguments();
@@ -286,10 +286,16 @@ bool TerminatorAnalysis::isMarkedDoall(LoopStructure *LS) {
     StringRef str;
     PragmaTree::getStringFromArg(args[0], str);
     if (str.equals("yes")) {
-      return true;
+      return DoallTag::YES;
+    } else if (str.equals("no")) {
+      return DoallTag::NO;
+    } else if (str.equals("maybe")) {
+      return DoallTag::MAYBE;
+    } else {
+      assert(false && "Unexpected DOALL tag");
     }
   }
-  return false;
+  return DoallTag::MAYBE;
 }
 
 void TerminatorAnalysis::populateLoopTags() {
