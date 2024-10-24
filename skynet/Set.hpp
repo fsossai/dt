@@ -209,14 +209,13 @@ public:
     }
   }
 
-  void __insert(int t, T value) {
+  void __insert(int j, T value) {
     int i = hasher(value) % n_rows_;
-    int j = t;
 
     auto pair = container_[i][j].insert(value);
 
     if (pair.second) { // insertion took place
-      storage_size_.sum(1);
+      storage_size_.__sum(j, 1);
     }
   }
 

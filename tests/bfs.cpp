@@ -175,18 +175,16 @@ int bfs_tc_manual(const Graph &g, Node *root) {
         L2_insert[t] = skynet::clause_set_insert(nextFrontier);
       }
     }
-    currentFrontier->printStats();
 #pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
-#pragma omp critical
       for (; _it.__op_neq(L2_neq[t], _end);) {
         auto n = _it.__op_star(L2_star[t]);
         result.__sum(L2_sum[t], n->value);
 
         for (auto m : n->outEdges) {
           if (!enqueued.contains(m)) {
-            nextFrontier->insert(m);
+            nextFrontier->__insert(t, m);
           }
         }
 

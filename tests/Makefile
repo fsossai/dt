@@ -1,6 +1,6 @@
 CXX=clang++
 STD=-std=c++20
-OPT=-O3
+OPT=-O0 -g
 INCLUDE_DIRS=-I../skynet -I $(shell noelle-config --include)
 OPENMP=-fopenmp
 FLAGS=
