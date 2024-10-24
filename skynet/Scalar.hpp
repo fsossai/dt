@@ -12,6 +12,7 @@ class Scalar;
 
 template <class T>
 size_t clause_scalar_sum(Scalar<T> *s) {
+  std::printf("%s(%p)\n", __func__, s);
   s->container_.resize(s->container_.size() + 1);
   return s->container_.size() - 1;
 }

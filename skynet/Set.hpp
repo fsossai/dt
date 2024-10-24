@@ -27,6 +27,7 @@ class SetIterator;
 
 template <class T>
 int clause_set_insert(Set<T> *set) {
+  std::printf("%s(%p)\n", __func__, set);
   set->n_rows_++;
   set->n_cols_++;
   set->container_.resize(set->n_rows_);
@@ -38,6 +39,7 @@ int clause_set_insert(Set<T> *set) {
 
 template <class T>
 int clause_set_op_plusplus(SetIterator<T> *mit) {
+  std::printf("%s(%p)\n", __func__, mit);
   const int N = mit->base_->n_rows_;
   const int M = mit->limits_.size() + 1;
   mit->limits_.clear();
@@ -56,11 +58,13 @@ int clause_set_op_plusplus(SetIterator<T> *mit) {
 
 template <class T>
 int clause_set_op_neq(SetIterator<T> *mit) {
+  std::printf("%s(%p)\n", __func__, mit);
   return mit->limits_.size() - 1;
 }
 
 template <class T>
 int clause_set_op_star(SetIterator<T> *mit) {
+  std::printf("%s(%p)\n", __func__, mit);
   return mit->limits_.size() - 1;
 }
 
