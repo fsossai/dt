@@ -42,6 +42,10 @@ public:
     return acc;
   }
 
+  void __sum(size_t k, T x) {
+    container_[k] += x;
+  }
+
 private:
   std::vector<T> container_;
 };

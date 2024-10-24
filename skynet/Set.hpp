@@ -383,16 +383,15 @@ public:
     noelle_pragma_end(_p);
   }
 
-  T __op_star(int t) {
-    return *limits_[t].first;
+  T __op_star(int k) {
+    return *limits_[k].first;
   }
 
-  void __op_plusplus(int t) {
-    ++limits_[t].first;
+  void __op_plusplus(int k) {
+    ++limits_[k].first;
   }
 
-  bool __op_neq(int t, const SetIterator & /*other*/) const {
-    int k = t;
+  bool __op_neq(int k, const SetIterator & /*other*/) const {
     return limits_[k].first != limits_[k].second;
   }
 
