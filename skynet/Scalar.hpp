@@ -12,7 +12,9 @@ class Scalar;
 
 template <class T>
 size_t clause_scalar_sum(Scalar<T> *s) {
+#ifdef DEBUG
   std::printf("%s(%p)\n", __func__, s);
+#endif
   s->container_.resize(s->container_.size() + 1);
   return s->container_.size() - 1;
 }
@@ -25,12 +27,15 @@ public:
   Scalar() : container_(1) {}
 
   Scalar(T x) : Scalar() {
-    container_[0] = x;
+    for (auto &e : container_) {
+      e = x;
+    }
   }
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
+    auto _p =
+        noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
     container_[k] += x;
     noelle_pragma_end(_p);
   }
