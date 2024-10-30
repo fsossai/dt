@@ -20,9 +20,22 @@ size_t clause_scalar_sum(Scalar<T> *s) {
 }
 
 template <class T>
+void clause_scalar_sum_bulk(int N, Scalar<T> *s) {
+#ifdef DEBUG
+  std::printf("%s(%i, %p, %i)\n", __func__, N, s);
+#endif
+  if (s->container_.size() == N) {
+    return;
+  }
+  assert(s->container_.size() == 1);
+  s->container_.resize(N);
+}
+
+template <class T>
 class Scalar {
 public:
   friend size_t clause_scalar_sum<T>(Scalar<T> *s);
+  friend void clause_scalar_sum_bulk<T>(int N, Scalar<T> *s);
 
   Scalar() : container_(1) {}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
@@ -40,6 +41,23 @@ int clause_set_insert(Set<T> *set) {
 }
 
 template <class T>
+void clause_set_insert_bulk(int N, Set<T> *set) {
+#ifdef DEBUG
+  std::printf("%s(%i, %p)\n", __func__, N, set);
+#endif
+  if (set->n_rows_ == N) {
+    return;
+  }
+  set->n_rows_ = N;
+  set->n_cols_ = N;
+  set->container_.resize(N);
+  for (auto &row : set->container_) {
+    row.resize(N);
+  }
+  return;
+}
+
+template <class T>
 int clause_set_op_plusplus(SetIterator<T> *mit) {
 #ifdef DEBUG
   std::printf("%s(%p)\n", __func__, mit);
@@ -58,6 +76,29 @@ int clause_set_op_plusplus(SetIterator<T> *mit) {
   }
 
   return M - 1;
+}
+
+template <class T>
+void clause_set_op_plusplus_bulk(int N, SetIterator<T> *mit) {
+#ifdef DEBUG
+  std::printf("%s(%i, %p)\n", __func__, N, mit);
+#endif
+  if (mit->limits_.size() == N) {
+    return;
+  }
+  // The following assertion is there simply because I havne't thought about
+  // this scenario
+  assert(mit->limits_.size() == 1);
+
+  mit->limits_.clear();
+  auto set = mit->base_;
+
+  for (int i = 0; i < N; i++) {
+    mit->limits_.emplace_back(std::make_pair(SetSubIterator(set, i, i + 1),
+                                             SetSubIterator(set, i, i + 1)));
+  }
+
+  return;
 }
 
 template <class T>
@@ -90,6 +131,7 @@ typename std::enable_if<std::is_arithmetic<T>::value, int>::type hasher(T val) {
 template <class T>
 class Set {
   friend int clause_set_insert<T>(Set<T> *set);
+  friend void clause_set_insert_bulk<T>(int N, Set<T> *set);
   friend class SetSubIterator<T>;
   friend class SetIterator<T>;
 
@@ -227,7 +269,7 @@ public:
     }
   }
 
-// private:
+  // private:
   std::vector<std::vector<cell_container_t>> container_;
   size_t n_rows_;
   size_t n_cols_;
@@ -351,6 +393,7 @@ private:
 template <class T>
 class SetIterator {
   friend int clause_set_op_plusplus<T>(SetIterator<T> *range);
+  friend void clause_set_op_plusplus_bulk<T>(int N, SetIterator<T> *range);
   friend int clause_set_op_neq<T>(SetIterator<T> *range);
   friend int clause_set_op_star<T>(SetIterator<T> *range);
 

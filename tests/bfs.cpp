@@ -139,7 +139,7 @@ int bfs_frontier(const Graph &g, Node *root) {
   return t;
 }
 
-int bfs_tc_manual(const Graph &g, Node *root) {
+int bfs_tc_manual_original(const Graph &g, Node *root) {
   skynet::Set<Node *> enqueued;
   auto currentFrontier = new skynet::Set<Node *>();
   auto nextFrontier = new skynet::Set<Node *>();
@@ -149,7 +149,7 @@ int bfs_tc_manual(const Graph &g, Node *root) {
   enqueued.insert(root);
 
   int f_idx = 0;
-  const int T = 1;
+  const int T = 7;
   while (!currentFrontier->empty()) {
 #ifdef DEBUG
     cout << "--- processing frontier " << f_idx;
@@ -243,6 +243,98 @@ int bfs_tc_manual(const Graph &g, Node *root) {
   return result.get();
 }
 
+int bfs_tc_manual_bulk(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = 17;
+  while (!currentFrontier->empty()) {
+#ifdef DEBUG
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+#endif
+    auto _it2 = currentFrontier->begin();
+    auto _end2 = currentFrontier->end();
+    int L2_plusplus[T];
+    int L2_neq[T];
+    int L2_star[T];
+    int L2_sum[T];
+    int L2_insert[T];
+    skynet::clause_set_insert_bulk(T, currentFrontier);
+    skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
+    skynet::clause_set_op_plusplus_bulk(T, &_it2);
+    skynet::clause_scalar_sum_bulk(T, &result);
+    skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
+    skynet::clause_set_insert_bulk(T, nextFrontier);
+    for (int t = 0; t < T; t++) {
+      L2_plusplus[t] = t;
+      L2_neq[t] = t;
+      L2_star[t] = t;
+      L2_sum[t] = t;
+      L2_insert[t] = t;
+    }
+#pragma omp parallel num_threads(T)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      for (; _it2.__op_neq(L2_neq[t], _end2);) {
+        auto n = _it2.__op_star(L2_star[t]);
+        result.__sum(L2_sum[t], n->value);
+
+        for (auto m : n->outEdges) {
+          if (!enqueued.contains(m)) {
+            nextFrontier->__insert(L2_insert[t], m);
+          }
+        }
+
+        _it2.__op_plusplus(L2_plusplus[t]);
+      }
+    }
+
+    auto _it4 = nextFrontier->begin();
+    auto _end4 = nextFrontier->end();
+    int L4_plusplus[T];
+    int L4_neq[T];
+    int L4_star[T];
+    int L4_insert[T];
+    int L4_sum[T];
+    skynet::clause_set_insert_bulk(T, &enqueued);
+    skynet::clause_set_op_plusplus_bulk(T, &_it4);
+    skynet::clause_scalar_sum_bulk(T, &enqueued.storage_size_);
+    for (int t = 0; t < T; t++) {
+      L4_insert[t] = t;
+      L4_plusplus[t] = t;
+      L4_neq[t] = t;
+      L4_star[t] = t;
+      L4_sum[t] = t;
+    }
+#pragma omp parallel num_threads(T)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      for (; _it4.__op_neq(L4_neq[t], _end4);) {
+        auto m = _it4.__op_star(L4_star[t]);
+
+        enqueued.__insert(L4_insert[t], m);
+
+        _it4.__op_plusplus(L4_plusplus[t]);
+      }
+    }
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+  return result.get();
+}
+
 int bfs_tc(const Graph &g, Node *root) {
   skynet::Set<Node *> enqueued;
   auto currentFrontier = new skynet::Set<Node *>();
@@ -312,7 +404,7 @@ int main(int argc, char *argv[]) {
 
   TIMER_START("Kernel");
   // cout << "res = " << bfs_frontier(*g, g->nodes[0]) << endl;
-  auto result = bfs_tc_manual(*g, g->nodes[0]);
+  auto result = bfs_tc_manual_bulk(*g, g->nodes[0]);
   cout << "res = " << result << "\n";
   TIMER_STOP();
 
