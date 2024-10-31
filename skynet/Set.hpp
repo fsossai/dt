@@ -37,6 +37,8 @@ int clause_set_insert(Set<T> *set) {
   for (auto &row : set->container_) {
     row.resize(set->n_cols_);
   }
+  // TODO handle previously_inserted elements
+  assert(false);
   return set->n_rows_ - 1;
 }
 
@@ -48,11 +50,17 @@ void clause_set_insert_bulk(int N, Set<T> *set) {
   if (set->n_rows_ == N) {
     return;
   }
+  assert(set->n_rows_ == 1);
   set->n_rows_ = N;
   set->n_cols_ = N;
   set->container_.resize(N);
   for (auto &row : set->container_) {
     row.resize(N);
+  }
+  auto previously_inserted = set->container_[0][0];
+  set->container_[0][0].clear();
+  for (auto e : previously_inserted) {
+    set->insert(e);
   }
   return;
 }
@@ -177,7 +185,7 @@ public:
         cell.clear();
       }
     }
-    storage_size_ = 0;
+    storage_size_.set(0);
   }
 
   size_t storageSize() const {
@@ -349,7 +357,7 @@ private:
     reset_cell_iterators_();
   }
 
-  void produce_next_iterator_() {
+  __attribute__((always_inline)) void produce_next_iterator_() {
     bool moved;
     do {
       moved = false;

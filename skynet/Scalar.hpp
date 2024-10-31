@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -37,13 +38,9 @@ public:
   friend size_t clause_scalar_sum<T>(Scalar<T> *s);
   friend void clause_scalar_sum_bulk<T>(int N, Scalar<T> *s);
 
-  Scalar() : container_(1) {}
+  Scalar(T x) : container_{ x } {}
 
-  Scalar(T x) : Scalar() {
-    for (auto &e : container_) {
-      e = x;
-    }
-  }
+  Scalar() : Scalar(T{}) {}
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
@@ -51,6 +48,13 @@ public:
         noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
     container_[k] += x;
     noelle_pragma_end(_p);
+  }
+
+  void set(T x) {
+    for (auto &e : container_) {
+      e = T{};
+    }
+    container_[0] = x;
   }
 
   T get() const {
@@ -63,6 +67,14 @@ public:
 
   void __sum(size_t k, T x) {
     container_[k] += x;
+  }
+
+  void printInternals() const {
+    std::cout << "{ ";
+    for (auto x : container_) {
+      std::cout << x << " ";
+    }
+    std::cout << "}\n";
   }
 
 private:

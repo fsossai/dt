@@ -253,11 +253,14 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
   enqueued.insert(root);
 
   int f_idx = 0;
-  const int T = 17;
+  const int T = 8;
   while (!currentFrontier->empty()) {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
     cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    cout << "\n";
 #endif
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
@@ -268,10 +271,10 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
     int L2_insert[T];
     skynet::clause_set_insert_bulk(T, currentFrontier);
     skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
+    skynet::clause_set_insert_bulk(T, nextFrontier);
+    skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
     skynet::clause_set_op_plusplus_bulk(T, &_it2);
     skynet::clause_scalar_sum_bulk(T, &result);
-    skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
-    skynet::clause_set_insert_bulk(T, nextFrontier);
     for (int t = 0; t < T; t++) {
       L2_plusplus[t] = t;
       L2_neq[t] = t;
@@ -279,7 +282,7 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
       L2_sum[t] = t;
       L2_insert[t] = t;
     }
-#pragma omp parallel num_threads(T)
+#pragma omp parallel num_threads(1)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it2.__op_neq(L2_neq[t], _end2);) {
@@ -304,8 +307,8 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
     int L4_insert[T];
     int L4_sum[T];
     skynet::clause_set_insert_bulk(T, &enqueued);
-    skynet::clause_set_op_plusplus_bulk(T, &_it4);
     skynet::clause_scalar_sum_bulk(T, &enqueued.storage_size_);
+    skynet::clause_set_op_plusplus_bulk(T, &_it4);
     for (int t = 0; t < T; t++) {
       L4_insert[t] = t;
       L4_plusplus[t] = t;
@@ -313,7 +316,7 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
       L4_star[t] = t;
       L4_sum[t] = t;
     }
-#pragma omp parallel num_threads(T)
+#pragma omp parallel num_threads(1)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it4.__op_neq(L4_neq[t], _end4);) {
@@ -332,6 +335,86 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
   delete currentFrontier;
   delete nextFrontier;
 
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  result.printInternals();
+#endif
+
+  return result.get();
+}
+
+int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = 8;
+  skynet::clause_set_insert_bulk(T, currentFrontier);
+  skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
+  skynet::clause_set_insert_bulk(T, nextFrontier);
+  skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
+  skynet::clause_set_insert_bulk(T, &enqueued);
+  skynet::clause_scalar_sum_bulk(T, &enqueued.storage_size_);
+  skynet::clause_scalar_sum_bulk(T, &result);
+  enqueued.printInternals();
+  while (!currentFrontier->empty()) {
+#if defined(DEBUG) || defined(BFS_DEBUG)
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    cout << "\n";
+#endif
+    auto _it2 = currentFrontier->begin();
+    auto _end2 = currentFrontier->end();
+    skynet::clause_set_op_plusplus_bulk(T, &_it2);
+#pragma omp parallel num_threads(1)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      for (; _it2.__op_neq(t, _end2);) {
+        auto n = _it2.__op_star(t);
+        result.__sum(t, n->value);
+
+        for (auto m : n->outEdges) {
+          if (!enqueued.contains(m)) {
+            nextFrontier->__insert(t, m);
+          }
+        }
+
+        _it2.__op_plusplus(t);
+      }
+    }
+
+    auto _it4 = nextFrontier->begin();
+    auto _end4 = nextFrontier->end();
+    skynet::clause_set_op_plusplus_bulk(T, &_it4);
+#pragma omp parallel num_threads(1)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      for (; _it4.__op_neq(t, _end4);) {
+        auto m = _it4.__op_star(t);
+
+        enqueued.__insert(t, m);
+
+        _it4.__op_plusplus(t);
+      }
+    }
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  result.printInternals();
+#endif
+
   return result.get();
 }
 
@@ -340,18 +423,24 @@ int bfs_tc(const Graph &g, Node *root) {
   auto currentFrontier = new skynet::Set<Node *>();
   auto nextFrontier = new skynet::Set<Node *>();
 
-  skynet::Scalar<int> t(0);
+  skynet::Scalar<int> result(0);
   currentFrontier->insert(root);
   enqueued.insert(root);
 
   int f_idx = 0;
   auto p1 = noelle_pragma_begin("loop.tag", 1);
   while (!currentFrontier->empty()) {
-    cout << "--- processing frontier " << f_idx << "\n";
+#if defined(DEBUG) || defined(BFS_DEBUG)
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    cout << "\n";
+#endif
     auto p2 = noelle_pragma_begin("loop.tag", 2);
     auto p21 = noelle_pragma_begin("loop.doall", "yes");
     for (auto n : *currentFrontier) {
-      t.sum(n->value);
+      result.sum(n->value);
 
       auto p3 = noelle_pragma_begin("loop.tag", 3);
       auto p31 = noelle_pragma_begin("loop.doall", "maybe");
@@ -381,7 +470,7 @@ int bfs_tc(const Graph &g, Node *root) {
   delete currentFrontier;
   delete nextFrontier;
 
-  return t.get();
+  return result.get();
 }
 
 int main(int argc, char *argv[]) {
@@ -402,11 +491,17 @@ int main(int argc, char *argv[]) {
   g->incrementalValues();
   TIMER_STOP();
 
+  // auto result_correct = bfs_tc(*g, g->nodes[0]);
+  auto result_correct = 0;
+
   TIMER_START("Kernel");
-  // cout << "res = " << bfs_frontier(*g, g->nodes[0]) << endl;
-  auto result = bfs_tc_manual_bulk(*g, g->nodes[0]);
-  cout << "res = " << result << "\n";
+  // auto result_obtained = bfs_tc_manual_bulk_opt(*g, g->nodes[0]);
+  auto result_obtained = bfs_tc_manual_bulk(*g, g->nodes[0]);
+  // auto result_obtained = bfs_tc(*g, g->nodes[0]);
   TIMER_STOP();
+
+  cout << "correct  = " << result_correct << "\n";
+  cout << "obtained = " << result_obtained << "\n";
 
   delete g;
 
