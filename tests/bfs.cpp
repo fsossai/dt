@@ -359,7 +359,7 @@ int bfs_tc_manual_bulk_merge(const Graph &g, Node *root) {
   const int T = omp_get_max_threads();
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
-  #endif
+#endif
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -417,6 +417,87 @@ int bfs_tc_manual_bulk_merge(const Graph &g, Node *root) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
   result.printInternals();
 #endif
+
+  return result.get();
+}
+
+int bfs_tc_manual_bulk_merge_leak(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = omp_get_max_threads();
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  printf("T: %i\n", T);
+#endif
+  while (!currentFrontier->empty()) {
+#if defined(DEBUG) || defined(BFS_DEBUG)
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    currentFrontier->printStats();
+    cout << "\n";
+#endif
+    auto _it2 = currentFrontier->begin();
+    auto _end2 = currentFrontier->end();
+    int L2_plusplus[T];
+    int L2_neq[T];
+    int L2_star[T];
+    int L2_sum[T];
+    int L2_insert[T];
+    skynet::clause_set_insert_bulk(T, currentFrontier);
+    skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
+    skynet::clause_set_insert_bulk(T, nextFrontier);
+    skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
+    skynet::clause_set_op_plusplus_bulk(T, &_it2);
+    skynet::clause_scalar_sum_bulk(T, &result);
+    for (int t = 0; t < T; t++) {
+      L2_plusplus[t] = t;
+      L2_neq[t] = t;
+      L2_star[t] = t;
+      L2_sum[t] = t;
+      L2_insert[t] = t;
+    }
+#pragma omp parallel num_threads(T)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      auto &row = currentFrontier->container_[t];
+      unordered_set<Node *> seen;
+      auto seenEnd = seen.end();
+      for (auto &cell : row) {
+        for (auto &n : cell) {
+          if (seen.find(n) == seenEnd) {
+            seen.insert(n);
+            result.__sum(L2_sum[t], n->value);
+            for (auto m : n->outEdges) {
+              if (!enqueued.contains(m)) {
+                nextFrontier->__insert(L2_insert[t], m);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    enqueued.insert(*nextFrontier);
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  result.printInternals();
+#endif
+
 
   return result.get();
 }
@@ -667,7 +748,7 @@ int bfs_lockfree_no_omp(const Graph &g, Node *root) {
   return sum;
 }
 
-bool lockfree_contains(unordered_set<Node*> &roster, Node *m) {
+bool lockfree_contains(unordered_set<Node *> &roster, Node *m) {
   return roster.find(m) == roster.end();
 }
 
@@ -812,9 +893,10 @@ int main(int argc, char *argv[]) {
   // auto result_obtained = bfs_tc_manual_bulk_opt(*g, g->nodes[0]);
   // auto result_obtained = bfs_tc_manual_bulk(*g, g->nodes[0]);
   // auto result_obtained = bfs_tc_manual_bulk_merge(*g, g->nodes[0]);
+  auto result_obtained = bfs_tc_manual_bulk_merge_leak(*g, g->nodes[0]);
   // auto result_obtained = bfs_tc(*g, g->nodes[0]);
   // auto result_obtained = bfs_frontier(*g, g->nodes[0]);
-  auto result_obtained = bfs_lockfree(*g, g->nodes[0]);
+  // auto result_obtained = bfs_lockfree(*g, g->nodes[0]);
   // auto result_obtained = bfs_lockfree_no_omp(*g, g->nodes[0]);
   TIMER_STOP();
 

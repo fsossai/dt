@@ -195,7 +195,7 @@ public:
       }
     }
     if (n_rows_ == other.n_rows_) {
-      #pragma omp parallel for
+#pragma omp parallel for
       for (int i = 0; i < n_rows_; i++) {
         const auto &other_row = other.container_[i];
         auto &this_cell = container_[i][0];
@@ -245,6 +245,7 @@ public:
   }
 
   void clear() {
+#pragma omp parallel for
     for (auto &row : container_) {
       for (auto &cell : row) {
         cell.clear();
