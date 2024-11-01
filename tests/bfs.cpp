@@ -1,10 +1,12 @@
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <set>
 #include <queue>
 #include <chrono>
 #include <stack>
 #include <unordered_set>
+#include <omp.h>
 
 #include "ScopeTimer.hpp"
 #include "Set.hpp"
@@ -253,7 +255,7 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
   enqueued.insert(root);
 
   int f_idx = 0;
-  const int T = 8;
+  const int T = 2;
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -262,6 +264,8 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
     result.printInternals();
     cout << "\n";
 #endif
+    enqueued.printInternals();
+    cout << "\n";
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
     int L2_plusplus[T];
@@ -282,7 +286,7 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
       L2_sum[t] = t;
       L2_insert[t] = t;
     }
-#pragma omp parallel num_threads(1)
+#pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it2.__op_neq(L2_neq[t], _end2);) {
@@ -316,7 +320,7 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
       L4_star[t] = t;
       L4_sum[t] = t;
     }
-#pragma omp parallel num_threads(1)
+#pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it4.__op_neq(L4_neq[t], _end4);) {
@@ -342,6 +346,81 @@ int bfs_tc_manual_bulk(const Graph &g, Node *root) {
   return result.get();
 }
 
+int bfs_tc_manual_bulk_merge(const Graph &g, Node *root) {
+  skynet::Set<Node *> enqueued;
+  auto currentFrontier = new skynet::Set<Node *>();
+  auto nextFrontier = new skynet::Set<Node *>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = omp_get_max_threads();
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  printf("T: %i\n", T);
+  #endif
+  while (!currentFrontier->empty()) {
+#if defined(DEBUG) || defined(BFS_DEBUG)
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    cout << "\n";
+#endif
+    auto _it2 = currentFrontier->begin();
+    auto _end2 = currentFrontier->end();
+    int L2_plusplus[T];
+    int L2_neq[T];
+    int L2_star[T];
+    int L2_sum[T];
+    int L2_insert[T];
+    skynet::clause_set_insert_bulk(T, currentFrontier);
+    skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
+    skynet::clause_set_insert_bulk(T, nextFrontier);
+    skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
+    skynet::clause_set_op_plusplus_bulk(T, &_it2);
+    skynet::clause_scalar_sum_bulk(T, &result);
+    for (int t = 0; t < T; t++) {
+      L2_plusplus[t] = t;
+      L2_neq[t] = t;
+      L2_star[t] = t;
+      L2_sum[t] = t;
+      L2_insert[t] = t;
+    }
+#pragma omp parallel num_threads(T)
+#pragma omp for
+    for (int t = 0; t < T; t++) {
+      for (; _it2.__op_neq(L2_neq[t], _end2);) {
+        auto n = _it2.__op_star(L2_star[t]);
+        result.__sum(L2_sum[t], n->value);
+
+        for (auto m : n->outEdges) {
+          if (!enqueued.contains(m)) {
+            nextFrontier->__insert(L2_insert[t], m);
+          }
+        }
+
+        _it2.__op_plusplus(L2_plusplus[t]);
+      }
+    }
+
+    enqueued.insert(*nextFrontier);
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  result.printInternals();
+#endif
+
+  return result.get();
+}
+
 int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
   skynet::Set<Node *> enqueued;
   auto currentFrontier = new skynet::Set<Node *>();
@@ -352,7 +431,7 @@ int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
   enqueued.insert(root);
 
   int f_idx = 0;
-  const int T = 8;
+  const int T = 16;
   skynet::clause_set_insert_bulk(T, currentFrontier);
   skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
   skynet::clause_set_insert_bulk(T, nextFrontier);
@@ -360,7 +439,6 @@ int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
   skynet::clause_set_insert_bulk(T, &enqueued);
   skynet::clause_scalar_sum_bulk(T, &enqueued.storage_size_);
   skynet::clause_scalar_sum_bulk(T, &result);
-  enqueued.printInternals();
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -372,7 +450,7 @@ int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
     skynet::clause_set_op_plusplus_bulk(T, &_it2);
-#pragma omp parallel num_threads(1)
+#pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it2.__op_neq(t, _end2);) {
@@ -392,7 +470,7 @@ int bfs_tc_manual_bulk_opt(const Graph &g, Node *root) {
     auto _it4 = nextFrontier->begin();
     auto _end4 = nextFrontier->end();
     skynet::clause_set_op_plusplus_bulk(T, &_it4);
-#pragma omp parallel num_threads(1)
+#pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
       for (; _it4.__op_neq(t, _end4);) {
@@ -456,9 +534,10 @@ int bfs_tc(const Graph &g, Node *root) {
     noelle_pragma_end(p2);
     auto p4 = noelle_pragma_begin("loop.tag", 4);
     auto p41 = noelle_pragma_begin("loop.doall", "no");
-    for (auto m : *nextFrontier) {
-      enqueued.insert(m);
-    }
+    // for (auto m : *nextFrontier) {
+    //   enqueued.insert(m);
+    // }
+    enqueued.insert(*nextFrontier);
     noelle_pragma_end(p41);
     noelle_pragma_end(p4);
     currentFrontier->clear();
@@ -471,6 +550,241 @@ int bfs_tc(const Graph &g, Node *root) {
   delete nextFrontier;
 
   return result.get();
+}
+
+int bfs_lockfree_no_omp(const Graph &g, Node *root) {
+  using roster_t = unordered_set<Node *>;
+  using frontier_t = vector<vector<Node *>>;
+
+  unique_ptr<vector<frontier_t>> current_frontiers;
+  unique_ptr<vector<frontier_t>> next_frontiers;
+  vector<roster_t> rosters;
+
+  int n_threads = omp_get_max_threads();
+  rosters.resize(n_threads);
+  current_frontiers = make_unique<vector<frontier_t>>(n_threads);
+  next_frontiers = make_unique<vector<frontier_t>>(n_threads);
+
+  for (int tid = 0; tid < n_threads; tid++) {
+    (*current_frontiers)[tid].resize(n_threads);
+    (*next_frontiers)[tid].resize(n_threads);
+  }
+
+  int sum = 0;
+
+#ifdef STATS
+  printf("n_threads: %i\n", n_threads);
+#endif
+
+  (*current_frontiers)[skynet::hasher(root) % n_threads][0].push_back(root);
+  rosters[skynet::hasher(root) % n_threads].insert(root);
+
+  bool has_work = true;
+  while (has_work) {
+#ifdef STATS
+    printf("current_frontiers: ");
+    for (int i = 0; i < n_threads; i++) {
+      unsigned long int k = 0;
+      for (int j = 0; j < n_threads; j++) {
+        k += (*current_frontiers)[i][j].size();
+      }
+      printf("%4lu ", k);
+    }
+    printf("\n");
+#endif
+#ifdef STATS
+    int frontier_skips = 0;
+    int frontier_size = 0;
+#endif
+
+    has_work = false;
+    for (int tid = 0; tid < n_threads; tid++) {
+      auto &tid_current_frontier = (*current_frontiers)[tid];
+
+      roster_t frontier_roster;
+      for (auto &subfrontier : tid_current_frontier) {
+        for (auto n : subfrontier) {
+
+          if (frontier_roster.find(n) != frontier_roster.end()) {
+#ifdef STATS
+#  pragma omp atomic
+            ++frontier_skips;
+#endif
+            continue;
+          }
+          sum += n->value;
+          frontier_roster.insert(n);
+
+          for (auto m : n->outEdges) {
+            auto owner_tid = skynet::hasher(m) % n_threads;
+            auto &owner_roster = rosters[owner_tid];
+            auto not_in_roster = owner_roster.find(m) == owner_roster.end();
+            if (not_in_roster) {
+              (*next_frontiers)[owner_tid][tid].push_back(m);
+              has_work = true;
+            }
+          }
+        }
+#ifdef STATS
+#  pragma omp atomic
+        frontier_size += subfrontier.size();
+#endif
+      }
+    }
+
+    for (int tid = 0; tid < n_threads; tid++) {
+      auto &tid_current_frontier = (*current_frontiers)[tid];
+      for (auto &subfrontier : tid_current_frontier) {
+        subfrontier.clear();
+      }
+      auto &tid_roster = rosters[tid];
+      auto &tid_next_frontier = (*next_frontiers)[tid];
+      for (auto &subfrontier : tid_next_frontier) {
+        for (auto n : subfrontier) {
+          tid_roster.insert(n);
+        }
+      }
+    }
+
+#ifdef STATS
+#  pragma omp single
+    {
+      printf("frontier redundancy: %.1lf %%\n",
+             100. * (double)frontier_skips / (double)frontier_size);
+      printf("next_frontiers:\n");
+      for (int i = 0; i < n_threads; i++) {
+        for (int j = 0; j < n_threads; j++) {
+          printf("%4lu ", (*next_frontiers)[i][j].size());
+        }
+        printf("\n");
+      }
+      printf("-------------------------------------------\n");
+    }
+#endif
+    swap(current_frontiers, next_frontiers);
+  }
+
+  return sum;
+}
+
+bool lockfree_contains(unordered_set<Node*> &roster, Node *m) {
+  return roster.find(m) == roster.end();
+}
+
+int bfs_lockfree(const Graph &g, Node *root) {
+  using roster_t = unordered_set<Node *>;
+  using frontier_t = vector<vector<Node *>>;
+
+  unique_ptr<vector<frontier_t>> current_frontiers;
+  unique_ptr<vector<frontier_t>> next_frontiers;
+  vector<roster_t> rosters;
+
+  int n_threads = omp_get_max_threads();
+  rosters.resize(n_threads);
+  current_frontiers = make_unique<vector<frontier_t>>(n_threads);
+  next_frontiers = make_unique<vector<frontier_t>>(n_threads);
+
+#pragma omp parallel
+  {
+    int tid = omp_get_thread_num();
+    (*current_frontiers)[tid].resize(n_threads);
+    (*next_frontiers)[tid].resize(n_threads);
+  }
+
+  int sum = 0;
+
+  (*current_frontiers)[skynet::hasher(root) % n_threads][0].push_back(root);
+  rosters[skynet::hasher(root) % n_threads].insert(root);
+
+  bool has_work = true;
+  while (has_work) {
+#ifdef STATS
+    printf("current_frontiers: ");
+    for (int i = 0; i < n_threads; i++) {
+      unsigned long int k = 0;
+      for (int j = 0; j < n_threads; j++) {
+        k += (*current_frontiers)[i][j].size();
+      }
+      printf("%4lu ", k);
+    }
+    printf("\n");
+#endif
+#ifdef STATS
+    int frontier_skips = 0;
+    int frontier_size = 0;
+#endif
+
+    has_work = false;
+#pragma omp parallel reduction(+ : sum) reduction(|| : has_work)
+    {
+      int tid = omp_get_thread_num();
+      auto &tid_current_frontier = (*current_frontiers)[tid];
+
+      roster_t frontier_roster;
+      for (auto &subfrontier : tid_current_frontier) {
+        for (auto n : subfrontier) {
+
+          if (frontier_roster.find(n) != frontier_roster.end()) {
+#ifdef STATS
+#  pragma omp atomic
+            ++frontier_skips;
+#endif
+            continue;
+          }
+          sum += n->value;
+          frontier_roster.insert(n);
+
+          for (auto m : n->outEdges) {
+            auto owner_tid = skynet::hasher(m) % n_threads;
+            auto &owner_roster = rosters[owner_tid];
+            // auto not_in_roster = owner_roster.find(m) == owner_roster.end();
+            bool not_in_roster = lockfree_contains(owner_roster, m);
+            if (not_in_roster) {
+              (*next_frontiers)[owner_tid][tid].push_back(m);
+              has_work = true;
+            }
+          }
+        }
+#ifdef STATS
+#  pragma omp atomic
+        frontier_size += subfrontier.size();
+#endif
+      }
+
+      for (auto &subfrontier : tid_current_frontier) {
+        subfrontier.clear();
+      }
+#pragma omp barrier
+
+#ifdef STATS
+#  pragma omp single
+      {
+        printf("frontier redundancy: %.1lf %%\n",
+               100. * (double)frontier_skips / (double)frontier_size);
+        printf("next_frontiers:\n");
+        for (int i = 0; i < n_threads; i++) {
+          for (int j = 0; j < n_threads; j++) {
+            printf("%4lu ", (*next_frontiers)[i][j].size());
+          }
+          printf("\n");
+        }
+        printf("-------------------------------------------\n");
+      }
+#endif
+
+      auto &tid_roster = rosters[tid];
+      auto &tid_next_frontier = (*next_frontiers)[tid];
+      for (auto &subfrontier : tid_next_frontier) {
+        for (auto n : subfrontier) {
+          tid_roster.insert(n);
+        }
+      }
+
+    } // pragma omp parallel
+    swap(current_frontiers, next_frontiers);
+  }
+
+  return sum;
 }
 
 int main(int argc, char *argv[]) {
@@ -496,8 +810,12 @@ int main(int argc, char *argv[]) {
 
   TIMER_START("Kernel");
   // auto result_obtained = bfs_tc_manual_bulk_opt(*g, g->nodes[0]);
-  auto result_obtained = bfs_tc_manual_bulk(*g, g->nodes[0]);
+  // auto result_obtained = bfs_tc_manual_bulk(*g, g->nodes[0]);
+  // auto result_obtained = bfs_tc_manual_bulk_merge(*g, g->nodes[0]);
   // auto result_obtained = bfs_tc(*g, g->nodes[0]);
+  // auto result_obtained = bfs_frontier(*g, g->nodes[0]);
+  auto result_obtained = bfs_lockfree(*g, g->nodes[0]);
+  // auto result_obtained = bfs_lockfree_no_omp(*g, g->nodes[0]);
   TIMER_STOP();
 
   cout << "correct  = " << result_correct << "\n";

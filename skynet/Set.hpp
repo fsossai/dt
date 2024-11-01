@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <omp.h>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -61,6 +62,25 @@ void clause_set_insert_bulk(int N, Set<T> *set) {
   set->container_[0][0].clear();
   for (auto e : previously_inserted) {
     set->insert(e);
+  }
+  return;
+}
+
+template <class T>
+void clause_set_insert_all_bulk(int N, Set<T> *set) {
+#ifdef DEBUG
+  std::printf("%s(%i, %p)\n", __func__, N, set);
+#endif
+  if (set->n_cols_ == N) {
+    return;
+  }
+  assert(set->n_cols_ == 1);
+  assert(set->n_rows_ == 1);
+  set->n_rows_ = 1;
+  set->n_cols_ = N;
+  set->container_.resize(1);
+  for (auto &row : set->container_) {
+    row.resize(N);
   }
   return;
 }
@@ -168,11 +188,56 @@ public:
     }
   }
 
+  void insert(const Set<T> &other) {
+    if (n_rows_ != other.n_rows_) {
+      if (other.n_rows_ > n_rows_) {
+        __reshape(other.n_rows_, 1);
+      }
+    }
+    if (n_rows_ == other.n_rows_) {
+      #pragma omp parallel for
+      for (int i = 0; i < n_rows_; i++) {
+        const auto &other_row = other.container_[i];
+        auto &this_cell = container_[i][0];
+        for (const auto &other_cell : other_row) {
+          for (const auto &x : other_cell) {
+            this_cell.insert(x);
+          }
+        }
+      }
+    } else {
+      for (const auto &other_row : other.container_) {
+        for (const auto &other_cell : other_row) {
+          for (const auto &x : other_cell) {
+            int i = hasher(x) % n_rows_;
+            container_[i][0].insert(x);
+          }
+        }
+      }
+    }
+  }
+
+  void __reshape(int N, int M) {
+    assert(N >= n_rows_ && M >= n_cols_ && "Not implemented");
+    assert(n_rows_ == 1 && n_cols_ == 1 && "Not implemented");
+    auto cell_copy = container_[0][0];
+    container_.resize(N);
+    for (auto &row : container_) {
+      row.resize(M);
+    }
+    n_rows_ = N;
+    n_cols_ = M;
+    for (auto &x : cell_copy) {
+      int i = hasher(x) % n_rows_;
+      container_[i][0].insert(x);
+    }
+  }
+
   bool contains(T value) {
     int i = hasher(value) % n_rows_;
-    for (int j = 0; j < n_cols_; j++) {
-      auto &s = container_[i][j];
-      if (s.find(value) != s.end()) {
+    auto &row = container_[i];
+    for (auto &cell : row) {
+      if (cell.find(value) != cell.end()) {
         return true;
       }
     }
@@ -264,6 +329,14 @@ public:
       }
       std::cout << "row." << i << ".storageSize = " << count << " ";
       std::printf("(%.1f %%)\n", 100. * count / storageSize());
+    }
+  }
+
+  void __insert_special(int j, T value) {
+    auto pair = container_[0][j].insert(value);
+
+    if (pair.second) { // insertion took place
+      storage_size_.__sum(j, 1);
     }
   }
 
