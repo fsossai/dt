@@ -18,17 +18,19 @@
 
 namespace skynet {
 
-template <class T>
+enum SetCellContainerT { VectorT, SetT };
+
+template <class T, SetCellContainerT C = SetT>
 class Set;
 
-template <class T>
+template <class T, SetCellContainerT C = SetT>
 class SetSubIterator;
 
-template <class T>
+template <class T, SetCellContainerT C = SetT>
 class SetIterator;
 
-template <class T>
-int clause_set_insert(Set<T> *set) {
+template <class T, SetCellContainerT C = SetT>
+int clause_set_insert(Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%p)\n", __func__, set);
 #endif
@@ -43,8 +45,8 @@ int clause_set_insert(Set<T> *set) {
   return set->n_rows_ - 1;
 }
 
-template <class T>
-void clause_set_insert_bulk(int N, Set<T> *set) {
+template <class T, SetCellContainerT C = SetT>
+void clause_set_insert_bulk(int N, Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, set);
 #endif
@@ -66,8 +68,8 @@ void clause_set_insert_bulk(int N, Set<T> *set) {
   return;
 }
 
-template <class T>
-void clause_set_insert_all_bulk(int N, Set<T> *set) {
+template <class T, SetCellContainerT C = SetT>
+void clause_set_insert_all_bulk(int N, Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, set);
 #endif
@@ -85,8 +87,8 @@ void clause_set_insert_all_bulk(int N, Set<T> *set) {
   return;
 }
 
-template <class T>
-int clause_set_op_plusplus(SetIterator<T> *mit) {
+template <class T, SetCellContainerT C = SetT>
+int clause_set_op_plusplus(SetIterator<T, C> *mit) {
 #ifdef DEBUG
   std::printf("%s(%p)\n", __func__, mit);
 #endif
@@ -106,8 +108,8 @@ int clause_set_op_plusplus(SetIterator<T> *mit) {
   return M - 1;
 }
 
-template <class T>
-void clause_set_op_plusplus_bulk(int N, SetIterator<T> *mit) {
+template <class T, SetCellContainerT C = SetT>
+void clause_set_op_plusplus_bulk(int N, SetIterator<T, C> *mit) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, mit);
 #endif
@@ -129,16 +131,16 @@ void clause_set_op_plusplus_bulk(int N, SetIterator<T> *mit) {
   return;
 }
 
-template <class T>
-int clause_set_op_neq(SetIterator<T> *mit) {
+template <class T, SetCellContainerT C = SetT>
+int clause_set_op_neq(SetIterator<T, C> *mit) {
 #ifdef DEBUG
   std::printf("%s(%p)\n", __func__, mit);
 #endif
   return mit->limits_.size() - 1;
 }
 
-template <class T>
-int clause_set_op_star(SetIterator<T> *mit) {
+template <class T, SetCellContainerT C = SetT>
+int clause_set_op_star(SetIterator<T, C> *mit) {
 #ifdef DEBUG
   std::printf("%s(%p)\n", __func__, mit);
 #endif
@@ -156,15 +158,16 @@ typename std::enable_if<std::is_arithmetic<T>::value, int>::type hasher(T val) {
   return val;
 };
 
-template <class T>
+template <class T, SetCellContainerT C>
 class Set {
-  friend int clause_set_insert<T>(Set<T> *set);
-  friend void clause_set_insert_bulk<T>(int N, Set<T> *set);
-  friend class SetSubIterator<T>;
-  friend class SetIterator<T>;
+  friend int clause_set_insert<T, C>(Set<T, C> *set);
+  friend void clause_set_insert_bulk<T, C>(int N, Set<T, C> *set);
+  friend class SetSubIterator<T, C>;
+  friend class SetIterator<T, C>;
 
 public:
-  using cell_container_t = std::unordered_set<T>;
+  using cell_container_t = typename std::
+      conditional<C == SetT, std::unordered_set<T>, std::vector<T>>::type;
   using container_t = std::vector<cell_container_t>;
 
   Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
@@ -179,16 +182,27 @@ public:
     int j = 0;
     // j = rand() % n_cols_;
 
-    auto _p = noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T>, this);
-    auto pair = container_[i][j].insert(value);
-    noelle_pragma_end(_p);
+    if constexpr (C == SetT) {
+      auto _p =
+          noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
+      auto pair = container_[i][j].insert(value);
 
-    if (pair.second) { // insertion took place
+      if (pair.second) { // insertion took place
+        storage_size_.sum(1);
+      }
+      noelle_pragma_end(_p);
+    }
+    if constexpr (C == VectorT) {
+      auto _p =
+          noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
+      container_[i][j].push_back(value);
+      noelle_pragma_end(_p);
       storage_size_.sum(1);
     }
   }
 
-  void insert(const Set<T> &other) {
+  template <SetCellContainerT C2>
+  void insert(const Set<T, C2> &other) {
     if (n_rows_ != other.n_rows_) {
       if (other.n_rows_ > n_rows_) {
         __reshape(other.n_rows_, 1);
@@ -237,8 +251,15 @@ public:
     int i = hasher(value) % n_rows_;
     auto &row = container_[i];
     for (auto &cell : row) {
-      if (cell.find(value) != cell.end()) {
-        return true;
+      if constexpr (C == SetT) {
+        if (cell.find(value) != cell.end()) {
+          return true;
+        }
+      }
+      if constexpr (C == VectorT) {
+        if (std::find(cell.begin(), cell.end(), value) != cell.end()) {
+          return true;
+        }
       }
     }
     return false;
@@ -262,11 +283,11 @@ public:
     return storage_size_.get() == 0;
   }
 
-  SetIterator<T> begin() {
+  SetIterator<T, C> begin() {
     return SetIterator(this);
   }
 
-  SetIterator<T> end() {
+  SetIterator<T, C> end() {
     return SetIterator(this);
   }
 
@@ -333,20 +354,18 @@ public:
     }
   }
 
-  void __insert_special(int j, T value) {
-    auto pair = container_[0][j].insert(value);
-
-    if (pair.second) { // insertion took place
-      storage_size_.__sum(j, 1);
-    }
-  }
-
   void __insert(int j, T value) {
     int i = hasher(value) % n_rows_;
 
-    auto pair = container_[i][j].insert(value);
+    if constexpr (C == SetT) {
+      auto pair = container_[i][j].insert(value);
 
-    if (pair.second) { // insertion took place
+      if (pair.second) { // insertion took place
+        storage_size_.__sum(j, 1);
+      }
+    }
+    if constexpr (C == VectorT) {
+      container_[i][j].push_back(value);
       storage_size_.__sum(j, 1);
     }
   }
@@ -358,10 +377,10 @@ public:
   Scalar<size_t> storage_size_;
 };
 
-template <class T>
+template <class T, SetCellContainerT C>
 class SetSubIterator {
 public:
-  SetSubIterator(Set<T> *base, int row_begin, int row_end)
+  SetSubIterator(Set<T, C> *base, int row_begin, int row_end)
     : base_(base),
       row_idx_(row_begin),
       col_idx_(0),
@@ -458,29 +477,30 @@ private:
     }
   }
 
-  Set<T> *base_;
+  Set<T, C> *base_;
   size_t row_idx_;
   size_t col_idx_;
   size_t n_rows_;
   size_t n_cols_;
-  std::vector<typename Set<T>::cell_container_t> *row_;
-  typename Set<T>::cell_container_t::iterator it_;
-  typename Set<T>::cell_container_t::iterator cell_end_;
-  typename Set<T>::cell_container_t::iterator end_;
-  typename Set<T>::cell_container_t anti_duplicates_;
+  std::vector<typename Set<T, C>::cell_container_t> *row_;
+  typename Set<T, C>::cell_container_t::iterator it_;
+  typename Set<T, C>::cell_container_t::iterator cell_end_;
+  typename Set<T, C>::cell_container_t::iterator end_;
+  std::unordered_set<T> anti_duplicates_;
   int row_begin_;
   int row_end_;
 };
 
-template <class T>
+template <class T, SetCellContainerT C>
 class SetIterator {
-  friend int clause_set_op_plusplus<T>(SetIterator<T> *range);
-  friend void clause_set_op_plusplus_bulk<T>(int N, SetIterator<T> *range);
-  friend int clause_set_op_neq<T>(SetIterator<T> *range);
-  friend int clause_set_op_star<T>(SetIterator<T> *range);
+  friend int clause_set_op_plusplus<T, C>(SetIterator<T, C> *range);
+  friend void clause_set_op_plusplus_bulk<T, C>(int N,
+                                                SetIterator<T, C> *range);
+  friend int clause_set_op_neq<T, C>(SetIterator<T, C> *range);
+  friend int clause_set_op_star<T, C>(SetIterator<T, C> *range);
 
 public:
-  SetIterator(Set<T> *base) : base_(base) {
+  SetIterator(Set<T, C> *base) : base_(base) {
     limits_.emplace_back(
         std::make_pair(SetSubIterator(base, 0, base->n_rows_),
                        SetSubIterator(base, 0, base->n_rows_)));
@@ -497,7 +517,7 @@ public:
   __attribute__((always_inline)) bool operator!=(
       const SetIterator & /*other*/) const {
     int k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T, C>, this);
     auto result = limits_[k].first != limits_[k].second;
     noelle_pragma_end(_p);
     return result;
@@ -505,7 +525,8 @@ public:
 
   __attribute__((always_inline)) T operator*() {
     int k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T>, this);
+    auto _p =
+        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T, C>, this);
     auto result = *limits_[k].first;
     noelle_pragma_end(_p);
     return result;
@@ -514,7 +535,7 @@ public:
   __attribute__((always_inline)) void operator++() {
     int k = 0;
     auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T>, this);
+        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T, C>, this);
     ++limits_[k].first;
     noelle_pragma_end(_p);
   }
@@ -532,8 +553,8 @@ public:
   }
 
 private:
-  Set<T> *base_;
-  std::vector<std::pair<SetSubIterator<T>, SetSubIterator<T>>> limits_;
+  Set<T, C> *base_;
+  std::vector<std::pair<SetSubIterator<T, C>, SetSubIterator<T, C>>> limits_;
 };
 
 } // namespace skynet
