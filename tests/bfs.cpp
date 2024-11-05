@@ -470,7 +470,7 @@ int main(int argc, char *argv[]) {
 
   TIMER_START("Total");
 
-  TIMER_START("Read");
+  TIMER_START("Build");
   auto g = Graph(input_file);
   TIMER_STOP();
 
@@ -479,7 +479,15 @@ int main(int argc, char *argv[]) {
   auto root = g.getRoot();
 
   TIMER_START("Kernel");
+  #ifdef BFS_FRONTIER
   int result = bfs_frontier(g, g.getRoot());
+  #elif defined BFS_MANUAL
+  int result = bfs_tc_manual(g, g.getRoot());
+  #elif defined BFS_MANUAL_OPT
+  int result = bfs_tc_manual_opt(g, g.getRoot());
+  #elif defined BFS_OMP
+  int result = bfs_lockfree(g, g.getRoot());
+  #endif
   cout << "res = " << result << endl;
   TIMER_STOP();
 
