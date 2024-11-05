@@ -1,0 +1,20 @@
+Universe = vanilla
+Requirements = Machine == "$ENV(machine).cs.northwestern.edu"
+Output = condor/$ENV(machine)/$(Cluster)_out.txt
+Error  = condor/$ENV(machine)/$(Cluster)_err.txt
+Log    = condor/$ENV(machine)/$(Cluster)_log.txt
+
+Environment = \
+  results_dir=results/$ENV(machine)/$(Cluster); \
+  bin_dir=condor/$ENV(machine)/$(Cluster)_bin; \
+  json=results/$ENV(machine)/summary.json;
+
+Executable = run.sh
+Rank = TARGET.Mips
+Copy_To_Spool = False
+Notification = error
+Getenv = True
++IsWholeMachineJob = true
++IsSuspensionJob   = false
+priority = 0
+Queue

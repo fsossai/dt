@@ -2,7 +2,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <fcntl.h>    // for open
+#include <fcntl.h> // for open
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -228,11 +228,11 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 
   int f_idx = 0;
   const int T = omp_get_max_threads();
-  #ifdef PADDING
+#ifdef PADDING
   constexpr int PAD = 16;
-  #else
+#else
   constexpr int PAD = 1;
-  #endif
+#endif
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
 #endif
@@ -240,7 +240,7 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
   skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
   skynet::clause_set_insert_bulk(T, nextFrontier);
   skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
-  skynet::clause_scalar_sum_bulk(T*PAD, &result);
+  skynet::clause_scalar_sum_bulk(T * PAD, &result);
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -260,7 +260,7 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
         for (auto *n : cell) {
           if (seen.find(n) == seenEnd) {
             seen.insert(n);
-            result.__sum(t*PAD, n->value);
+            result.__sum(t * PAD, n->value);
             for (auto *m : g.outgoingEdges(n)) {
               if (!enqueued.contains(m)) {
                 nextFrontier->__insert(t, m);
@@ -360,14 +360,21 @@ int bfs_lockfree(const Graph &g, Node *root) {
   current_frontiers = make_unique<vector<frontier_t>>(n_threads);
   next_frontiers = make_unique<vector<frontier_t>>(n_threads);
 
+#ifdef PADDING
+  const int PAD = 16;
+#else
+  const int PAD = 1;
+#endif
+
+  int sum[n_threads * PAD];
+
 #pragma omp parallel
   {
     int tid = omp_get_thread_num();
     (*current_frontiers)[tid].resize(n_threads);
     (*next_frontiers)[tid].resize(n_threads);
+    sum[tid * PAD] = 0;
   }
-
-  int sum = 0;
 
   (*current_frontiers)[skynet::hasher(root) % n_threads][0].push_back(root);
   rosters[skynet::hasher(root) % n_threads].insert(root);
@@ -391,7 +398,7 @@ int bfs_lockfree(const Graph &g, Node *root) {
 #endif
 
     has_work = false;
-#pragma omp parallel reduction(+ : sum) reduction(|| : has_work)
+#pragma omp parallel reduction(|| : has_work)
     {
       int tid = omp_get_thread_num();
       auto &tid_current_frontier = (*current_frontiers)[tid];
@@ -407,7 +414,7 @@ int bfs_lockfree(const Graph &g, Node *root) {
 #endif
             continue;
           }
-          sum += n->value;
+          sum[tid * PAD] += n->value;
           frontier_roster.insert(n);
 
           for (auto *m : g.outgoingEdges(n)) {
@@ -460,7 +467,12 @@ int bfs_lockfree(const Graph &g, Node *root) {
     swap(current_frontiers, next_frontiers);
   }
 
-  return sum;
+  int reduced_sum = sum[0];
+  for (int i = 1; i < n_threads; i++) {
+    reduced_sum += sum[i*PAD];
+  }
+
+  return reduced_sum;
 }
 
 int main(int argc, char *argv[]) {
@@ -484,15 +496,15 @@ int main(int argc, char *argv[]) {
   auto root = g.getRoot();
 
   TIMER_START("Kernel");
-  #ifdef BFS_FRONTIER
+#ifdef BFS_FRONTIER
   int result = bfs_frontier(g, g.getRoot());
-  #elif defined BFS_MANUAL
+#elif defined BFS_MANUAL
   int result = bfs_tc_manual(g, g.getRoot());
-  #elif defined BFS_MANUAL_OPT
+#elif defined BFS_MANUAL_OPT
   int result = bfs_tc_manual_opt(g, g.getRoot());
-  #elif defined BFS_OMP
+#elif defined BFS_OMP
   int result = bfs_lockfree(g, g.getRoot());
-  #endif
+#endif
   cout << "res = " << result << endl;
   TIMER_STOP();
 
