@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export machine="maudite"
+export machine="custom"
 export input_file="inputs/kronecker_20.bin"
 export runs=10
 export turboboost="on"
@@ -11,12 +11,12 @@ export note="turboboost $turboboost"
 export flags="-O3"
 
 _sequential_programs=(
-  bfs_frontier
+  # bfs_frontier
 )
 
 _parallel_programs=(
   bfs_omp
-  bfs_manual
+  # bfs_manual
   bfs_manual_opt
 )
 
@@ -40,6 +40,9 @@ case $machine in
     ;;
   tremens | maudite | guldendraak)
     export tspace="1 2 4 6 8"
+    ;;
+  custom)
+    export tspace="16"
     ;;
 esac
 

@@ -2,3 +2,4 @@
 **/*.ll
 **/*.out
 *.csv
+inputs/*.bin
