@@ -228,6 +228,11 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 
   int f_idx = 0;
   const int T = omp_get_max_threads();
+  #ifdef PADDING
+  constexpr int PAD = 16;
+  #else
+  constexpr int PAD = 1;
+  #endif
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
 #endif
@@ -235,7 +240,7 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
   skynet::clause_scalar_sum_bulk(T, &currentFrontier->storage_size_);
   skynet::clause_set_insert_bulk(T, nextFrontier);
   skynet::clause_scalar_sum_bulk(T, &nextFrontier->storage_size_);
-  skynet::clause_scalar_sum_bulk(T, &result);
+  skynet::clause_scalar_sum_bulk(T*PAD, &result);
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -255,7 +260,7 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
         for (auto *n : cell) {
           if (seen.find(n) == seenEnd) {
             seen.insert(n);
-            result.__sum(t, n->value);
+            result.__sum(t*PAD, n->value);
             for (auto *m : g.outgoingEdges(n)) {
               if (!enqueued.contains(m)) {
                 nextFrontier->__insert(t, m);

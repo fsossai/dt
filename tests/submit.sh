@@ -8,7 +8,7 @@ export KMP_AFFINITY="granularity=thread,balanced"
 # export LD_PRELOAD=libjemalloc.so
 # export note="using jemalloc, turboboost $turboboost"
 export note="turboboost $turboboost"
-export flags="-O3"
+export flags="-O3 -fno-exceptions -DPADDING"
 
 _sequential_programs=(
   # bfs_frontier
@@ -22,7 +22,6 @@ _parallel_programs=(
 
 export sequential_programs=${_sequential_programs[@]}
 export parallel_programs=${_parallel_programs[@]}
-# export programs=${program_selection[@]}
 export root=$(realpath .)
 
 case $machine in
@@ -42,7 +41,7 @@ case $machine in
     export tspace="1 2 4 6 8"
     ;;
   custom)
-    export tspace="16"
+    export tspace="4 8 16"
     ;;
 esac
 
