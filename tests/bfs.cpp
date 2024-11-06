@@ -506,6 +506,8 @@ int main(int argc, char *argv[]) {
   int result = bfs_tc_manual_opt(g, g.getRoot());
 #elif defined BFS_OMP
   int result = bfs_lockfree(g, g.getRoot());
+#else
+  int result = bfs_tc(g, g.getRoot());
 #endif
   cout << "res = " << result << endl;
   TIMER_STOP();

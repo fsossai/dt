@@ -305,10 +305,16 @@ void TerminatorAnalysis::populateLoopTags() {
     auto ID = LS->getID().value();
     auto BranchI = LS->getHeader()->getTerminator();
     auto p = LoopPF.findInnermostPragmaFor(BranchI);
-    auto args = p->getArguments();
-    assert(args.size() >= 1);
-    auto tag = cast<ConstantInt>(args[0]);
-    this->loopIdToTag[ID] = tag->getZExtValue();
+    if (p == nullptr) {
+      errs() << this->prefix << "WARNING: loop.id=" << ID
+             << " does not have a loop.tag attribute\n";
+      this->loopIdToTag[ID] = 0;
+    } else {
+      auto args = p->getArguments();
+      assert(args.size() >= 1);
+      auto tag = cast<ConstantInt>(args[0]);
+      this->loopIdToTag[ID] = tag->getZExtValue();
+    }
   }
 }
 
