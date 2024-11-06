@@ -10,3 +10,4 @@
 #include "Scalar.hpp"
 #include "Sequence.hpp"
 #include "Set.hpp"
+#include "Set2.hpp"

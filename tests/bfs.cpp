@@ -174,6 +174,7 @@ int bfs_tc_manual(const Graph &g, Node *root) {
     cout << " (size=" << currentFrontier->size() << ")\n";
     cout << result.get() << "\n";
     result.printInternals();
+    currentFrontier->printStats();
     cout << "\n";
 #endif
     auto _it2 = currentFrontier->begin();
