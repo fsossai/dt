@@ -20,7 +20,6 @@ int main(int argc, char *argv[]) {
   Set2<int> set;
 
   clause_set2_insert_bulk(T, &set);
-  clause_scalar_sum_bulk(T, &set.storage_size_);
 
   for (int t = 0; t < T; t++) {
     // for (int i = t * N / T; i < (t + 1) * N / T; i++) {
