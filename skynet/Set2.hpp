@@ -17,6 +17,12 @@
 #include "Scalar.hpp"
 #include "Set.hpp"
 
+#ifdef PADDING
+constexpr int PAD = 32;
+#else
+constexpr int PAD = 1;
+#endif
+
 namespace skynet {
 
 template <class T, SetCellContainerT C = SetT>
@@ -69,9 +75,13 @@ void clause_set2_insert_bulk(int N, Set2<T, C> *set) {
 
 template <class T, SetCellContainerT C = SetT>
 void clause_set2_op_plusplus_bulk(int N, Set2Iterator<T, C> *it) {
-  // The following assertion is there simply because I havne't thought about
-  // this scenario
+// The following assertion is there simply because I havne't thought about
+// this scenario
+#ifdef PADDING
+  assert(it->row_its_.size() == PAD);
+#else
   assert(it->row_its_.size() == 1);
+#endif
   it->reshape(N);
 }
 
@@ -312,9 +322,15 @@ public:
   }
 
   void reshape(int N) {
+#ifdef PADDING
+    if (row_its_.size() == N * PAD) {
+      return;
+    }
+#else
     if (row_its_.size() == N) {
       return;
     }
+#endif
     row_its_.clear();
     row_ends_.clear();
     cell_its_.clear();
@@ -340,7 +356,8 @@ public:
       } else {
         // there is at least one valid element in this row
         auto cell_it = row_it->begin();
-        auto cell_end = row_it->end();;
+        auto cell_end = row_it->end();
+        ;
         if (cell_it != cell_end) {
           seens_.back().insert(*cell_it);
         }
@@ -349,6 +366,14 @@ public:
       }
       row_its_.push_back(std::move(row_it));
       row_ends_.push_back(std::move(row_end));
+
+      for (int j = 0; j < PAD - 1; j++) {
+        row_its_.emplace_back();
+        row_ends_.emplace_back();
+        cell_its_.emplace_back();
+        cell_ends_.emplace_back();
+        seens_.emplace_back();
+      }
     }
 
     return;
@@ -399,10 +424,12 @@ public:
   }
 
   T __op_star(int k) {
+    k *= PAD;
     return *(cell_its_[k]);
   }
 
   void __op_plusplus(int k) {
+    k *= PAD;
     ++(cell_its_[k]);
     while (true) {
       if (cell_its_[k] == cell_ends_[k]) {
@@ -426,6 +453,7 @@ public:
   }
 
   bool __op_neq(int k, const Set2Iterator & /*other*/) const {
+    k *= PAD;
     return (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
   }
 
