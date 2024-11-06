@@ -170,7 +170,7 @@ public:
       conditional<C == SetT, std::unordered_set<T>, std::vector<T>>::type;
   using container_t = std::vector<cell_container_t>;
 
-  Set() : n_rows_(1), n_cols_(1), storage_size_(0) {
+  Set() : n_rows_(1), n_cols_(1) {
     container_.resize(n_rows_ * n_cols_);
     for (auto &row : container_) {
       row.resize(n_cols_);
@@ -185,11 +185,7 @@ public:
     if constexpr (C == SetT) {
       auto _p =
           noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
-      auto pair = container_[i][j].insert(value);
-
-      if (pair.second) { // insertion took place
-        storage_size_.sum(1);
-      }
+      container_[i][j].insert(value);
       noelle_pragma_end(_p);
     }
     if constexpr (C == VectorT) {
@@ -197,7 +193,6 @@ public:
           noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
       container_[i][j].push_back(value);
       noelle_pragma_end(_p);
-      storage_size_.sum(1);
     }
   }
 
@@ -272,15 +267,27 @@ public:
         cell.clear();
       }
     }
-    storage_size_.set(0);
   }
 
   size_t storageSize() const {
-    return storage_size_.get();
+    size_t s = 0;
+    for (auto &row : container_) {
+      for (auto &cell : row) {
+        s += cell.size();
+      }
+    }
+    return s;
   }
 
   bool empty() const {
-    return storage_size_.get() == 0;
+    for (auto &row : container_) {
+      for (auto &cell : row) {
+        if (!cell.empty()) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   SetIterator<T, C> begin() {
@@ -358,15 +365,10 @@ public:
     int i = hasher(value) % n_rows_;
 
     if constexpr (C == SetT) {
-      auto pair = container_[i][j].insert(value);
-
-      if (pair.second) { // insertion took place
-        storage_size_.__sum(j, 1);
-      }
+      container_[i][j].insert(value);
     }
     if constexpr (C == VectorT) {
       container_[i][j].push_back(value);
-      storage_size_.__sum(j, 1);
     }
   }
 
@@ -374,7 +376,6 @@ public:
   std::vector<std::vector<cell_container_t>> container_;
   size_t n_rows_;
   size_t n_cols_;
-  Scalar<size_t> storage_size_;
 };
 
 template <class T, SetCellContainerT C>
