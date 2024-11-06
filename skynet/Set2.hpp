@@ -25,7 +25,7 @@ class Set2;
 template <class T, SetCellContainerT C = SetT>
 class Set2Iterator;
 
-static inline int clause_empty() {
+inline int clause_empty() {
   return 0;
 }
 
@@ -68,29 +68,11 @@ void clause_set2_insert_bulk(int N, Set2<T, C> *set) {
 }
 
 template <class T, SetCellContainerT C = SetT>
-void clause_set2_op_plusplus_bulk(int N, Set2Iterator<T, C> *mit) {
-#ifdef DEBUG
-  std::printf("%s(%i, %p)\n", __func__, N, mit);
-#endif
-  // if (mit->limits_.size() == N) {
-  //   return;
-  // }
-  // // The following assertion is there simply because I havne't thought about
-  // // this scenario
-  // assert(mit->limits_.size() == 1);
-  //
-  // mit->limits_.clear();
-  // auto set = mit->base_;
-  //
-  // for (int i = 0; i < N; i++) {
-  //   mit->limits_.emplace_back(std::make_pair(Set2SubIterator(set, i, i + 1),
-  //                                            Set2SubIterator(set, i, i +
-  //                                            1)));
-  // }
-
-  // TODO
-
-  return;
+void clause_set2_op_plusplus_bulk(int N, Set2Iterator<T, C> *it) {
+  // The following assertion is there simply because I havne't thought about
+  // this scenario
+  assert(it->row_its_.size() == 1);
+  it->reshape(N);
 }
 
 template <class T, SetCellContainerT C>
@@ -313,19 +295,11 @@ public:
 
 template <class T, SetCellContainerT C>
 class Set2Iterator {
-  friend void clause_set2_op_plusplus_bulk<T, C>(int N,
-                                                 Set2Iterator<T, C> *range);
+  friend void clause_set2_op_plusplus_bulk<T, C>(int N, Set2Iterator<T, C> *it);
 
 public:
   Set2Iterator(Set2<T, C> *base) : base_(base) {
-    row_its_.push_back(base_->container_[0].begin());
-    row_ends_.push_back(base_->container_[0].end());
-    cell_its_.push_back(row_its_[0]->begin());
-    cell_ends_.push_back(row_its_[0]->end());
-    if (cell_its_[0] != cell_ends_[0]) {
-      seens_.emplace_back();
-      seens_[0].insert(*cell_its_[0]);
-    }
+    reshape(1);
   }
 
   Set2Iterator begin() {
@@ -336,11 +310,55 @@ public:
     return *this;
   }
 
+  void reshape(int N) {
+    if (row_its_.size() == N) {
+      return;
+    }
+    row_its_.clear();
+    row_ends_.clear();
+    cell_its_.clear();
+    cell_ends_.clear();
+    seens_.clear();
+    auto set = base_;
+
+    for (int i = 0; i < N; i++) {
+      // find first non-empty cell in the i-th row
+      auto &row = set->container_[i];
+      auto row_it = row.begin();
+      auto row_end = row.end();
+      for (; row_it != row_end; ++row_it) {
+        if (row_it->size() > 0) {
+          break;
+        }
+      }
+      seens_.emplace_back();
+      if (row_it == row_end) {
+        // i-th row is empty
+        cell_ends_.emplace_back();
+        cell_its_.push_back(cell_ends_.back());
+      } else {
+        // there is at least one valid element in this row
+        auto cell_it = row_it->begin();
+        auto cell_end = row_it->end();;
+        if (cell_it != cell_end) {
+          seens_.back().insert(*cell_it);
+        }
+        cell_its_.push_back(std::move(cell_it));
+        cell_ends_.push_back(std::move(cell_end));
+      }
+      row_its_.push_back(std::move(row_it));
+      row_ends_.push_back(std::move(row_end));
+    }
+
+    return;
+  }
+
   __attribute__((always_inline)) bool operator!=(
       const Set2Iterator & /*other*/) const {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
-    bool result = (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
+    bool result =
+        (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
     noelle_pragma_end(_p);
     return result;
   }
@@ -407,7 +425,7 @@ public:
   }
 
   bool __op_neq(int k, const Set2Iterator & /*other*/) const {
-    return !(row_its_[k] != row_ends_[k]) && !(cell_its_[k] != cell_ends_[k]);
+    return (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
   }
 
 private:
