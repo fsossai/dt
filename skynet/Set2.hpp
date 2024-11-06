@@ -318,12 +318,13 @@ class Set2Iterator {
 
 public:
   Set2Iterator(Set2<T, C> *base) : base_(base) {
-    row_it_ = base_->container_[0].begin();
-    row_end_ = base_->container_[0].end();
-    cell_it_ = row_it_->begin();
-    cell_end_ = row_it_->end();
-    if (cell_it_ != cell_end_) {
-      seen_.insert(*cell_it_);
+    row_its_.push_back(base_->container_[0].begin());
+    row_ends_.push_back(base_->container_[0].end());
+    cell_its_.push_back(row_its_[0]->begin());
+    cell_ends_.push_back(row_its_[0]->end());
+    if (cell_its_[0] != cell_ends_[0]) {
+      seens_.emplace_back();
+      seens_[0].insert(*cell_its_[0]);
     }
   }
 
@@ -339,7 +340,7 @@ public:
       const Set2Iterator & /*other*/) const {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
-    bool result = (row_it_ != row_end_) || (cell_it_ != cell_end_);
+    bool result = (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
     noelle_pragma_end(_p);
     return result;
   }
@@ -347,7 +348,7 @@ public:
   __attribute__((always_inline)) T operator*() {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
-    auto result = *cell_it_;
+    auto result = *(cell_its_[k]);
     noelle_pragma_end(_p);
     return result;
   }
@@ -355,23 +356,23 @@ public:
   __attribute__((always_inline)) void operator++() {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
-    ++cell_it_;
+    ++(cell_its_[k]);
     while (true) {
-      if (cell_it_ == cell_end_) {
-        ++row_it_;
-        if (row_it_ == row_end_) {
+      if (cell_its_[k] == cell_ends_[k]) {
+        ++(row_its_[k]);
+        if (row_its_[k] == row_ends_[k]) {
           break;
         } else {
-          cell_it_ = row_it_->begin();
-          cell_end_ = row_it_->end();
+          cell_its_[k] = row_its_[k]->begin();
+          cell_ends_[k] = row_its_[k]->end();
         }
       } else {
-        const auto &e = *cell_it_;
-        if (seen_.find(e) == seen_.end()) {
-          seen_.insert(e);
+        const auto &e = *(cell_its_[k]);
+        if (seens_[k].find(e) == seens_[k].end()) {
+          seens_[k].insert(e);
           break;
         } else {
-          ++cell_it_;
+          ++(cell_its_[k]);
         }
       }
     }
@@ -379,15 +380,34 @@ public:
   }
 
   T __op_star(int k) {
-    return *cell_it_;
+    return *(cell_its_[k]);
   }
 
   void __op_plusplus(int k) {
-    // TODO
+    ++(cell_its_[k]);
+    while (true) {
+      if (cell_its_[k] == cell_ends_[k]) {
+        ++(row_its_[k]);
+        if (row_its_[k] == row_ends_[k]) {
+          break;
+        } else {
+          cell_its_[k] = row_its_[k]->begin();
+          cell_ends_[k] = row_its_[k]->end();
+        }
+      } else {
+        const auto &e = *(cell_its_[k]);
+        if (seens_[k].find(e) == seens_[k].end()) {
+          seens_[k].insert(e);
+          break;
+        } else {
+          ++(cell_its_[k]);
+        }
+      }
+    }
   }
 
   bool __op_neq(int k, const Set2Iterator & /*other*/) const {
-    return !(row_it_ != row_end_) && !(cell_it_ != cell_end_);
+    return !(row_its_[k] != row_ends_[k]) && !(cell_its_[k] != cell_ends_[k]);
   }
 
 private:
@@ -396,12 +416,11 @@ private:
   using cell_it_t = typename Set2<T, C>::cell_container_t::iterator;
 
   Set2<T, C> *base_;
-  cell_it_t cell_it_;
-  cell_it_t cell_end_;
-  row_it_t row_it_;
-  row_it_t row_end_;
-  // std::vector<std::unordered_set<T>> seen_;
-  std::unordered_set<T> seen_;
+  std::vector<cell_it_t> cell_its_;
+  std::vector<cell_it_t> cell_ends_;
+  std::vector<row_it_t> row_its_;
+  std::vector<row_it_t> row_ends_;
+  std::vector<std::unordered_set<T>> seens_;
 };
 
 } // namespace skynet
