@@ -48,6 +48,13 @@ static cl::opt<bool> Details("terminator-details",
                              cl::Hidden,
                              cl::desc("Show analysis details"));
 
+static cl::opt<bool> TaggedOnly(
+    "terminator-tagged-only",
+    cl::ZeroOrMore,
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("Only terminate loops with a loop.tag attribute"));
+
 static cl::opt<bool> CraftPlan(
     "terminator-craft-plan",
     cl::ZeroOrMore,
@@ -158,9 +165,15 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   auto heuristics = getAnalysis<HeuristicsPass>().getHeuristics(noelle);
 
   for (auto *LS : relevantLoops) {
+    auto LD = TA.getLoopDescription(LS);
+    if (TaggedOnly) {
+      if (TA.getLoopTag(LS) == 0) {
+        errs() << this->prefix << "Skipping " << LD << "\n";
+        continue;
+      }
+    }
     auto LC = TA.fetchLoopContent(LS);
     assert(LC != nullptr);
-    auto LD = TA.getLoopDescription(LS);
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
 
     errs() << this->prefix << "Loop" << LD
@@ -240,13 +253,13 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     // At this point, this is the preheader of the new loop introduced
     // by the loop blocking transformation.
     auto PreHeader = LS->getPreHeader();
+    auto ClauseInsertionPoint = PreHeader->getTerminator();
 
     // Applying termination clauses
     int clauseID = 0;
     for (auto clause : TA.getClausesOf(LS)) {
       errs() << this->prefix << "Loop" << LD << ": Handling: ";
       clause->print(errs()) << "\n";
-      Builder.SetInsertPoint(PreHeader->getTerminator());
       if (clause->isStrong()) {
         // This kind of clauses don't need to be handled
         continue;
@@ -266,7 +279,6 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
           continue;
         }
         auto CurrentDef = dyn_cast<Instruction>(A);
-        auto ClauseInsertionPoint = NewHeader->getTerminator();
 
         // Construct the def-use chain back to the origin
         stack<Instruction *> defUseChain;
@@ -300,23 +312,28 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       }
 
       // The first argument is always `NumBlocks` by contract
+      // errs() << "NEW HEADER\n";
+      // errs() << *NewHeader << "\n";
       AdjustedCallArgs.insert(AdjustedCallArgs.begin(),
                               ConstantInt::get(NewIVPHI->getType(), NumBlocks));
+      Builder.SetInsertPoint(ClauseInsertionPoint);
       Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
       // Type manipulation of the `t` induction variable
-      auto SrcTy = NewIVPHI->getType();
-      Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      auto DestTy = clause->getVariable()->getType()->getPointerElementType();
-      Value *CastedIV;
-      if (SrcTy->getIntegerBitWidth() < DestTy->getIntegerBitWidth()) {
-        CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
-      } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth()) {
-        CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
-      } else {
-        CastedIV = NewIVPHI;
-      }
-      Builder.CreateStore(CastedIV, clause->getVariable());
+      // auto SrcTy = NewIVPHI->getType();
+      // Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
+      // auto DestTy =
+      // clause->getVariable()->getType()->getPointerElementType(); Value
+      // *CastedIV; if (SrcTy->getIntegerBitWidth() <
+      // DestTy->getIntegerBitWidth()) {
+      //   CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
+      // } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth())
+      // {
+      //   CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
+      // } else {
+      //   CastedIV = NewIVPHI;
+      // }
+      // Builder.CreateStore(CastedIV, clause->getVariable());
       clauseID++;
     }
 

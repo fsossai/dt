@@ -274,8 +274,9 @@ unordered_set<TClause *> TerminatorAnalysis::getClausesOf(
 string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
   auto ID = LS->getID().value();
   auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
-  return "(id=" + to_string(ID) + ", tag=" + to_string(this->loopIdToTag[ID])
-         + ", order=" + order + ")";
+  auto tag =
+      (this->loopIdToTag[ID] == 0) ? "" : to_string(this->loopIdToTag[ID]);
+  return "(id=" + to_string(ID) + ", tag=" + tag + ", order=" + order + ")";
 }
 
 DoallTag TerminatorAnalysis::getDoallTag(LoopStructure *LS) {
@@ -316,6 +317,14 @@ void TerminatorAnalysis::populateLoopTags() {
       this->loopIdToTag[ID] = tag->getZExtValue();
     }
   }
+}
+
+uint64_t TerminatorAnalysis::getLoopTag(LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  if (loopIdToTag.find(ID) != loopIdToTag.end()) {
+    return loopIdToTag[ID];
+  }
+  return 0;
 }
 
 } // namespace arcana::dt

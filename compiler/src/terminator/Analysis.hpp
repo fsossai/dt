@@ -73,6 +73,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   DoallTag getDoallTag(noelle::LoopStructure *LS);
 
+  uint64_t getLoopTag(noelle::LoopStructure *LS);
+
   bool details;
 
 private:
