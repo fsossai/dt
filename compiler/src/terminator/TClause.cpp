@@ -29,11 +29,15 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
 
     assert(isa<Function>(pragmaArgs[2]));
     this->function = cast<Function>(pragmaArgs[2]);
-    assert(this->function->getReturnType() == dstType);
+    assert(this->function->getReturnType()->isVoidTy());
 
     // Remaining arguments are arguments of the clause function
-    assert(this->function->arg_size() == (pragmaArgs.size() - 3));
+    assert(this->function->arg_size() == (pragmaArgs.size() - 3 + 1));
     auto arg_it = this->function->arg_begin();
+    // The first argument is the number of blocks
+    auto &context = this->function->getContext();
+    assert(arg_it->getType() == IntegerType::getInt32Ty(context));
+    ++arg_it;
     for (size_t i = 3; i < pragmaArgs.size(); i++) {
       // The type of the arguments provided to the clause must be compatible
       // with the signature of the clause function

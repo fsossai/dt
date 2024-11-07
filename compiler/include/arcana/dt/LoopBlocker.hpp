@@ -6,6 +6,6 @@
 
 namespace arcana::dt {
 
-llvm::BasicBlock *blockLoop(noelle::LoopContent *LC, int numBlocks);
+llvm::BasicBlock *blockLoop(noelle::LoopContent *LC, int numBlocks, llvm::PHINode **NewIVPHI = nullptr);
 
 } // namespace arcana::gino

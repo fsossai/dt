@@ -12,10 +12,8 @@ template <typename T>
 class Sequence;
 
 template <typename T>
-int clause_sequence_append(Sequence<T> *seq) {
-  seq->k_++;
-  seq->container_.emplace_back();
-  return seq->k_;
+void clause_sequence_append(int N, Sequence<T> *seq) {
+  seq->container_.resize(N);
 }
 
 template <class T>
@@ -24,7 +22,7 @@ public:
   template <typename U>
   using ContainerType = std::vector<U>;
 
-  friend int clause_sequence_append<T>(Sequence<T> *base);
+  friend void clause_sequence_append<T>(int N, Sequence<T> *base);
 
   class Iterator {
   public:

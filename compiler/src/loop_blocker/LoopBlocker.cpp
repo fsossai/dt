@@ -11,7 +11,7 @@ using namespace arcana::noelle;
 
 namespace arcana::dt {
 
-BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
+BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
   auto LS = LC->getLoopStructure();
   auto IVM = LC->getInductionVariableManager();
   auto LGIV = IVM->getLoopGoverningInductionVariable(*LC->getLoopStructure());
@@ -179,6 +179,10 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks) {
   auto OuterCmp =
       Builder.CreateICmpSLT(LGOuterPHI, ConstantInt::get(OuterTy, numBlocks));
   Builder.CreateCondBr(OuterCmp, InnerHeader, ExitBB);
+
+  if (NewIVPHI != nullptr) {
+    *NewIVPHI = LGOuterPHI;
+  }
 
   // errs() << *F << "\n";
 

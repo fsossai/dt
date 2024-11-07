@@ -229,19 +229,17 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   for (auto LC : terminationTargetLCs) {
     auto LS = LC->getLoopStructure();
-    BasicBlock *NewHeader = blockLoop(LC, NumBlocks);
+    PHINode *NewIVPHI = nullptr;
+    BasicBlock *NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
     auto LD = TA.getLoopDescription(LS);
     assert(NewHeader != nullptr && "Failed to block to loop");
+    assert(NewIVPHI != nullptr);
     errs() << this->prefix << "Loop" << LD << ": Blocks: " << NumBlocks << "\n";
-
-    auto &FirstPHI = *NewHeader->phis().begin();
 
     // The old preheader is still stored in LS.
     // At this point, this is the preheader of the new loop introduced
     // by the loop blocking transformation.
     auto PreHeader = LS->getPreHeader();
-    auto Zero = Builder.getInt32(0);
-    auto ID = LS->getID().value();
 
     // Applying termination clauses
     int clauseID = 0;
@@ -253,15 +251,6 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         // This kind of clauses don't need to be handled
         continue;
       }
-      auto ClauseFuncName = clause->getFunction()->getName().str();
-      auto ClausePtrTy = clause->getVariable()->getType();
-      auto ClauseElemTy = ClausePtrTy->getPointerElementType();
-      auto ArrayTy = ArrayType::get(ClauseElemTy, NumBlocks);
-      auto TCValuesName = "TCValues." + clause->getUniqueName() + ".loopid."
-                          + to_string(ID) + "." + ClauseFuncName;
-
-      Builder.CreateLoad(ClauseElemTy, clause->getVariable());
-      auto TCValues = Builder.CreateAlloca(ArrayTy, nullptr, TCValuesName);
 
       // Solving for an earlier location of the arguments.
       // By contract, we must find a pointer value that dominates
@@ -313,26 +302,14 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       // Creating a new value for each clause variable.
       // This is achieved by generating the necessary calls
       // to the clause function
-      for (int i = 0; i < NumBlocks; i++) {
-        auto GEP = Builder.CreateInBoundsGEP(ArrayTy,
-                                             TCValues,
-                                             { Zero, Builder.getInt32(i) });
-        if (i == 0) {
-          Builder.CreateStore(clause->getDefaultValue(), GEP);
-        } else {
-          auto TCValue =
-              Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
-          Builder.CreateStore(TCValue, GEP);
-        }
-      }
+      // The first argument is always `NumBlocks` by contract
+      AdjustedCallArgs.insert(AdjustedCallArgs.begin(), Builder.getInt32(NumBlocks));
+      Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
       // Patching the clause variable with a value from TCValues
       Builder.SetInsertPoint(NewHeader->getTerminator());
-      auto GEP =
-          Builder.CreateInBoundsGEP(ArrayTy, TCValues, { Zero, &FirstPHI });
-      auto LoadTCValue = Builder.CreateLoad(ClauseElemTy, GEP);
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      Builder.CreateStore(LoadTCValue, clause->getVariable());
+      Builder.CreateStore(NewIVPHI, clause->getVariable());
       clauseID++;
     }
 

@@ -45,7 +45,7 @@ public:
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
     auto _p =
-        noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
+        noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum_bulk<T>, this);
     container_[k] += x;
     noelle_pragma_end(_p);
   }
