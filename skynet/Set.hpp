@@ -250,16 +250,6 @@ public:
     std::cout << "redundancyFactor = " << redundancy << "\n";
 
     for (int i = 0; i < n_rows_; i++) {
-      int count = 0;
-      auto it = SetSubIterator(this, i, i + 1);
-      auto end = it;
-      for (; it != end; ++it) {
-        count++;
-      }
-      std::cout << "row." << i << ".size = " << count << " ";
-      std::printf("(%.1f %%)\n", 100. * count / size_local);
-    }
-    for (int i = 0; i < n_rows_; i++) {
       size_t count = 0;
       for (int j = 0; j < n_cols_; j++) {
         count += container_[i][j].size();
@@ -381,7 +371,8 @@ public:
 
   __attribute__((always_inline)) void operator++() {
     int k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
+    auto _p =
+        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T, C>, this);
     ++(cell_its_[k]);
     while (true) {
       if (cell_its_[k] == cell_ends_[k]) {
