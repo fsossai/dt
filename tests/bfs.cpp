@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "ScopeTimer.hpp"
-#include "Set.hpp"
 #include "Skynet.hpp"
 #include "arcana/noelle/core/Pragma.h"
 
@@ -155,9 +154,9 @@ int bfs_frontier(const Graph &g, Node *root) {
 }
 
 int bfs_tc_manual(const Graph &g, Node *root) {
-  skynet::Set2<Node *, skynet::SetT> enqueued;
-  auto currentFrontier = new skynet::Set2<Node *, skynet::VectorT>();
-  auto nextFrontier = new skynet::Set2<Node *, skynet::VectorT>();
+  skynet::Set<Node *, skynet::SetT> enqueued;
+  auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
+  auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
 
   skynet::Scalar<int> result(0);
   currentFrontier->insert(root);
@@ -184,10 +183,10 @@ int bfs_tc_manual(const Graph &g, Node *root) {
 #endif
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
-    skynet::clause_set2_insert_bulk(T, currentFrontier);
-    skynet::clause_set2_insert_bulk(T, nextFrontier);
-    skynet::clause_set2_op_plusplus_bulk(T, &_it2);
-    skynet::clause_scalar_sum_bulk(T * PAD, &result);
+    skynet::clause_set_insert(T, currentFrontier);
+    skynet::clause_set_insert(T, nextFrontier);
+    skynet::clause_set_op_plusplus(T, &_it2);
+    skynet::clause_scalar_sum(T * PAD, &result);
 #pragma omp parallel num_threads(T)
 #pragma omp for
     for (int t = 0; t < T; t++) {
@@ -222,9 +221,9 @@ int bfs_tc_manual(const Graph &g, Node *root) {
 }
 
 int bfs_tc_manual_opt(const Graph &g, Node *root) {
-  skynet::Set2<Node *, skynet::SetT> enqueued;
-  auto currentFrontier = new skynet::Set2<Node *, skynet::VectorT>();
-  auto nextFrontier = new skynet::Set2<Node *, skynet::VectorT>();
+  skynet::Set<Node *, skynet::SetT> enqueued;
+  auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
+  auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
 
   skynet::Scalar<int> result(0);
   currentFrontier->insert(root);
@@ -240,9 +239,9 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
 #endif
-  skynet::clause_set2_insert_bulk(T, currentFrontier);
-  skynet::clause_set2_insert_bulk(T, nextFrontier);
-  skynet::clause_scalar_sum_bulk(T * PAD, &result);
+  skynet::clause_set_insert(T, currentFrontier);
+  skynet::clause_set_insert(T, nextFrontier);
+  skynet::clause_scalar_sum(T * PAD, &result);
   while (!currentFrontier->empty()) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
     cout << "--- processing frontier " << f_idx;
@@ -327,9 +326,7 @@ int bfs_tc(const Graph &g, Node *root) {
     noelle_pragma_end(p2);
     auto p4 = noelle_pragma_begin("loop.tag", 4);
     auto p41 = noelle_pragma_begin("loop.doall", "no");
-    // for (auto m : *nextFrontier) {
-    //   enqueued.insert(m);
-    // }
+
     enqueued.insert(*nextFrontier);
     noelle_pragma_end(p41);
     noelle_pragma_end(p4);

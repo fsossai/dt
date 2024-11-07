@@ -14,7 +14,13 @@
 
 #include "arcana/noelle/core/Pragma.h"
 
-#include "Scalar.hpp"
+#include "Hasher.hpp"
+
+#ifdef PADDING
+constexpr int PAD = 32;
+#else
+constexpr int PAD = 1;
+#endif
 
 namespace skynet {
 
@@ -24,29 +30,14 @@ template <class T, SetCellContainerT C = SetT>
 class Set;
 
 template <class T, SetCellContainerT C = SetT>
-class SetSubIterator;
-
-template <class T, SetCellContainerT C = SetT>
 class SetIterator;
 
-template <class T, SetCellContainerT C = SetT>
-int clause_set_insert(Set<T, C> *set) {
-#ifdef DEBUG
-  std::printf("%s(%p)\n", __func__, set);
-#endif
-  set->n_rows_++;
-  set->n_cols_++;
-  set->container_.resize(set->n_rows_);
-  for (auto &row : set->container_) {
-    row.resize(set->n_cols_);
-  }
-  // TODO handle previously_inserted elements
-  assert(false);
-  return set->n_rows_ - 1;
+inline int clause_empty(int /*N*/) {
+  return 0;
 }
 
 template <class T, SetCellContainerT C = SetT>
-void clause_set_insert_bulk(int N, Set<T, C> *set) {
+void clause_set_insert(int N, Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, set);
 #endif
@@ -65,104 +56,23 @@ void clause_set_insert_bulk(int N, Set<T, C> *set) {
   for (auto e : previously_inserted) {
     set->insert(e);
   }
-  return;
 }
 
 template <class T, SetCellContainerT C = SetT>
-void clause_set_insert_all_bulk(int N, Set<T, C> *set) {
-#ifdef DEBUG
-  std::printf("%s(%i, %p)\n", __func__, N, set);
+void clause_set_op_plusplus(int N, SetIterator<T, C> *it) {
+// The following assertion is there simply because I havne't thought about
+// this scenario
+#ifdef PADDING
+  assert(it->row_its_.size() == PAD);
+#else
+  assert(it->row_its_.size() == 1);
 #endif
-  if (set->n_cols_ == N) {
-    return;
-  }
-  assert(set->n_cols_ == 1);
-  assert(set->n_rows_ == 1);
-  set->n_rows_ = 1;
-  set->n_cols_ = N;
-  set->container_.resize(1);
-  for (auto &row : set->container_) {
-    row.resize(N);
-  }
-  return;
+  it->reshape(N);
 }
-
-template <class T, SetCellContainerT C = SetT>
-int clause_set_op_plusplus(SetIterator<T, C> *mit) {
-#ifdef DEBUG
-  std::printf("%s(%p)\n", __func__, mit);
-#endif
-  const int N = mit->base_->n_rows_;
-  const int M = mit->limits_.size() + 1;
-  mit->limits_.clear();
-  auto set = mit->base_;
-
-  for (int i = 0; i < M; i++) {
-    int row_begin = i * N / M;
-    int row_end = (i + 1) * N / M;
-    mit->limits_.emplace_back(
-        std::make_pair(SetSubIterator(set, row_begin, row_end),
-                       SetSubIterator(set, row_begin, row_end)));
-  }
-
-  return M - 1;
-}
-
-template <class T, SetCellContainerT C = SetT>
-void clause_set_op_plusplus_bulk(int N, SetIterator<T, C> *mit) {
-#ifdef DEBUG
-  std::printf("%s(%i, %p)\n", __func__, N, mit);
-#endif
-  if (mit->limits_.size() == N) {
-    return;
-  }
-  // The following assertion is there simply because I havne't thought about
-  // this scenario
-  assert(mit->limits_.size() == 1);
-
-  mit->limits_.clear();
-  auto set = mit->base_;
-
-  for (int i = 0; i < N; i++) {
-    mit->limits_.emplace_back(std::make_pair(SetSubIterator(set, i, i + 1),
-                                             SetSubIterator(set, i, i + 1)));
-  }
-
-  return;
-}
-
-template <class T, SetCellContainerT C = SetT>
-int clause_set_op_neq(SetIterator<T, C> *mit) {
-#ifdef DEBUG
-  std::printf("%s(%p)\n", __func__, mit);
-#endif
-  return mit->limits_.size() - 1;
-}
-
-template <class T, SetCellContainerT C = SetT>
-int clause_set_op_star(SetIterator<T, C> *mit) {
-#ifdef DEBUG
-  std::printf("%s(%p)\n", __func__, mit);
-#endif
-  return mit->limits_.size() - 1;
-}
-
-template <typename T>
-typename std::enable_if<std::is_pointer<T>::value, int>::type hasher(T val) {
-  return (reinterpret_cast<uint64_t>(val) * 14695981039346656037ULL)
-         >> (64 - 11);
-};
-
-template <typename T>
-typename std::enable_if<std::is_arithmetic<T>::value, int>::type hasher(T val) {
-  return val;
-};
 
 template <class T, SetCellContainerT C>
 class Set {
-  friend int clause_set_insert<T, C>(Set<T, C> *set);
-  friend void clause_set_insert_bulk<T, C>(int N, Set<T, C> *set);
-  friend class SetSubIterator<T, C>;
+  friend void clause_set_insert<T, C>(int N, Set<T, C> *set);
   friend class SetIterator<T, C>;
 
 public:
@@ -379,132 +289,12 @@ public:
 };
 
 template <class T, SetCellContainerT C>
-class SetSubIterator {
-public:
-  SetSubIterator(Set<T, C> *base, int row_begin, int row_end)
-    : base_(base),
-      row_idx_(row_begin),
-      col_idx_(0),
-      n_rows_(base->n_rows_),
-      n_cols_(base->n_cols_),
-      row_begin_(0),
-      row_end_(row_end) {
-    row_ = &base->container_[0];
-    end_ = base->container_[row_end - 1][n_cols_ - 1].end();
-    reset_cell_iterators_();
-    produce_next_iterator_();
-  }
-
-  T operator*() {
-    return *it_;
-  }
-
-  SetSubIterator &operator++() {
-    ++it_;
-    produce_next_iterator_();
-    return *this;
-  }
-
-  bool operator!=(const SetSubIterator &other) const {
-    return it_ != other.end_;
-  }
-
-private:
-  bool reached_last_cell_() const {
-    return (row_idx_ == row_end_ - 1) && (col_idx_ == n_cols_ - 1);
-  }
-
-  bool reached_cell_end_() const {
-    return it_ == cell_end_;
-  }
-
-  bool reached_end_() const {
-    return it_ == end_;
-  }
-
-  bool already_seen_() const {
-    return anti_duplicates_.find(*it_) != anti_duplicates_.end();
-  }
-
-  void reset_seen_set_() {
-    anti_duplicates_.clear();
-  }
-
-  void reset_cell_iterators_() {
-    row_ = &base_->container_[row_idx_];
-    auto &cell = (*row_).at(col_idx_);
-    it_ = cell.begin();
-    cell_end_ = cell.end();
-  }
-
-  void mark_current_element_as_seen_() {
-    anti_duplicates_.insert(*it_);
-  }
-
-  void move_to_next_cell_() {
-    if (col_idx_ == n_cols_ - 1) {
-      col_idx_ = 0;
-      row_idx_++;
-    } else {
-      col_idx_++;
-    }
-    reset_cell_iterators_();
-  }
-
-  __attribute__((always_inline)) void produce_next_iterator_() {
-    bool moved;
-    do {
-      moved = false;
-
-      // find the next non-empty cell
-      while (reached_cell_end_() && !reached_last_cell_()) {
-        move_to_next_cell_();
-        if (col_idx_ == 0) {
-          reset_seen_set_();
-        }
-      }
-
-      // find the next unseen element
-      if (!reached_cell_end_()) {
-        if (already_seen_()) {
-          it_++;
-          moved = true;
-        }
-      }
-    } while (moved);
-
-    if (!reached_last_cell_() && !reached_end_()) {
-      mark_current_element_as_seen_();
-    }
-  }
-
-  Set<T, C> *base_;
-  size_t row_idx_;
-  size_t col_idx_;
-  size_t n_rows_;
-  size_t n_cols_;
-  std::vector<typename Set<T, C>::cell_container_t> *row_;
-  typename Set<T, C>::cell_container_t::iterator it_;
-  typename Set<T, C>::cell_container_t::iterator cell_end_;
-  typename Set<T, C>::cell_container_t::iterator end_;
-  std::unordered_set<T> anti_duplicates_;
-  int row_begin_;
-  int row_end_;
-};
-
-template <class T, SetCellContainerT C>
 class SetIterator {
-  friend int clause_set_op_plusplus<T, C>(SetIterator<T, C> *range);
-  friend void clause_set_op_plusplus_bulk<T, C>(int N,
-                                                SetIterator<T, C> *range);
-  friend int clause_set_op_neq<T, C>(SetIterator<T, C> *range);
-  friend int clause_set_op_star<T, C>(SetIterator<T, C> *range);
+  friend void clause_set_op_plusplus<T, C>(int N, SetIterator<T, C> *it);
 
 public:
   SetIterator(Set<T, C> *base) : base_(base) {
-    limits_.emplace_back(
-        std::make_pair(SetSubIterator(base, 0, base->n_rows_),
-                       SetSubIterator(base, 0, base->n_rows_)));
+    reshape(1);
   }
 
   SetIterator begin() {
@@ -515,47 +305,153 @@ public:
     return *this;
   }
 
+  void reshape(int N) {
+#ifdef PADDING
+    if (row_its_.size() == N * PAD) {
+      return;
+    }
+#else
+    if (row_its_.size() == N) {
+      return;
+    }
+#endif
+    row_its_.clear();
+    row_ends_.clear();
+    cell_its_.clear();
+    cell_ends_.clear();
+    seens_.clear();
+    auto set = base_;
+
+    for (int i = 0; i < N; i++) {
+      // find first non-empty cell in the i-th row
+      auto &row = set->container_[i];
+      auto row_it = row.begin();
+      auto row_end = row.end();
+      for (; row_it != row_end; ++row_it) {
+        if (row_it->size() > 0) {
+          break;
+        }
+      }
+      seens_.emplace_back();
+      if (row_it == row_end) {
+        // i-th row is empty
+        cell_ends_.emplace_back();
+        cell_its_.push_back(cell_ends_.back());
+      } else {
+        // there is at least one valid element in this row
+        auto cell_it = row_it->begin();
+        auto cell_end = row_it->end();
+        ;
+        if (cell_it != cell_end) {
+          seens_.back().insert(*cell_it);
+        }
+        cell_its_.push_back(std::move(cell_it));
+        cell_ends_.push_back(std::move(cell_end));
+      }
+      row_its_.push_back(std::move(row_it));
+      row_ends_.push_back(std::move(row_end));
+
+      for (int j = 0; j < PAD - 1; j++) {
+        row_its_.emplace_back();
+        row_ends_.emplace_back();
+        cell_its_.emplace_back();
+        cell_ends_.emplace_back();
+        seens_.emplace_back();
+      }
+    }
+
+    return;
+  }
+
   __attribute__((always_inline)) bool operator!=(
       const SetIterator & /*other*/) const {
     int k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_set_op_neq<T, C>, this);
-    auto result = limits_[k].first != limits_[k].second;
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
+    bool result =
+        (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
     noelle_pragma_end(_p);
     return result;
   }
 
   __attribute__((always_inline)) T operator*() {
     int k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_star<T, C>, this);
-    auto result = *limits_[k].first;
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
+    auto result = *(cell_its_[k]);
     noelle_pragma_end(_p);
     return result;
   }
 
   __attribute__((always_inline)) void operator++() {
     int k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T, C>, this);
-    ++limits_[k].first;
+    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
+    ++(cell_its_[k]);
+    while (true) {
+      if (cell_its_[k] == cell_ends_[k]) {
+        ++(row_its_[k]);
+        if (row_its_[k] == row_ends_[k]) {
+          break;
+        } else {
+          cell_its_[k] = row_its_[k]->begin();
+          cell_ends_[k] = row_its_[k]->end();
+        }
+      } else {
+        const auto &e = *(cell_its_[k]);
+        if (seens_[k].find(e) == seens_[k].end()) {
+          seens_[k].insert(e);
+          break;
+        } else {
+          ++(cell_its_[k]);
+        }
+      }
+    }
     noelle_pragma_end(_p);
   }
 
   T __op_star(int k) {
-    return *limits_[k].first;
+    k *= PAD;
+    return *(cell_its_[k]);
   }
 
   void __op_plusplus(int k) {
-    ++limits_[k].first;
+    k *= PAD;
+    ++(cell_its_[k]);
+    while (true) {
+      if (cell_its_[k] == cell_ends_[k]) {
+        ++(row_its_[k]);
+        if (row_its_[k] == row_ends_[k]) {
+          break;
+        } else {
+          cell_its_[k] = row_its_[k]->begin();
+          cell_ends_[k] = row_its_[k]->end();
+        }
+      } else {
+        const auto &e = *(cell_its_[k]);
+        if (seens_[k].find(e) == seens_[k].end()) {
+          seens_[k].insert(e);
+          break;
+        } else {
+          ++(cell_its_[k]);
+        }
+      }
+    }
   }
 
   bool __op_neq(int k, const SetIterator & /*other*/) const {
-    return limits_[k].first != limits_[k].second;
+    k *= PAD;
+    return (row_its_[k] != row_ends_[k]) || (cell_its_[k] != cell_ends_[k]);
   }
 
 private:
+  using row_it_t =
+      typename std::vector<typename Set<T, C>::cell_container_t>::iterator;
+  using cell_it_t = typename Set<T, C>::cell_container_t::iterator;
+
   Set<T, C> *base_;
-  std::vector<std::pair<SetSubIterator<T, C>, SetSubIterator<T, C>>> limits_;
+  std::vector<cell_it_t> cell_its_;
+  std::vector<cell_it_t> cell_ends_;
+  std::vector<row_it_t> row_its_;
+  std::vector<row_it_t> row_ends_;
+  std::vector<std::unordered_set<T>> seens_;
 };
 
 } // namespace skynet
