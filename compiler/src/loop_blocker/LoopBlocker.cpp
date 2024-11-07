@@ -23,18 +23,24 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
   auto &Context = F->getContext();
   IRBuilder<> Builder(Context);
 
-  assert(LS->numberOfExitBasicBlocks() == 1);
-
   auto IVs = IVM->getInductionVariables();
 
-  auto ExitBB = LS->getLoopExitBasicBlocks()[0];
   auto InnerHeader = LS->getHeader();
   auto InnerPreheader = LS->getPreHeader();
-
 
   auto OuterHeader = BasicBlock::Create(Context, "", F);
 
   Value *InnerOriginalStartIdx = nullptr;
+
+  errs() << "=========================================================\n";
+  errs() << "NUM LATCHES = " << LS->getLatches().size() << "\n";
+
+  for (auto IV : IVM->getInductionVariables()) {
+    errs() << "IV\n";
+    for (auto PHI : IV->getPHIs()) {
+      errs() << " PHI" << *PHI << "\n";
+    }
+  }
 
   if (LGInnerPHI) {
     errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
@@ -58,63 +64,104 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
   }
 
   auto OuterLatch = BasicBlock::Create(Context, "", F);
-  InnerHeader->getTerminator()->replaceSuccessorWith(ExitBB, OuterLatch);
+
+  // When exiting the loop, we now go to the latch of the outermost loop
+
+  // I haven't thought about how to handle a more general case
+  assert(LS->getLoopExitBasicBlocks().size() == 1);
+  auto ExitBB = LS->getLoopExitBasicBlocks()[0];
+  for (auto [BB, E] : LS->getLoopExitEdges()) {
+    assert(E == ExitBB);
+    BB->getTerminator()->replaceSuccessorWith(ExitBB, OuterLatch);
+  }
+  auto InnerHeaderSuccInLoop = LS->getSuccessorWithinLoopOfTheHeader();
+  for (auto BB : successors(InnerHeader)) {
+    if (BB != InnerHeaderSuccInLoop) {
+      InnerHeader->getTerminator()->replaceSuccessorWith(BB, OuterLatch);
+    }
+  }
 
   // PHI associated to Loop-Governing IV of outer loop
   PHINode *LGOuterPHI = nullptr;
 
-  Builder.SetInsertPoint(OuterHeader);
-  for (auto &I : *InnerHeader) {
-    if (auto *InnerPHI = dyn_cast<PHINode>(&I)) {
-      // Duplicate the InnerPHI in the OuterHeader
-      auto OuterPHI = Builder.CreatePHI(InnerPHI->getType(),
-                                        InnerPHI->getNumIncomingValues());
-      for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
-        OuterPHI->addIncoming(InnerPHI->getIncomingValue(i),
-                              InnerPHI->getIncomingBlock(i));
-      }
+  if (LGInnerPHI) {
+  }
+  // Builder.SetInsertPoint(OuterHeader);
+  // for (auto &I : *InnerHeader) {
+  //   if (auto *InnerPHI = dyn_cast<PHINode>(&I)) {
+  //     // Duplicate the InnerPHI in the OuterHeader
+  //     auto OuterPHI = Builder.CreatePHI(InnerPHI->getType(),
+  //                                       InnerPHI->getNumIncomingValues());
+  //     for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
+  //       OuterPHI->addIncoming(InnerPHI->getIncomingValue(i),
+  //                             InnerPHI->getIncomingBlock(i));
+  //     }
+  //
+  //     // Rewiring new InnerPHI with old ones
+  //     for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
+  //       auto BB = InnerPHI->getIncomingBlock(i);
+  //       // If BB is a latch of the inner loop
+  //       if (InnerLatches.find(BB) != InnerLatches.end()) {
+  //         // It should now be replaced with the latch of the outer loop
+  //         OuterPHI->setIncomingValueForBlock(BB, InnerPHI);
+  //         OuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
+  //       } else {
+  //         // BB is not a latch. This means that now `InnerPHI` must the value
+  //         // from the `OuterPHI`, that now represents `InnerPHI`
+  //         InnerPHI->setIncomingValueForBlock(BB, OuterPHI);
+  //         InnerPHI->replaceIncomingBlockWith(BB, OuterHeader);
+  //       }
+  //     }
+  //     if (InnerPHI == LGInnerPHI) {
+  //       LGOuterPHI = OuterPHI;
+  //     }
+  //
+  //     // The original induction variable might me used outside the loop.
+  //     // We need to track its last value
+  //     // TODO is this really necessary?
+  //     // auto OuterLastValuePHI = OuterPHI->clone();
+  //     // OuterLastValuePHI->insertAfter(OuterPHI);
+  //
+  //     // Thanks to LCSSA we only need to patch the exit BB
+  //     // TODO
+  //     // errs() << "ExitBB\n" << *ExitBB << "\n";
+  //     // for (auto &I : *ExitBB) {
+  //     //   if (auto *ExitPHI = dyn_cast<PHINode>(&I)) {
+  //     //     errs() << *ExitPHI << "\n";
+  //     //     errs() << *InnerHeader << "\n";
+  //     //     if (ExitPHI->getIncomingValueForBlock(InnerHeader) == InnerPHI)
+  //     {
+  //     //       ExitPHI->setIncomingValueForBlock(InnerHeader,
+  //     //       OuterLastValuePHI);
+  //     //     }
+  //     //   } else {
+  //     //     break;
+  //     //   }
+  //     // }
+  //   }
+  // }
 
-      // Rewiring new InnerPHI with old ones
-      for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
-        auto BB = InnerPHI->getIncomingBlock(i);
-        // If BB is a latch of the inner loop
-        if (InnerLatches.find(BB) != InnerLatches.end()) {
-          // It should now be replaced with the latch of the outer loop
-          OuterPHI->setIncomingValueForBlock(BB, InnerPHI);
-          OuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
-        } else {
-          // BB is not a latch. This means that now `InnerPHI` must the value
-          // from the `OuterPHI`, that now represents `InnerPHI`
-          InnerPHI->setIncomingValueForBlock(BB, OuterPHI);
-          InnerPHI->replaceIncomingBlockWith(BB, OuterHeader);
-        }
-      }
-      if (InnerPHI == LGInnerPHI) {
-        LGOuterPHI = OuterPHI;
-      }
-
-      // The original induction variable might me used outside the loop.
-      // We need to track its last value
-      // TODO is this really necessary?
-      auto OuterLastValuePHI = OuterPHI->clone();
-      OuterLastValuePHI->insertAfter(OuterPHI);
-
-      // Thanks to LCSSA we only need to patch the exit BB
-      for (auto &I : *ExitBB) {
-        if (auto *ExitPHI = dyn_cast<PHINode>(&I)) {
-          if (ExitPHI->getIncomingValueForBlock(InnerHeader) == InnerPHI) {
-            ExitPHI->setIncomingValueForBlock(InnerHeader, OuterLastValuePHI);
-          }
-        } else {
-          break;
-        }
+  if (LGInnerPHI) {
+    Builder.SetInsertPoint(OuterHeader);
+    LGOuterPHI = cast<PHINode>(LGInnerPHI->clone());
+    // Rewiring new LGInnerPHI with old ones
+    for (size_t i = 0; i < LGInnerPHI->getNumIncomingValues(); i++) {
+      auto BB = LGInnerPHI->getIncomingBlock(i);
+      // If BB is a latch of the inner loop
+      if (InnerLatches.find(BB) != InnerLatches.end()) {
+        // It should now be replaced with the latch of the outer loop
+        LGOuterPHI->setIncomingValueForBlock(BB, LGInnerPHI);
+        LGOuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
+      } else {
+        // BB is not a latch. This means that now `LGInnerPHI` must the value
+        // from the `OuterPHI`, that now represents `LGInnerPHI`
+        LGInnerPHI->setIncomingValueForBlock(BB, LGOuterPHI);
+        LGInnerPHI->replaceIncomingBlockWith(BB, OuterHeader);
       }
     }
-  }
-
-  // If there's no LGOuterPHI at this point, it means that the inner most loop
-  // didn't have one. But we need one.
-  if (!LGOuterPHI) {
+  } else {
+    // If there's no LGOuterPHI, it means that the inner most loop
+    // didn't have one. But we need one.
     Builder.SetInsertPoint(OuterHeader);
     auto OuterTy = Type::getInt32Ty(Context);
     auto Zero = ConstantInt::get(OuterTy, 0);
@@ -127,10 +174,60 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
     LGOuterPHI->addIncoming(Zero, InnerPreheader);
   }
 
+  // Analyzing loop liveouts
+  auto ENV = LC->getEnvironment();
+
+  // Get Live-Outs
+  set<Instruction *> InnerLiveOuts;
+  for (auto id : ENV->getEnvIDsOfLiveOutVars()) {
+    auto I = cast<Instruction>(ENV->getProducer(id));
+    InnerLiveOuts.insert(I);
+  }
+
+  // Duplicate Live-Outs into `OuterHeader`
+  assert(InnerLatches.size() == 1); // for simplicity
+  auto Latch = *InnerLatches.begin();
+  map<Instruction *, Instruction *> OldToNewLiveOuts;
+  for (auto LO : InnerLiveOuts) {
+    auto NewLO = LO->clone();
+    NewLO->insertAfter(LGOuterPHI);
+    if (auto NewPHI = dyn_cast<PHINode>(NewLO)) {
+      NewPHI->setIncomingValueForBlock(Latch, LO);
+      NewPHI->replaceIncomingBlockWith(Latch, OuterLatch);
+      auto OldPHI = cast<PHINode>(LO);
+      OldPHI->replaceIncomingBlockWith(InnerPreheader, OuterHeader);
+      OldPHI->setIncomingValueForBlock(OuterHeader, NewPHI);
+    } else {
+      // TODO
+      assert(false);
+    }
+    OldToNewLiveOuts[LO] = NewLO;
+  }
+
   // Adjusting (presumaby LCSSA) PHIs in the exit block
   for (auto &I : *ExitBB) {
     if (auto *PHI = dyn_cast<PHINode>(&I)) {
+      errs() << "PRE " << *PHI << "\n";
       PHI->replaceIncomingBlockWith(InnerHeader, OuterHeader);
+      for (auto [BB, E] : LS->getLoopExitEdges()) {
+        assert(E == ExitBB);
+        PHI->replaceIncomingBlockWith(BB, OuterHeader);
+      }
+      // Replace old Live-Outs with new ones
+      for (size_t i = 0; i < PHI->getNumIncomingValues(); ++i) {
+        auto V = PHI->getIncomingValue(i);
+        assert(isa<Instruction>(V));
+        auto I = cast<Instruction>(V);
+
+        if (InnerLiveOuts.find(I) != InnerLiveOuts.end()) {
+          // I is a Live-Out and need to be replaced
+          PHI->setIncomingValue(i, OldToNewLiveOuts[I]);
+          errs() << " LO yes" << *I << "\n";
+        } else {
+          errs() << " LO no " << *I << "\n";
+        }
+      }
+      errs() << "POST" << *PHI << "\n";
     } else {
       break;
     }
@@ -184,7 +281,7 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
     *NewIVPHI = LGOuterPHI;
   }
 
-  // errs() << *F << "\n";
+  errs() << *F << "\n";
 
   return OuterHeader;
 }
