@@ -11,11 +11,14 @@ template <typename T>
 class Array;
 
 template <typename T>
-int clause_array_add(Array<T> *array) {
-  array->k_++;
-  array->container_.emplace_back();
-  array->container_[array->k_].resize(array->size_);
-  return array->k_;
+void clause_array_add(int N, Array<T> *array) {
+  if (array->container_.size() == N) {
+    return;
+  }
+  array->container_.resize(N);
+  for (auto &row : array->container_) {
+    row.resize(array->size_);
+  }
 }
 
 template <class T>
@@ -24,7 +27,7 @@ public:
   template <typename U>
   using ContainerType = std::vector<U>;
 
-  friend int clause_array_add<T>(Array<T> *base);
+  friend void clause_array_add<T>(int N, Array<T> *base);
 
   class Iterator {
   public:
@@ -51,15 +54,15 @@ public:
   Array(size_t size) : size_(size) {
     container_.emplace_back();
     container_[0].resize(size);
-    k_ = 0;
   }
 
   void set(size_t idx, T value) {
-    container_[k_][idx] = value;
+    int k = 0;
+    container_[k][idx] = value;
   }
 
   void add(size_t idx, T value) {
-    int k = container_.size() - 1;
+    int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
     container_[k][idx] += value;
     noelle_pragma_end(_p);
@@ -67,7 +70,7 @@ public:
 
   T operator[](size_t idx) {
     T v = container_[0][idx];
-    for (int i = 1; i <= this->k_; i++) {
+    for (int i = 1; i <= container_.size(); i++) {
       v += container_[i][idx];
     }
     return v;
@@ -101,7 +104,6 @@ public:
 
 private:
   std::vector<std::vector<T>> container_;
-  int k_;
   size_t size_;
 };
 
