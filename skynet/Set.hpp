@@ -32,9 +32,7 @@ class Set;
 template <class T, SetCellContainerT C = SetT>
 class SetIterator;
 
-inline int clause_empty(int /*N*/) {
-  return 0;
-}
+inline void clause_empty(int /*N*/) {}
 
 template <class T, SetCellContainerT C = SetT>
 void clause_set_insert(int N, Set<T, C> *set) {

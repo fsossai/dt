@@ -299,17 +299,24 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         A = LastNewDef;
       }
 
-      // Creating a new value for each clause variable.
-      // This is achieved by generating the necessary calls
-      // to the clause function
       // The first argument is always `NumBlocks` by contract
-      AdjustedCallArgs.insert(AdjustedCallArgs.begin(), Builder.getInt32(NumBlocks));
+      AdjustedCallArgs.insert(AdjustedCallArgs.begin(),
+                              ConstantInt::get(NewIVPHI->getType(), NumBlocks));
       Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
-      // Patching the clause variable with a value from TCValues
-      Builder.SetInsertPoint(NewHeader->getTerminator());
+      // Type manipulation of the `t` induction variable
+      auto SrcTy = NewIVPHI->getType();
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      Builder.CreateStore(NewIVPHI, clause->getVariable());
+      auto DestTy = clause->getVariable()->getType()->getPointerElementType();
+      Value *CastedIV;
+      if (SrcTy->getIntegerBitWidth() < DestTy->getIntegerBitWidth()) {
+        CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
+      } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth()) {
+        CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
+      } else {
+        CastedIV = NewIVPHI;
+      }
+      Builder.CreateStore(CastedIV, clause->getVariable());
       clauseID++;
     }
 

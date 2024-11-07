@@ -107,7 +107,7 @@ noelle-load -PragmaEraser s$((stage-1))_parallelized.bc -o s$((stage))_nopragma.
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-clang++ -pthreads s$((stage-1))_nopragma.bc -o s$((stage))_exe.out
+clang++ -pthreads -fopenmp s$((stage-1))_nopragma.bc -o s$((stage))_exe.out
 
 wait
 echo "Winchester: Done"
