@@ -91,63 +91,6 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   PHINode *LGOuterPHI = nullptr;
 
   if (LGInnerPHI) {
-  }
-  // Builder.SetInsertPoint(OuterHeader);
-  // for (auto &I : *InnerHeader) {
-  //   if (auto *InnerPHI = dyn_cast<PHINode>(&I)) {
-  //     // Duplicate the InnerPHI in the OuterHeader
-  //     auto OuterPHI = Builder.CreatePHI(InnerPHI->getType(),
-  //                                       InnerPHI->getNumIncomingValues());
-  //     for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
-  //       OuterPHI->addIncoming(InnerPHI->getIncomingValue(i),
-  //                             InnerPHI->getIncomingBlock(i));
-  //     }
-  //
-  //     // Rewiring new InnerPHI with old ones
-  //     for (size_t i = 0; i < InnerPHI->getNumIncomingValues(); i++) {
-  //       auto BB = InnerPHI->getIncomingBlock(i);
-  //       // If BB is a latch of the inner loop
-  //       if (InnerLatches.find(BB) != InnerLatches.end()) {
-  //         // It should now be replaced with the latch of the outer loop
-  //         OuterPHI->setIncomingValueForBlock(BB, InnerPHI);
-  //         OuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
-  //       } else {
-  //         // BB is not a latch. This means that now `InnerPHI` must the value
-  //         // from the `OuterPHI`, that now represents `InnerPHI`
-  //         InnerPHI->setIncomingValueForBlock(BB, OuterPHI);
-  //         InnerPHI->replaceIncomingBlockWith(BB, OuterHeader);
-  //       }
-  //     }
-  //     if (InnerPHI == LGInnerPHI) {
-  //       LGOuterPHI = OuterPHI;
-  //     }
-  //
-  //     // The original induction variable might me used outside the loop.
-  //     // We need to track its last value
-  //     // TODO is this really necessary?
-  //     // auto OuterLastValuePHI = OuterPHI->clone();
-  //     // OuterLastValuePHI->insertAfter(OuterPHI);
-  //
-  //     // Thanks to LCSSA we only need to patch the exit BB
-  //     // TODO
-  //     // errs() << "ExitBB\n" << *ExitBB << "\n";
-  //     // for (auto &I : *ExitBB) {
-  //     //   if (auto *ExitPHI = dyn_cast<PHINode>(&I)) {
-  //     //     errs() << *ExitPHI << "\n";
-  //     //     errs() << *InnerHeader << "\n";
-  //     //     if (ExitPHI->getIncomingValueForBlock(InnerHeader) == InnerPHI)
-  //     {
-  //     //       ExitPHI->setIncomingValueForBlock(InnerHeader,
-  //     //       OuterLastValuePHI);
-  //     //     }
-  //     //   } else {
-  //     //     break;
-  //     //   }
-  //     // }
-  //   }
-  // }
-
-  if (LGInnerPHI) {
     LGOuterPHI = cast<PHINode>(LGInnerPHI->clone());
     OuterHeader->getInstList().push_front(LGOuterPHI);
     // Rewiring new LGInnerPHI with old ones
@@ -180,7 +123,6 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
     LGOuterPHI->addIncoming(Zero, OuterLatch);
     LGOuterPHI->addIncoming(Zero, InnerPreheader);
   }
-  // errs() << "LGOuterPHI [pre]" << *LGOuterPHI << "\n";
 
   // Analyzing loop liveouts
   auto ENV = LC->getEnvironment();
@@ -215,7 +157,6 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   // Adjusting (presumaby LCSSA) PHIs in the exit block
   for (auto &I : *ExitBB) {
     if (auto *PHI = dyn_cast<PHINode>(&I)) {
-      // errs() << "PRE " << *PHI << "\n";
       PHI->replaceIncomingBlockWith(InnerHeader, OuterHeader);
       for (auto [BB, E] : LS->getLoopExitEdges()) {
         assert(E == ExitBB);
@@ -230,12 +171,9 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
         if (InnerLiveOuts.find(I) != InnerLiveOuts.end()) {
           // I is a Live-Out and need to be replaced
           PHI->setIncomingValue(i, OldToNewLiveOuts[I]);
-          // errs() << " LO yes" << *I << "\n";
         } else {
-          // errs() << " LO no " << *I << "\n";
         }
       }
-      // errs() << "POST" << *PHI << "\n";
     } else {
       break;
     }
@@ -291,7 +229,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
     *NewIVPHI = LGOuterPHI;
   }
 
-  errs() << *F << "\n";
+  // errs() << *F << "\n";
 
   return OuterHeader;
 }
