@@ -320,20 +320,18 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
       // Type manipulation of the `t` induction variable
-      // auto SrcTy = NewIVPHI->getType();
-      // Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      // auto DestTy =
-      // clause->getVariable()->getType()->getPointerElementType(); Value
-      // *CastedIV; if (SrcTy->getIntegerBitWidth() <
-      // DestTy->getIntegerBitWidth()) {
-      //   CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
-      // } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth())
-      // {
-      //   CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
-      // } else {
-      //   CastedIV = NewIVPHI;
-      // }
-      // Builder.CreateStore(CastedIV, clause->getVariable());
+      auto SrcTy = NewIVPHI->getType();
+      auto DestTy = clause->getVariable()->getType()->getPointerElementType();
+      Value *CastedIV;
+      Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
+      if (SrcTy->getIntegerBitWidth() < DestTy->getIntegerBitWidth()) {
+        CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
+      } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth()) {
+        CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
+      } else {
+        CastedIV = NewIVPHI;
+      }
+      Builder.CreateStore(CastedIV, clause->getVariable());
       clauseID++;
     }
 

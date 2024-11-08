@@ -69,6 +69,7 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
+  --terminator-tagged-only=true \
   --terminator-func= \
   --terminator-details \
   --terminator-craft-plan \
@@ -77,6 +78,7 @@ gino-load  \
   -o s$((stage))_terminated.bc \
   s$((stage-1))_inlined.bc
 
+exit 159
 noelle-norm s$((stage))_terminated.bc -o s$((stage))_terminated.bc
 # noelle-meta-scc-embed s$((stage))_terminated.bc -o scc.s$((stage))_terminated.bc &
 
