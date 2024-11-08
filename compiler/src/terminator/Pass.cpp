@@ -238,16 +238,33 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // This phase only applies to the collected DOALL loops
 
   IRBuilder<> Builder(F.getContext());
-  const int NumBlocks = NumBreaks + 1;
+  auto &M = *F.getParent();
+  Value *NumBlocks;
+  if (NumBreaks < 0) {
+    auto &EntryBB = F.getEntryBlock();
+    NumBlocks = Builder.CreateCall(M.getOrInsertFunction(
+        "omp_get_max_threads",
+        FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
+    auto NumBlocksI = cast<Instruction>(NumBlocks);
+    NumBlocksI->insertBefore(EntryBB.getTerminator());
+  } else {
+    NumBlocks = Builder.getInt32(NumBreaks + 1);
+  }
 
   for (auto LC : terminationTargetLCs) {
     auto LS = LC->getLoopStructure();
-    PHINode *NewIVPHI = nullptr;
-    BasicBlock *NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
     auto LD = TA.getLoopDescription(LS);
+    PHINode *NewIVPHI = nullptr;
+    BasicBlock *NewHeader;
+    if (NumBreaks < 0) {
+      errs() << this->prefix << "Loop" << LD << ": Blocks: auto\n";
+    } else {
+      errs() << this->prefix << "Loop" << LD << ": Blocks: " << (NumBreaks + 1)
+             << "\n";
+    }
+    NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
     assert(NewHeader != nullptr && "Failed to block to loop");
     assert(NewIVPHI != nullptr);
-    errs() << this->prefix << "Loop" << LD << ": Blocks: " << NumBlocks << "\n";
 
     // The old preheader is still stored in LS.
     // At this point, this is the preheader of the new loop introduced
@@ -312,25 +329,16 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       }
 
       // The first argument is always `NumBlocks` by contract
-      // errs() << "NEW HEADER\n";
-      // errs() << *NewHeader << "\n";
-      AdjustedCallArgs.insert(AdjustedCallArgs.begin(),
-                              ConstantInt::get(NewIVPHI->getType(), NumBlocks));
+      AdjustedCallArgs.insert(AdjustedCallArgs.begin(), NumBlocks);
       Builder.SetInsertPoint(ClauseInsertionPoint);
       Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
       // Type manipulation of the `t` induction variable
-      auto SrcTy = NewIVPHI->getType();
+      // auto SrcTy = NewIVPHI->getType();
       auto DestTy = clause->getVariable()->getType()->getPointerElementType();
-      Value *CastedIV;
+      // Value *CastedIV;
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      if (SrcTy->getIntegerBitWidth() < DestTy->getIntegerBitWidth()) {
-        CastedIV = Builder.CreateZExt(NewIVPHI, DestTy);
-      } else if (SrcTy->getIntegerBitWidth() > DestTy->getIntegerBitWidth()) {
-        CastedIV = Builder.CreateTrunc(NewIVPHI, DestTy);
-      } else {
-        CastedIV = NewIVPHI;
-      }
+      auto CastedIV = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
       Builder.CreateStore(CastedIV, clause->getVariable());
       clauseID++;
     }

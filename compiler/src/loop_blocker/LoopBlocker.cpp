@@ -10,8 +10,14 @@ using namespace std;
 using namespace arcana::noelle;
 
 namespace arcana::dt {
-
 BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
+  auto F = LC->getLoopStructure()->getFunction();
+  auto &Context = F->getContext();
+  auto NumBlocks = ConstantInt::get(Type::getInt32Ty(Context), numBlocks);
+  return blockLoop(LC, NumBlocks, NewIVPHI);
+}
+
+BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   auto LS = LC->getLoopStructure();
   auto IVM = LC->getInductionVariableManager();
   auto LGIV = IVM->getLoopGoverningInductionVariable(*LC->getLoopStructure());
@@ -32,15 +38,15 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
 
   Value *InnerOriginalStartIdx = nullptr;
 
-  errs() << "=========================================================\n";
-  errs() << "NUM LATCHES = " << LS->getLatches().size() << "\n";
+  // errs() << "=========================================================\n";
+  // errs() << "NUM LATCHES = " << LS->getLatches().size() << "\n";
 
-  for (auto IV : IVM->getInductionVariables()) {
-    errs() << "IV\n";
-    for (auto PHI : IV->getPHIs()) {
-      errs() << " PHI" << *PHI << "\n";
-    }
-  }
+  // for (auto IV : IVM->getInductionVariables()) {
+  //   errs() << "IV\n";
+  //   for (auto PHI : IV->getPHIs()) {
+  //     errs() << " PHI" << *PHI << "\n";
+  //   }
+  // }
 
   if (LGInnerPHI) {
     errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
@@ -207,7 +213,7 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
   // Adjusting (presumaby LCSSA) PHIs in the exit block
   for (auto &I : *ExitBB) {
     if (auto *PHI = dyn_cast<PHINode>(&I)) {
-      errs() << "PRE " << *PHI << "\n";
+      // errs() << "PRE " << *PHI << "\n";
       PHI->replaceIncomingBlockWith(InnerHeader, OuterHeader);
       for (auto [BB, E] : LS->getLoopExitEdges()) {
         assert(E == ExitBB);
@@ -222,12 +228,12 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
         if (InnerLiveOuts.find(I) != InnerLiveOuts.end()) {
           // I is a Live-Out and need to be replaced
           PHI->setIncomingValue(i, OldToNewLiveOuts[I]);
-          errs() << " LO yes" << *I << "\n";
+          // errs() << " LO yes" << *I << "\n";
         } else {
-          errs() << " LO no " << *I << "\n";
+          // errs() << " LO no " << *I << "\n";
         }
       }
-      errs() << "POST" << *PHI << "\n";
+      // errs() << "POST" << *PHI << "\n";
     } else {
       break;
     }
@@ -253,9 +259,10 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
         Builder.CreateSub(InnerCmp->getOperand(1), InnerOriginalStartIdx);
 
     // InnerNewStartIdx = i * (N - i_start) / numBlocks + i_start
+    auto AdjustedNumBlocks = Builder.CreateZExtOrTrunc(NumBlocks, OuterTy);
     auto InnerNewStartIdx = Builder.CreateAdd(
         Builder.CreateSDiv(Builder.CreateMul(LGOuterPHI, NumIterations),
-                           ConstantInt::get(OuterTy, numBlocks)),
+                           AdjustedNumBlocks),
         InnerOriginalStartIdx);
 
     // InnerNewEndIdx = (i + 1) * (N - i_start) / numBlocks + i_start
@@ -264,7 +271,7 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
             Builder.CreateMul(
                 Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1)),
                 NumIterations),
-            ConstantInt::get(OuterTy, numBlocks)),
+            AdjustedNumBlocks),
         InnerOriginalStartIdx);
 
     // for (...; j < InnerNewEndIdx; ...)
@@ -274,14 +281,14 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
 
   Builder.SetInsertPoint(OuterHeader);
   auto OuterCmp =
-      Builder.CreateICmpSLT(LGOuterPHI, ConstantInt::get(OuterTy, numBlocks));
+      Builder.CreateICmpSLT(LGOuterPHI, NumBlocks);
   Builder.CreateCondBr(OuterCmp, InnerHeader, ExitBB);
 
   if (NewIVPHI != nullptr) {
     *NewIVPHI = LGOuterPHI;
   }
 
-  errs() << *F << "\n";
+  // errs() << *F << "\n";
 
   return OuterHeader;
 }

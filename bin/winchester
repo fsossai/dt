@@ -2,13 +2,12 @@
 
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
-if [[ $# < 2 ]]; then
-  echo "usage: `basename $0` <SOURCE> <N_CORES>"
+if [[ $# < 1 ]]; then
+  echo "usage: `basename $0` <SOURCE>"
   exit 1
 fi
 
 input=$1
-n_cores=$2
 
 installDir=$(realpath $(dirname $(realpath $0))/..)
 ginoSrc=/nfs-scratch/fsv1684/gino-dt
@@ -69,16 +68,16 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
-  --terminator-tagged-only=true \
+  --terminator-tagged-only=false \
   --terminator-func= \
   --terminator-details \
   --terminator-craft-plan \
-  --terminator-breaks=$((n_cores-1)) \
+  --terminator-breaks=-1 \
   --noelle-verbose=2 \
   -o s$((stage))_terminated.bc \
   s$((stage-1))_inlined.bc
 
-exit 159
+# exit 159
 noelle-norm s$((stage))_terminated.bc -o s$((stage))_terminated.bc
 # noelle-meta-scc-embed s$((stage))_terminated.bc -o scc.s$((stage))_terminated.bc &
 
