@@ -148,14 +148,15 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   // }
 
   if (LGInnerPHI) {
-    Builder.SetInsertPoint(OuterHeader);
     LGOuterPHI = cast<PHINode>(LGInnerPHI->clone());
+    OuterHeader->getInstList().push_front(LGOuterPHI);
     // Rewiring new LGInnerPHI with old ones
     for (size_t i = 0; i < LGInnerPHI->getNumIncomingValues(); i++) {
       auto BB = LGInnerPHI->getIncomingBlock(i);
       // If BB is a latch of the inner loop
       if (InnerLatches.find(BB) != InnerLatches.end()) {
         // It should now be replaced with the latch of the outer loop
+        // LGOuterPHI->setIncomingBlock(i, BB);
         LGOuterPHI->setIncomingValueForBlock(BB, LGInnerPHI);
         LGOuterPHI->replaceIncomingBlockWith(BB, OuterLatch);
       } else {
@@ -179,6 +180,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
     LGOuterPHI->addIncoming(Zero, OuterLatch);
     LGOuterPHI->addIncoming(Zero, InnerPreheader);
   }
+  // errs() << "LGOuterPHI [pre]" << *LGOuterPHI << "\n";
 
   // Analyzing loop liveouts
   auto ENV = LC->getEnvironment();
@@ -241,6 +243,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
 
   // IV increment for the outermost loop
   Builder.SetInsertPoint(OuterLatch);
+  // errs() << "LGOuterPHI [post]" << *LGOuterPHI << "\n";
   auto OuterTy = LGOuterPHI->getType();
   auto OuterIncrement =
       Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1));
@@ -288,7 +291,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
     *NewIVPHI = LGOuterPHI;
   }
 
-  // errs() << *F << "\n";
+  errs() << *F << "\n";
 
   return OuterHeader;
 }
