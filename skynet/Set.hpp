@@ -65,6 +65,7 @@ void clause_set_op_plusplus(int N, SetIterator<T, C> *it) {
 #else
   assert(it->row_its_.size() == 1);
 #endif
+  clause_set_insert(N, it->set_);
   it->reshape(N);
 }
 
@@ -281,7 +282,7 @@ class SetIterator {
   friend void clause_set_op_plusplus<T, C>(int N, SetIterator<T, C> *it);
 
 public:
-  SetIterator(Set<T, C> *base) : base_(base) {
+  SetIterator(Set<T, C> *base) : set_(base) {
     reshape(1);
   }
 
@@ -308,11 +309,10 @@ public:
     cell_its_.clear();
     cell_ends_.clear();
     seens_.clear();
-    auto set = base_;
 
     for (int i = 0; i < N; i++) {
       // find first non-empty cell in the i-th row
-      auto &row = set->container_[i];
+      auto &row = set_->container_[i];
       auto row_it = row.begin();
       auto row_end = row.end();
       for (; row_it != row_end; ++row_it) {
@@ -435,7 +435,7 @@ private:
       typename std::vector<typename Set<T, C>::cell_container_t>::iterator;
   using cell_it_t = typename Set<T, C>::cell_container_t::iterator;
 
-  Set<T, C> *base_;
+  Set<T, C> *set_;
   std::vector<cell_it_t> cell_its_;
   std::vector<cell_it_t> cell_ends_;
   std::vector<row_it_t> row_its_;

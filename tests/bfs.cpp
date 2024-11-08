@@ -183,7 +183,6 @@ int bfs_tc_manual(const Graph &g, Node *root) {
 #endif
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
-    skynet::clause_set_insert(T, currentFrontier);
     skynet::clause_set_insert(T, nextFrontier);
     skynet::clause_set_op_plusplus(T, &_it2);
     skynet::clause_scalar_sum(T * PAD, &result);
@@ -239,7 +238,6 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
 #endif
-  skynet::clause_set_insert(T, currentFrontier);
   skynet::clause_set_insert(T, nextFrontier);
   skynet::clause_scalar_sum(T * PAD, &result);
   while (!currentFrontier->empty()) {
