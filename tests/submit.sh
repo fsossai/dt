@@ -11,6 +11,8 @@ export note="turboboost $turboboost, LD_PRELOAD=$LD_PRELOAD"
 export flags="-march=native -O3 -fno-exceptions -DPADDING"
 
 source /nfs-scratch/fsv1684/repo/dt/enable
+source /nfs-scratch/fsv1684/noelle-dt/enable
+source /nfs-scratch/fsv1684/gino-dt/enable
 
 _sequential_programs=(
   bfs_frontier
@@ -44,9 +46,9 @@ case $machine in
     export tspace="1 2 4 6 8"
     ;;
   custom)
-    export tspace="1"
+    export tspace="1 2"
     ;;
 esac
 
-# ./run.sh # for local testing
+# ./run.sh for local testing
 condor_submit condor.job
