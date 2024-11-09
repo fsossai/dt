@@ -16,6 +16,10 @@ targets:
 		make -C $$dir; \
 	done
 
+bfs_tc:
+	winchester bfs.cpp $(OUTDIR)
+	cp $(OUTDIR)/s7_exe.out $(OUTDIR)/$@.out
+
 bfs_%:
 	$(CXX) -D$(shell echo $@ | tr a-z A-Z) $(OPENMP) $(STD) $(INCLUDE_DIRS) $(OPT) $(FLAGS) bfs.cpp -o $(OUTDIR)/$@.out
 

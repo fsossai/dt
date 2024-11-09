@@ -238,6 +238,7 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 #if defined(DEBUG) || defined(BFS_DEBUG)
   printf("T: %i\n", T);
 #endif
+  skynet::clause_set_insert(T, currentFrontier);
   skynet::clause_set_insert(T, nextFrontier);
   skynet::clause_scalar_sum(T * PAD, &result);
   while (!currentFrontier->empty()) {
@@ -287,9 +288,9 @@ int bfs_tc_manual_opt(const Graph &g, Node *root) {
 }
 
 int bfs_tc(const Graph &g, Node *root) {
-  skynet::Set<Node *> enqueued;
-  auto currentFrontier = new skynet::Set<Node *>();
-  auto nextFrontier = new skynet::Set<Node *>();
+  skynet::Set<Node *, skynet::SetT> enqueued;
+  auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
+  auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
 
   skynet::Scalar<int> result(0);
   currentFrontier->insert(root);

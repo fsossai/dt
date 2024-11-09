@@ -1,14 +1,15 @@
 #!/bin/bash
 
 export machine="piraat"
-export input_file="inputs/kronecker_21.bin"
+export input_file="inputs/kronecker_24.bin"
 export runs=10
 export turboboost="off"
 export KMP_AFFINITY="granularity=thread,balanced"
-# export LD_PRELOAD=libjemalloc.so
-# export note="using jemalloc, turboboost $turboboost"
-export note="turboboost $turboboost"
-export flags="-O3 -fno-exceptions -DPADDING"
+export LD_PRELOAD=libjemalloc.so
+export note="turboboost $turboboost, LD_PRELOAD=$LD_PRELOAD"
+export flags="-march=native -O3 -fno-exceptions -DPADDING"
+
+source /nfs-scratch/fsv1684/repo/dt/enable
 
 _sequential_programs=(
   bfs_frontier
@@ -16,7 +17,8 @@ _sequential_programs=(
 
 _parallel_programs=(
   bfs_omp
-  # bfs_manual
+  bfs_tc
+  bfs_manual
   bfs_manual_opt
 )
 
@@ -41,7 +43,7 @@ case $machine in
     export tspace="1 2 4 6 8"
     ;;
   custom)
-    export tspace="4 8"
+    export tspace="1"
     ;;
 esac
 

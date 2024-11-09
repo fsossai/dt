@@ -75,7 +75,7 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
-  --terminator-tagged-only=false \
+  --terminator-tagged-only=true \
   --terminator-func= \
   --terminator-details \
   --terminator-craft-plan \
@@ -115,7 +115,12 @@ noelle-load -PragmaEraser $outDir/s$((stage-1))_parallelized.bc -o $outDir/s$((s
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-clang++ -pthreads -fopenmp $outDir/s$((stage-1))_nopragma.bc -o $outDir/s$((stage))_exe.out
+clang++ \
+  $flags \
+  -pthreads \
+  -fopenmp \
+  $outDir/s$((stage-1))_nopragma.bc \
+  -o $outDir/s$((stage))_exe.out
 
 wait
 echo "Winchester: Done"
