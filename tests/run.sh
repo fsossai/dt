@@ -34,7 +34,7 @@ fi
 for program in ${sequential_programs[@]}; do
   export outfile=$results_dir/s_$program.csv
   export cmd="$bin_dir/$program.out $input_file"
-  tspace=1 taskset -c $target_core $makebm
+  tspace=1 turboboost=on taskset -c $target_core $makebm
 done
 
 if [[ $turboboost == "off" ]]; then
