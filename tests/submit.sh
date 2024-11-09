@@ -1,11 +1,12 @@
 #!/bin/bash
 
 export machine="piraat"
-export input_file="inputs/kronecker_24.bin"
+export input_file="inputs/kronecker_21.bin"
 export runs=10
 export turboboost="off"
+export affinity="y"
 export KMP_AFFINITY="granularity=thread,balanced"
-export LD_PRELOAD=libjemalloc.so
+# export LD_PRELOAD=libjemalloc.so
 export note="turboboost $turboboost, LD_PRELOAD=$LD_PRELOAD"
 export flags="-march=native -O3 -fno-exceptions -DPADDING"
 

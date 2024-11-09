@@ -84,7 +84,6 @@ gino-load  \
   -o $outDir/s$((stage))_terminated.bc \
   $outDir/s$((stage-1))_inlined.bc
 
-# exit 159
 noelle-norm $outDir/s$((stage))_terminated.bc -o $outDir/s$((stage))_terminated.bc
 # noelle-meta-scc-embed $outDir/s$((stage))_terminated.bc -o scc.$outDir/s$((stage))_terminated.bc &
 

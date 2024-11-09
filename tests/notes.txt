@@ -222,3 +222,17 @@ _______________________________________________________ AskiBench ______________
 |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      
 |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      |@@@@||$$$$||****|      
 <___ threads=1 __>      <___ threads=2 __>      <___ threads=4 __>      <___ threads=6 __>      <___ threads=8 __>      
+
+
+Fix bug in bfs_manual_opt
+
+Waiting for condor jobs
+- [x] 4298430 boucanier kronecker 21
+- [x] 4298431 piraat kronecker 21
+- [x] 4298432 piraat kronecker 21, jemalloc
+- [x] 4298435 guldendraak kronecker 21
+- [x] 4298436 guldendraak kronecker 21, jemalloc
+- [ ] 4298439 piraat kronecker 21, affinity
+Experiments 4298432 and 4298433 show how faster allocations reduce
+the gap between manual and compiler-generated tc.
+
