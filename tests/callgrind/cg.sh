@@ -8,7 +8,7 @@ source /nfs-scratch/fsv1684/repo/dt/enable
 source /nfs-scratch/fsv1684/noelle-dt/enable
 source /nfs-scratch/fsv1684/gino-dt/enable
 
-make bfs_omp FLAGS="-march=native -O3 -fno-exceptions" OUTDIR=callgrind
+make bfs_tc FLAGS="-march=native -O3 -fno-exceptions" OUTDIR=callgrind
 
 export OMP_NUM_THREADS=1
 
@@ -22,6 +22,7 @@ echo $bin $input
 valgrind \
   --tool=callgrind \
   --simulate-cache=yes \
+  --callgrind-out-file=cg_${jobid}_s.out \
   $bin $input \
   > cg_${jobid}_s.txt \
   2>&1
@@ -31,6 +32,7 @@ export OMP_NUM_THREADS=8
 valgrind \
   --tool=callgrind \
   --simulate-cache=yes \
+  --callgrind-out-file=cg_${jobid}_p.out \
   $bin $input \
   > cg_${jobid}_p.txt \
   2>&1
