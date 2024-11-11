@@ -1,0 +1,16 @@
+Universe = vanilla
+Requirements = Machine == "$ENV(machine).cs.northwestern.edu"
+Output = $ENV(machine)_$(Cluster)_out.txt
+Error = $ENV(machine)_$(Cluster)_err.txt
+Log = $ENV(machine)_$(Cluster)_log.txt
+# Executable = run.sh
+
+Executable = cg.sh
+Rank = TARGET.Mips
+Copy_To_Spool = False
+Notification = error
+Getenv = True
++IsWholeMachineJob = true
++IsSuspensionJob   = false
+priority = 0
+Queue
