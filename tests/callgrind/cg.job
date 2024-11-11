@@ -5,6 +5,7 @@ Error = $ENV(machine)_$(Cluster)_err.txt
 Log = $ENV(machine)_$(Cluster)_log.txt
 # Executable = run.sh
 
+Environment = jobid=$(Cluster);
 Executable = cg.sh
 Rank = TARGET.Mips
 Copy_To_Spool = False
