@@ -9,6 +9,7 @@
 #include <omp.h>
 #include <pthread.h>
 #include <queue>
+#include <sched.h>
 #include <set>
 #include <stack>
 #include <sys/mman.h> // for mmap, munmap
@@ -287,6 +288,7 @@ int bfs_pthreads(const Graph &g, Node *root) {
     pthread_t threads[T];
     bfs_pthreads_kernel_args args[T];
 
+    int rc;
     for (int t = 0; t < T; t++) {
       args[t].t = t;
       args[t].g = &g;
@@ -296,21 +298,27 @@ int bfs_pthreads(const Graph &g, Node *root) {
       args[t]._it2 = &_it2;
       args[t]._end2 = &_end2;
       args[t].enqueued = &enqueued;
-      if (t == T - 1) {
-        bfs_pthreads_kernel((void *)&args[t]);
-      } else {
-        int rc = pthread_create(&threads[t],
-                                NULL,
-                                bfs_pthreads_kernel,
-                                (void *)&args[t]);
-        if (rc != 0) {
-          cout << "ERROR\n";
-          return 0;
-        }
+      rc = pthread_create(&threads[t],
+                              NULL,
+                              bfs_pthreads_kernel,
+                              (void *)&args[t]);
+      if (rc != 0) {
+        cout << "ERROR: pthread_create()\n";
+        return 0;
       }
+      cpu_set_t cpuset;
+      CPU_ZERO(&cpuset);
+      CPU_SET(t*2, &cpuset); 
+
+      rc = pthread_setaffinity_np(threads[t], sizeof(cpu_set_t), &cpuset);
+      if (rc != 0) {
+        cout << "ERROR: pthread_setaffinity_np()\n";
+        return 0;
+      }
+
     }
 
-    for (int t = 0; t < T - 1; t++) {
+    for (int t = 0; t < T; t++) {
       pthread_join(threads[t], NULL);
     }
 
