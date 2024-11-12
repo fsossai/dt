@@ -1,28 +1,29 @@
 #!/bin/bash
 
-export machine="piraat"
+export machine="custom"
 export input_file="inputs/kronecker_21.bin"
-export runs=10
-export turboboost="off"
+export runs=5
+export turboboost="on"
 export affinity="y"
 export KMP_AFFINITY="granularity=thread,balanced"
-# export LD_PRELOAD=libjemalloc.so
+export LD_PRELOAD=libjemalloc.so
 export note="turboboost $turboboost, LD_PRELOAD=$LD_PRELOAD"
-export flags="-march=native -O3 -fno-exceptions -DPADDING"
+export flags="-march=native -O3 -fno-exceptions"
 
 source /nfs-scratch/fsv1684/repo/dt/enable
 source /nfs-scratch/fsv1684/noelle-dt/enable
 source /nfs-scratch/fsv1684/gino-dt/enable
 
 _sequential_programs=(
-  bfs_frontier
+  # bfs_frontier
 )
 
 _parallel_programs=(
-  bfs_omp
-  bfs_tc
-  bfs_manual
-  bfs_manual_opt
+  # bfs_omp
+  bfs_pthreads
+  # bfs_tc
+  # bfs_manual
+  # bfs_manual_opt
 )
 
 export sequential_programs=${_sequential_programs[@]}
@@ -41,14 +42,15 @@ case $machine in
     ;;
   piraat)
     export tspace="1 2 4 8 12 16 20 24"
+    # export maxt=24
     ;;
   tremens | maudite | guldendraak)
     export tspace="1 2 4 6 8"
     ;;
   custom)
-    export tspace="1 2"
+    export tspace="14"
     ;;
 esac
 
-# ./run.sh for local testing
-condor_submit condor.job
+./run.sh # for local testing
+# condor_submit condor.job

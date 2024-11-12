@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <omp.h>
+#include <pthread.h>
 #include <queue>
 #include <set>
 #include <stack>
@@ -153,7 +154,7 @@ int bfs_frontier(const Graph &g, Node *root) {
   return t;
 }
 
-int bfs_tc_manual(const Graph &g, Node *root) {
+int bfs_manual(const Graph &g, Node *root) {
   skynet::Set<Node *, skynet::SetT> enqueued;
   auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
   auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
@@ -219,7 +220,117 @@ int bfs_tc_manual(const Graph &g, Node *root) {
   return result.get();
 }
 
-int bfs_tc_manual_opt(const Graph &g, Node *root) {
+typedef struct {
+  int t;
+  const Graph *g;
+  skynet::Set<Node *, skynet::VectorT> *currentFrontier;
+  skynet::Set<Node *, skynet::VectorT> *nextFrontier;
+  skynet::Set<Node *, skynet::SetT> *enqueued;
+  skynet::Scalar<int> *result;
+  skynet::SetIterator<Node *, skynet::VectorT> *_it2;
+  skynet::SetIterator<Node *, skynet::VectorT> *_end2;
+
+} bfs_pthreads_kernel_args;
+
+void *bfs_pthreads_kernel(void *p) {
+  auto args = (bfs_pthreads_kernel_args *)p;
+
+  for (; args->_it2->__op_neq(args->t, *args->_end2);) {
+    auto *n = args->_it2->__op_star(args->t);
+    args->result->__sum(args->t * PAD, n->value);
+
+    for (auto *m : args->g->outgoingEdges(n)) {
+      if (!args->enqueued->contains(m)) {
+        args->nextFrontier->__insert(args->t, m);
+      }
+    }
+
+    args->_it2->__op_plusplus(args->t);
+  }
+  return nullptr;
+}
+
+int bfs_pthreads(const Graph &g, Node *root) {
+  skynet::Set<Node *, skynet::SetT> enqueued;
+  auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
+  auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
+
+  skynet::Scalar<int> result(0);
+  currentFrontier->insert(root);
+  enqueued.insert(root);
+
+  int f_idx = 0;
+  const int T = omp_get_max_threads();
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  printf("T: %i\n", T);
+#endif
+#ifdef PADDING
+  constexpr int PAD = 16;
+#else
+  constexpr int PAD = 1;
+#endif
+  while (!currentFrontier->empty()) {
+#if defined(DEBUG) || defined(BFS_DEBUG)
+    cout << "--- processing frontier " << f_idx;
+    cout << " (size=" << currentFrontier->size() << ")\n";
+    cout << result.get() << "\n";
+    result.printInternals();
+    currentFrontier->printStats();
+    out << "\n";
+#endif
+    auto _it2 = currentFrontier->begin();
+    auto _end2 = currentFrontier->end();
+    skynet::clause_set_insert(T, nextFrontier);
+    skynet::clause_set_op_plusplus(T, &_it2);
+    skynet::clause_scalar_sum(T * PAD, &result);
+
+    pthread_t threads[T];
+    bfs_pthreads_kernel_args args[T];
+
+    for (int t = 0; t < T; t++) {
+      args[t].t = t;
+      args[t].g = &g;
+      args[t].currentFrontier = currentFrontier;
+      args[t].nextFrontier = nextFrontier;
+      args[t].result = &result;
+      args[t]._it2 = &_it2;
+      args[t]._end2 = &_end2;
+      args[t].enqueued = &enqueued;
+      if (t == T - 1) {
+        bfs_pthreads_kernel((void *)&args[t]);
+      } else {
+        int rc = pthread_create(&threads[t],
+                                NULL,
+                                bfs_pthreads_kernel,
+                                (void *)&args[t]);
+        if (rc != 0) {
+          cout << "ERROR\n";
+          return 0;
+        }
+      }
+    }
+
+    for (int t = 0; t < T - 1; t++) {
+      pthread_join(threads[t], NULL);
+    }
+
+    enqueued.insert(*nextFrontier);
+    currentFrontier->clear();
+    swap(currentFrontier, nextFrontier);
+    ++f_idx;
+  }
+
+  delete currentFrontier;
+  delete nextFrontier;
+
+#if defined(DEBUG) || defined(BFS_DEBUG)
+  result.printInternals();
+#endif
+
+  return result.get();
+}
+
+int bfs_manual_opt(const Graph &g, Node *root) {
   skynet::Set<Node *, skynet::SetT> enqueued;
   auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
   auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
@@ -345,7 +456,7 @@ bool lockfree_contains(unordered_set<Node *> &roster, Node *m) {
   return roster.find(m) == roster.end();
 }
 
-int bfs_lockfree(const Graph &g, Node *root) {
+int bfs_omp(const Graph &g, Node *root) {
   using roster_t = unordered_set<Node *>;
   using frontier_t = vector<vector<Node *>>;
 
@@ -497,11 +608,13 @@ int main(int argc, char *argv[]) {
 #ifdef BFS_FRONTIER
   int result = bfs_frontier(g, g.getRoot());
 #elif defined BFS_MANUAL
-  int result = bfs_tc_manual(g, g.getRoot());
+  int result = bfs_manual(g, g.getRoot());
 #elif defined BFS_MANUAL_OPT
-  int result = bfs_tc_manual_opt(g, g.getRoot());
+  int result = bfs_manual_opt(g, g.getRoot());
 #elif defined BFS_OMP
-  int result = bfs_lockfree(g, g.getRoot());
+  int result = bfs_omp(g, g.getRoot());
+#elif defined BFS_PTHREADS
+  int result = bfs_pthreads(g, g.getRoot());
 #else
   int result = bfs_tc(g, g.getRoot());
 #endif
