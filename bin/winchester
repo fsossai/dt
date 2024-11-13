@@ -29,6 +29,7 @@ source /project/gllvm/enable
 gclang++ \
   -DNOELLE_PRAGMA_BODY_DISABLE \
   -std=c++17 \
+  $winchester_flags \
   -c \
   -O1 \
   -Xclang \

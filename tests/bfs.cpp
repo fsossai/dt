@@ -183,6 +183,9 @@ int bfs_manual(const Graph &g, Node *root) {
     currentFrontier->printStats();
     cout << "\n";
 #endif
+#ifdef BFS_TIMING
+    TIMER_START("Frontier");
+#endif
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
     skynet::clause_set_insert(T, nextFrontier);
@@ -209,6 +212,9 @@ int bfs_manual(const Graph &g, Node *root) {
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
     ++f_idx;
+#ifdef BFS_TIMING
+    TIMER_STOP();
+#endif
   }
 
   delete currentFrontier;
@@ -277,7 +283,7 @@ int bfs_pthreads(const Graph &g, Node *root) {
     cout << result.get() << "\n";
     result.printInternals();
     currentFrontier->printStats();
-    out << "\n";
+    cout << "\n";
 #endif
     auto _it2 = currentFrontier->begin();
     auto _end2 = currentFrontier->end();
@@ -299,23 +305,22 @@ int bfs_pthreads(const Graph &g, Node *root) {
       args[t]._end2 = &_end2;
       args[t].enqueued = &enqueued;
       rc = pthread_create(&threads[t],
-                              NULL,
-                              bfs_pthreads_kernel,
-                              (void *)&args[t]);
+                          NULL,
+                          bfs_pthreads_kernel,
+                          (void *)&args[t]);
       if (rc != 0) {
         cout << "ERROR: pthread_create()\n";
         return 0;
       }
       cpu_set_t cpuset;
       CPU_ZERO(&cpuset);
-      CPU_SET(t*2, &cpuset); 
+      CPU_SET(t * 2, &cpuset);
 
       rc = pthread_setaffinity_np(threads[t], sizeof(cpu_set_t), &cpuset);
       if (rc != 0) {
         cout << "ERROR: pthread_setaffinity_np()\n";
         return 0;
       }
-
     }
 
     for (int t = 0; t < T; t++) {
@@ -425,6 +430,9 @@ int bfs_tc(const Graph &g, Node *root) {
     result.printInternals();
     cout << "\n";
 #endif
+#ifdef BFS_TIMING
+    TIMER_START("Frontier");
+#endif
     auto p2 = noelle_pragma_begin("loop.tag", 2);
     auto p21 = noelle_pragma_begin("loop.doall", "yes");
     for (auto *n : *currentFrontier) {
@@ -451,6 +459,9 @@ int bfs_tc(const Graph &g, Node *root) {
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
     ++f_idx;
+#ifdef BFS_TIMING
+    TIMER_STOP();
+#endif
   }
   noelle_pragma_end(p1);
 
@@ -512,6 +523,9 @@ int bfs_omp(const Graph &g, Node *root) {
 #ifdef STATS
     int frontier_skips = 0;
     int frontier_size = 0;
+#endif
+#ifdef BFS_TIMING
+    TIMER_START("Frontier");
 #endif
 
     has_work = false;
@@ -582,6 +596,9 @@ int bfs_omp(const Graph &g, Node *root) {
 
     } // pragma omp parallel
     swap(current_frontiers, next_frontiers);
+#ifdef BFS_TIMING
+    TIMER_STOP();
+#endif
   }
 
   int reduced_sum = sum[0];
