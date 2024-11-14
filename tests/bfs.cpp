@@ -294,6 +294,10 @@ int bfs_pthreads(const Graph &g, Node *root) {
     pthread_t threads[T];
     bfs_pthreads_kernel_args args[T];
 
+#ifdef BFS_TIMING
+    TIMER_START("Frontier");
+#endif
+
     int rc;
     for (int t = 0; t < T; t++) {
       args[t].t = t;
@@ -314,7 +318,7 @@ int bfs_pthreads(const Graph &g, Node *root) {
       }
       cpu_set_t cpuset;
       CPU_ZERO(&cpuset);
-      CPU_SET(t * 2, &cpuset);
+      CPU_SET(t * 2, &cpuset); // balanced single-socket pinning
 
       rc = pthread_setaffinity_np(threads[t], sizeof(cpu_set_t), &cpuset);
       if (rc != 0) {
@@ -331,6 +335,10 @@ int bfs_pthreads(const Graph &g, Node *root) {
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
     ++f_idx;
+
+#ifdef BFS_TIMING
+    TIMER_STOP();
+#endif
   }
 
   delete currentFrontier;

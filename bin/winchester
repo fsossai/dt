@@ -49,6 +49,7 @@ noelle-norm $outDir/s$((stage))_inlined.bc -o $outDir/s$((stage))_inlined.bc
 # noelle-meta-scc-embed $outDir/s$((stage))_inlined.bc -o scc.$outDir/s$((stage))_inlined.bc &
 clang++ \
   -std=c++17 \
+  -fopenmp \
   -c \
   -emit-llvm \
   -O3 \
