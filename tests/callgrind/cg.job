@@ -11,7 +11,7 @@ Rank = TARGET.Mips
 Copy_To_Spool = False
 Notification = error
 Getenv = True
-+IsWholeMachineJob = true
++IsWholeMachineJob = false
 +IsSuspensionJob   = false
 priority = 0
 Queue

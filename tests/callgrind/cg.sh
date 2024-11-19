@@ -8,23 +8,25 @@ source /nfs-scratch/fsv1684/repo/dt/enable
 source /nfs-scratch/fsv1684/noelle-dt/enable
 source /nfs-scratch/fsv1684/gino-dt/enable
 
-make bfs_tc FLAGS="-march=native -O3 -fno-exceptions" OUTDIR=callgrind
+export flags="-O3"
+make bfs_tc FLAGS=$flags OUTDIR=callgrind
+make bfs_manual FLAGS=$flags OUTDIR=callgrind
 
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=8
 
 cd callgrind
 
 input=../inputs/kronecker_24.bin
-bin=./bfs_tc.out
+# bin=./bfs_tc.out
 
-echo $bin $input
+# echo $bin $input
 
 valgrind \
   --tool=callgrind \
   --simulate-cache=yes \
   --callgrind-out-file=cg_${jobid}_s.out \
-  $bin $input \
-  > cg_${jobid}_s.txt \
+  ./bfs_tc.out $input \
+  > cg_${jobid}_tc.txt \
   2>&1
 
 export OMP_NUM_THREADS=8
@@ -33,6 +35,6 @@ valgrind \
   --tool=callgrind \
   --simulate-cache=yes \
   --callgrind-out-file=cg_${jobid}_p.out \
-  $bin $input \
-  > cg_${jobid}_p.txt \
+  ./bfs_manual.out $input \
+  > cg_${jobid}_manual.txt \
   2>&1

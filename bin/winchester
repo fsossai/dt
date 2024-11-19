@@ -3,6 +3,7 @@
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
 outDir=.
+cppstd=-std=c++20
 
 if [[ $# < 1 || $# > 2 ]]; then
   echo "usage: `basename $0` <SOURCE> [<OUT_DIR>]"
@@ -25,18 +26,21 @@ source $noelleSrc/enable
 ################################################################################
 stage=0
 echo "Winchester: Stage $stage"
+
 source /project/gllvm/enable
 gclang++ \
   -DNOELLE_PRAGMA_BODY_DISABLE \
-  -std=c++17 \
+  $cppstd \
   $winchester_flags \
+  -fopenmp \
+  -fno-exceptions \
+  -fno-vectorize \
   -c \
-  -O1 \
+  -O2 \
   -Xclang \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
   -I /nfs-scratch/fsv1684/repo/dt/skynet \
-  -fno-exceptions \
   -o $outDir/s$((stage))_input.o \
   $input
 get-bc -o $outDir/s$((stage))_input.bc $outDir/s$((stage))_input.o
@@ -48,7 +52,7 @@ opt --inline $outDir/s$((stage-1))_input.bc -o $outDir/s$((stage))_inlined.bc
 noelle-norm $outDir/s$((stage))_inlined.bc -o $outDir/s$((stage))_inlined.bc
 # noelle-meta-scc-embed $outDir/s$((stage))_inlined.bc -o scc.$outDir/s$((stage))_inlined.bc &
 clang++ \
-  -std=c++17 \
+  $cppstd \
   -fopenmp \
   -c \
   -emit-llvm \

@@ -9,7 +9,7 @@ Environment = \
   bin_dir=condor/$ENV(machine)/$(Cluster)_bin; \
   json=results/$ENV(machine)/summary.json;
 
-Executable = run.sh
+Executable = build_and_run.sh
 Rank = TARGET.Mips
 Copy_To_Spool = False
 Notification = error
