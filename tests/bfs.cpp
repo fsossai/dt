@@ -469,12 +469,15 @@ int bfs_tc(const Graph &g, Node *root) {
     }
     noelle_pragma_end(p21);
     noelle_pragma_end(p2);
-    auto p4 = noelle_pragma_begin("loop.tag", 4);
-    auto p41 = noelle_pragma_begin("loop.doall", "no");
 
     enqueued.insert(*nextFrontier);
-    noelle_pragma_end(p41);
-    noelle_pragma_end(p4);
+    // auto p4 = noelle_pragma_begin("loop.tag", 4);
+    // auto p41 = noelle_pragma_begin("loop.doall", "yes");
+    // for (auto *n : *nextFrontier) {
+    //   enqueued.insert(n);
+    // }
+    // noelle_pragma_end(p41);
+    // noelle_pragma_end(p4);
     currentFrontier->clear();
     swap(currentFrontier, nextFrontier);
     ++f_idx;

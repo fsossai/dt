@@ -1,4 +1,3 @@
-Waiting for condor jobs
 - [x] 4298452:piraat,kronecker21,aff,tboff,balanced,pad
 - [x] 4298453:piraat,kronecker21,aff,tboff,balanced,nopad
 - [x] 4298455:piraat,kronecker21,aff,tboff,pad,scatter
@@ -14,8 +13,5 @@ Waiting for condor jobs
 
 TODO:
 - [ ] Investigate histogram
-- [ ] Try explicit parallelization of bfs_manual with pthreads
-- [ ] Modify IR to use another dispatcher
 - [x] Gather statistics on frontier computation times
 - [ ] Confirm that manual and pthreads are on par (ideally on piraat)
-- [ ] Parallelize target loop with gino directly
