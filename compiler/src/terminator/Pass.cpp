@@ -82,6 +82,10 @@ bool TerminatorPass::runOnModule(Module &M) {
   auto &LF = *noelle.getLoopNestingForest();
   int lastLoopOrder = 0;
 
+  // Pragma must not interfere with dependences
+  PragmaAnalysis PA;
+  noelle.addAnalysis(&PA);
+
   if (TargetFunc != "") {
     auto &F = *M.getFunction(TargetFunc);
     if (!F.empty()) {
@@ -121,10 +125,6 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
-
-  // Pragma must not interfere with dependences
-  PragmaAnalysis PA;
-  noelle.addAnalysis(&PA);
 
   TerminatorAnalysis TA(noelle, &LF, F, optimizations);
   TA.details = Details;
