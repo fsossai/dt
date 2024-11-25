@@ -14,7 +14,8 @@
 #include <stack>
 #include <sys/mman.h> // for mmap, munmap
 #include <sys/stat.h> // for fstat
-#include <unistd.h>   // for close
+#include <thread>
+#include <unistd.h> // for close
 #include <unordered_set>
 #include <vector>
 
@@ -309,12 +310,7 @@ int bfs_pthreads(const Graph &g, Node *root) {
       args[t]._end2 = &_end2;
       args[t].enqueued = &enqueued;
     }
-    auto p1 = noelle_pragma_begin("loop.tag", 100);
-    auto p11 = noelle_pragma_begin("loop.doall", "yes");
     for (int t = 0; t < T; t++) {
-      // int i;
-      // auto ldtc = noelle_pragma_begin("ldtc", &i, 0, skynet::clause_empty);
-      // bfs_pthreads_kernel((void*)&args[t]);
       rc = pthread_create(&threads[t],
                           NULL,
                           bfs_pthreads_kernel,
@@ -324,9 +320,15 @@ int bfs_pthreads(const Graph &g, Node *root) {
         cout << "ERROR: pthread_create()\n";
         return 0;
       }
+
+      // balanced single-socket pinning
       cpu_set_t cpuset;
       CPU_ZERO(&cpuset);
-      CPU_SET(t * 2, &cpuset); // balanced single-socket pinning
+      auto n_procs = thread::hardware_concurrency() / 2;
+      auto n_sockets = 2;
+      auto n_procs_per_socket = n_procs / n_sockets;
+      auto socket_id = t / n_procs_per_socket;
+      CPU_SET((t % n_procs_per_socket) * 2 + socket_id, &cpuset);
 
       rc = pthread_setaffinity_np(threads[t], sizeof(cpu_set_t), &cpuset);
       if (rc != 0) {
@@ -334,8 +336,6 @@ int bfs_pthreads(const Graph &g, Node *root) {
         return 0;
       }
     }
-    noelle_pragma_end(p11);
-    noelle_pragma_end(p1);
 
     for (int t = 0; t < T; t++) {
       pthread_join(threads[t], NULL);
