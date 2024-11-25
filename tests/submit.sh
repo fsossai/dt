@@ -1,10 +1,10 @@
 #!/bin/bash
 
-export machine="maudite"
-export input_file="inputs/kronecker_21.bin"
+export machine="piraat"
+export input_file="inputs/kronecker_24.bin"
 export runs=10
 export turboboost="off"
-export affinity="n"
+export affinity="y"
 export KMP_AFFINITY="granularity=thread,balanced"
 export LD_PRELOAD=libjemalloc.so
 export flags=""
@@ -27,7 +27,7 @@ _parallel_programs=(
   bfs_pthreads
   bfs_tc
   bfs_manual
-  # bfs_manual_opt
+  bfs_manual_opt
 )
 
 export sequential_programs=${_sequential_programs[@]}
@@ -80,7 +80,10 @@ else
     env_file_content+=("\"$var\":\"${!var}\"")
   done
   IFS="," ; printf "{%s}\n" "${env_file_content[*]}" > $env_file
-  cp $env_file job_${machine}_${jobid}.tmp
+
+  job_file=job_${machine}_${jobid}.tmp
+  IFS="," ; printf "{%s}\n" "${env_file_content[*]}" > $job_file
+
   echo "Submitted $jobid to $machine"
 fi
 
