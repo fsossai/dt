@@ -7,7 +7,7 @@ Log    = condor/$ENV(machine)/$(Cluster)_log.txt
 Environment = \
   results_dir=results/$ENV(machine)/$(Cluster); \
   bin_dir=condor/$ENV(machine)/$(Cluster)_bin; \
-  json=results/$ENV(machine)/summary.json;
+  summary=results/$ENV(machine)/summary_$(Cluster).json;
 
 Executable = build_and_run.sh
 Rank = TARGET.Mips

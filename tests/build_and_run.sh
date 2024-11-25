@@ -8,8 +8,6 @@ if [[ -z $results_dir ]]; then
   results_dir="."
 fi
 
-export phase=Kernel
-
 makebm=/nfs-scratch/fsv1684/.local/bin/makebm
 cd $root
 mkdir -p $results_dir

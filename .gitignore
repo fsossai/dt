@@ -8,3 +8,4 @@ install
 *.ll
 *.o
 *.out
+*.tmp
