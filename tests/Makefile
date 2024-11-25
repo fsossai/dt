@@ -1,30 +1,24 @@
-CXX=clang++
-STD=-std=c++20
-OPT=
-INCLUDE_DIRS=-I../skynet -I $(shell noelle-config --include)
-OPENMP=-fopenmp
-OUTDIR?=.
+CXX = clang++
+STD = -std=c++20
+INCLUDE =-I ../skynet -I $(shell noelle-config --include)
+OUTDIR ?= .
+OPT =
 FLAGS=
 
-SINGLE_FILE_TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
+TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
 DIRS=
 
-all: targets $(SINGLE_FILE_TARGETS)
-
-targets:
-	@for dir in $(DIRS); do \
-		make -C $$dir; \
-	done
+all: $(TARGETS)
 
 bfs_tc:
 	winchester bfs.cpp $(OUTDIR)
 	cp $(OUTDIR)/s7_exe.out $(OUTDIR)/$@.out
 
 bfs_%:
-	$(CXX) -D$(shell echo $@ | tr a-z A-Z) $(OPENMP) $(STD) $(INCLUDE_DIRS) $(OPT) $(FLAGS) bfs.cpp -o $(OUTDIR)/$@.out
+	$(CXX) $(STD) -DBFS_IMPL=$@ -fopenmp $(INCLUDE) $(OPT) $(FLAGS) bfs.cpp -o $(OUTDIR)/$@.out
 
-$(SINGLE_FILE_TARGETS): % : %.cpp
-	$(CXX) $(OPENMP) $(STD) $(INCLUDE_DIRS) $(OPT) $(FLAGS) $^ -o $@.out
+$(TARGETS): % : %.cpp
+	$(CXX) $(STD) -fopenmp $(INCLUDE) $(OPT) $(FLAGS) $^ -o $@.out
 
 clean:
 	rm -f *.out *.bc *.ll

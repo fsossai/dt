@@ -258,7 +258,6 @@ void *bfs_pthreads_kernel(void *p) {
 }
 
 int bfs_pthreads(const Graph &g, Node *root) {
-  cout << __func__ << "()\n";
   skynet::Set<Node *, skynet::SetT> enqueued;
   auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
   auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
@@ -493,79 +492,6 @@ int bfs_tc(const Graph &g, Node *root) {
   return result.get();
 }
 
-int bfs_tc_outlined(const Graph &g, Node *root) {
-  skynet::Set<Node *, skynet::SetT> enqueued;
-  auto currentFrontier = new skynet::Set<Node *, skynet::VectorT>();
-  auto nextFrontier = new skynet::Set<Node *, skynet::VectorT>();
-
-  skynet::Scalar<int> result(0);
-  currentFrontier->insert(root);
-  enqueued.insert(root);
-
-  int f_idx = 0;
-  auto p1 = noelle_pragma_begin("loop.tag", 10);
-  while (!currentFrontier->empty()) {
-#if defined(DEBUG) || defined(BFS_DEBUG)
-    cout << "--- processing frontier " << f_idx;
-    cout << " (size=" << currentFrontier->size() << ")\n";
-    cout << result.get() << "\n";
-    result.printInternals();
-    cout << "\n";
-#endif
-#ifdef BFS_TIMING
-    TIMER_START("Frontier");
-#endif
-    const int T = omp_get_max_threads();
-    pthread_t threads[T];
-    bfs_pthreads_kernel_args args[T];
-    auto _it2 = currentFrontier->begin();
-    auto _end2 = currentFrontier->end();
-    auto p5 = noelle_pragma_begin("loop.tag", 50);
-    for (int t = 0; t < T; t++) {
-      args[t].t = t;
-      args[t].g = &g;
-      args[t].currentFrontier = currentFrontier;
-      args[t].nextFrontier = nextFrontier;
-      args[t].result = &result;
-      args[t]._it2 = &_it2;
-      args[t]._end2 = &_end2;
-      args[t].enqueued = &enqueued;
-    }
-    noelle_pragma_end(p5);
-    skynet::clause_set_insert(T, nextFrontier);
-    skynet::clause_set_op_plusplus(T, &_it2);
-    skynet::clause_scalar_sum(T * PAD, &result);
-    auto p2 = noelle_pragma_begin("loop.tag", 20);
-    auto p21 = noelle_pragma_begin("loop.doall", "yes");
-    for (int t = 0; t < T; t++) {
-      // int i;
-      // auto pldtc = noelle_pragma_begin("ldtc", &i, 0, skynet::clause_empty);
-      bfs_pthreads_kernel((void*)&args[t]);
-      // noelle_pragma_end(pldtc);
-    }
-    noelle_pragma_end(p21);
-    noelle_pragma_end(p2);
-    auto p4 = noelle_pragma_begin("loop.tag", 40);
-    auto p41 = noelle_pragma_begin("loop.doall", "no");
-
-    enqueued.insert(*nextFrontier);
-    noelle_pragma_end(p41);
-    noelle_pragma_end(p4);
-    currentFrontier->clear();
-    swap(currentFrontier, nextFrontier);
-    ++f_idx;
-#ifdef BFS_TIMING
-    TIMER_STOP();
-#endif
-  }
-  noelle_pragma_end(p1);
-
-  delete currentFrontier;
-  delete nextFrontier;
-
-  return result.get();
-}
-
 bool lockfree_contains(unordered_set<Node *> &roster, Node *m) {
   return roster.find(m) == roster.end();
 }
@@ -724,24 +650,15 @@ int main(int argc, char *argv[]) {
 
   auto root = g.getRoot();
 
-  TIMER_START("Kernel");
-#ifdef BFS_FRONTIER
-  int result = bfs_frontier(g, g.getRoot());
-#elif defined BFS_MANUAL
-  int result = bfs_manual(g, g.getRoot());
-#elif defined BFS_MANUAL_OPT
-  int result = bfs_manual_opt(g, g.getRoot());
-#elif defined BFS_OMP
-  int result = bfs_omp(g, g.getRoot());
-#elif defined BFS_PTHREADS
-  int result = bfs_pthreads(g, g.getRoot());
-#elif defined BFS_TC_OUTLINED
-  int result = bfs_tc_outlined(g, g.getRoot());
-#else
-  int result = bfs_tc(g, g.getRoot());
+#ifndef BFS_IMPL
+#  error Please define BFS_IMPL
 #endif
-  cout << "res = " << result << endl;
+
+  TIMER_START("Kernel");
+  int result = BFS_IMPL(g, g.getRoot());
   TIMER_STOP();
+
+  cout << "res = " << result << endl;
 
   TIMER_STOP();
 

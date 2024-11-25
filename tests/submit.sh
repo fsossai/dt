@@ -64,6 +64,7 @@ else
     machine
     input_file
     runs
+    tspace
     turboboost
     affinity
     KMP_AFFINITY
