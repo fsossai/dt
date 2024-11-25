@@ -1,10 +1,10 @@
 #!/bin/bash
 
-export machine="local"
-export input_file="inputs/kronecker_24.bin"
-export runs=1
-export turboboost="on"
-export affinity="y"
+export machine="maudite"
+export input_file="inputs/kronecker_21.bin"
+export runs=10
+export turboboost="off"
+export affinity="n"
 export KMP_AFFINITY="granularity=thread,balanced"
 export LD_PRELOAD=libjemalloc.so
 export flags=""
@@ -23,11 +23,10 @@ _sequential_programs=(
 )
 
 _parallel_programs=(
-  # bfs_omp
-  # bfs_pthreads
-  # bfs_tc
-  # bfs_tc_outlined
-  # bfs_manual
+  bfs_omp
+  bfs_pthreads
+  bfs_tc
+  bfs_manual
   # bfs_manual_opt
 )
 
@@ -75,10 +74,13 @@ else
     sequential_programs
     parallel_programs
   )
+  env_file=results/${machine}/env_${jobid}.json
+  env_file_content=()
   for var in ${environment[@]}; do
-    echo "$var=\"${!var}\"" >> job_${machine}_${jobid}.tmp
+    env_file_content+=("\"$var\":\"${!var}\"")
   done
-  comm -2 <(echo $env_post) <(echo $env_pre)
+  IFS="," ; printf "{%s}\n" "${env_file_content[*]}" > $env_file
+  cp $env_file job_${machine}_${jobid}.tmp
   echo "Submitted $jobid to $machine"
 fi
 
