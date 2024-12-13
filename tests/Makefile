@@ -11,7 +11,7 @@ DIRS=
 all: $(TARGETS)
 
 bfs_tc:
-	winchester bfs.cpp $(OUTDIR)
+	winchester_flags="$$winchester_flags -DBFS_IMPL=bfs_tc" winchester bfs.cpp $(OUTDIR)
 	cp $(OUTDIR)/s7_exe.out $(OUTDIR)/$@.out
 
 bfs_%:
