@@ -77,7 +77,6 @@ class Set {
 public:
   using cell_container_t = typename std::
       conditional<C == SetT, std::unordered_set<T>, std::vector<T>>::type;
-  using container_t = std::vector<cell_container_t>;
 
   Set() : n_rows_(1), n_cols_(1) {
     container_.resize(n_rows_ * n_cols_);
@@ -147,7 +146,12 @@ public:
     n_cols_ = M;
     for (auto &x : cell_copy) {
       int i = hasher(x) % n_rows_;
-      container_[i][0].insert(x);
+      if constexpr (C == SetT) {
+        container_[i][0].insert(x);
+      }
+      if constexpr (C == VectorT) {
+        container_[i][0].push_back(x);
+      }
     }
   }
 
@@ -244,7 +248,13 @@ public:
 
   void printStats() {
     auto size_local = size();
-    auto redundancy = (double)storageSize() / size_local;
+    auto storage_size = storageSize();
+    auto redundancy = (double)storage_size / size_local;
+    if (size_local == 0) {
+      if (storage_size != 0) {
+        printInternals();
+      }
+    }
 
     std::cout << "storageSize = " << storageSize() << "\n";
     std::cout << "size = " << size_local << "\n";
