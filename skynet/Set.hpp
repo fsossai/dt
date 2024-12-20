@@ -222,11 +222,19 @@ public:
   }
 
   size_t size() {
-    size_t rs = 0;
-    for (const auto &e : *this) {
-      rs++;
+    size_t counter = 0;
+#pragma omp parallel for
+    for (auto &row : this->container_) {
+      std::unordered_set<T> seen;
+      for (auto &cell : row) {
+        for (auto &e : cell) {
+          if (seen.insert(e).second) {
+            counter++;
+          }
+        }
+      }
     }
-    return rs;
+    return counter;
   }
 
   double redundancyFactor() {
