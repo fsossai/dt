@@ -2,18 +2,17 @@
 
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
-outDir=.
+if [[ -z $winchester_outDir ]]; then
+  outDir=.
+else
+  outDir=$winchester_outDir
+fi
+
 cppstd=-std=c++20
 
 if [[ $# < 1 || $# > 2 ]]; then
   echo "usage: `basename $0` <SOURCE> [<OUT_DIR>]"
   exit 1
-fi
-if [[ $# > 0 ]]; then
-  input=$1
-fi
-if [[ $# > 1 ]]; then
-  outDir=$2
 fi
 
 mkdir -p $outDir
@@ -42,7 +41,7 @@ gclang++ \
   -I $(noelle-config --include) \
   -I /nfs-scratch/fsv1684/repo/dt/skynet \
   -o $outDir/s$((stage))_input.o \
-  $input
+  $@
 get-bc -o $outDir/s$((stage))_input.bc $outDir/s$((stage))_input.o
 
 ################################################################################
