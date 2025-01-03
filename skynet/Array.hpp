@@ -51,9 +51,13 @@ public:
     Array<T> *base_;
   };
 
-  Array(size_t size) : size_(size) {
+  Array(size_t size, bool init = true) : size_(size) {
     container_.emplace_back();
-    container_[0].resize(size);
+    if (init) {
+      container_[0].resize(size);
+    } else {
+      container_[0].reserve(size);
+    }
   }
 
   void set(size_t idx, T value) {
@@ -70,11 +74,12 @@ public:
 
   // This function should be a method of `ApatheticArray` that, at the moment is
   // not implemented
-  __attribute__((always_inline)) bool replace_if(size_t idx, T pre, T post) {
+  __attribute__((always_inline)) bool replace_if_negative(size_t idx, T new_val) {
     auto _p = noelle_pragma_begin("ldtc");
-    auto &addr = &container_[0][idx];
-    if (*addr == pre) {
-      if (__sync_bool_compare_and_swap(addr, pre, post)) {
+    auto *addr = &container_[0][idx];
+    auto val = *addr;
+    if (val < 0) {
+      if (__sync_bool_compare_and_swap(addr, val, new_val)) {
         return true;
       }
     }
@@ -84,7 +89,7 @@ public:
 
   T operator[](size_t idx) {
     T v = container_[0][idx];
-    for (int i = 1; i <= container_.size(); i++) {
+    for (int i = 1; i < container_.size(); i++) {
       v += container_[i][idx];
     }
     return v;
