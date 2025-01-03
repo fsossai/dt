@@ -61,11 +61,25 @@ public:
     container_[k][idx] = value;
   }
 
-  void add(size_t idx, T value) {
+  __attribute__((always_inline)) void add(size_t idx, T value) {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
     container_[k][idx] += value;
     noelle_pragma_end(_p);
+  }
+
+  // This function should be a method of `ApatheticArray` that, at the moment is
+  // not implemented
+  __attribute__((always_inline)) bool replace_if(size_t idx, T pre, T post) {
+    auto _p = noelle_pragma_begin("ldtc");
+    auto &addr = &container_[0][idx];
+    if (*addr == pre) {
+      if (__sync_bool_compare_and_swap(addr, pre, post)) {
+        return true;
+      }
+    }
+    noelle_pragma_end(_p);
+    return false;
   }
 
   T operator[](size_t idx) {

@@ -2,7 +2,7 @@ CXX = clang++
 STD = -std=c++20
 INCLUDE =-I ../skynet -I $(shell noelle-config --include)
 OUTDIR ?= .
-OPT =
+OPT ?= -g
 FLAGS=
 
 TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
