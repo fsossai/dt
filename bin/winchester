@@ -124,4 +124,10 @@ clang++ \
   -o $outDir/s$((stage))_exe.out
 
 wait
+
+sleep 0.5
+
+if [[ -n $winchester_outBin ]]; then
+  cp $outDir/s$((stage))_exe.out $outDir/$winchester_outBin
+fi
 echo "Winchester: Done"
