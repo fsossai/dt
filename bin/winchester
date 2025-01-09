@@ -37,16 +37,16 @@ gclang++ \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
   -I /nfs-scratch/fsv1684/repo/dt/skynet \
-  -o $outDir/s$((stage))_input.o \
+  -o $outDir/${winchester_outBin}_s$((stage))_input.o \
   $@
-get-bc -o $outDir/s$((stage))_input.bc $outDir/s$((stage))_input.o
+get-bc -o $outDir/${winchester_outBin}_s$((stage))_input.bc $outDir/${winchester_outBin}_s$((stage))_input.o
 
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-opt --inline $outDir/s$((stage-1))_input.bc -o $outDir/s$((stage))_inlined.bc
-noelle-norm $outDir/s$((stage))_inlined.bc -o $outDir/s$((stage))_inlined.bc
-# noelle-meta-scc-embed $outDir/s$((stage))_inlined.bc -o scc.$outDir/s$((stage))_inlined.bc &
+opt --inline $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
+noelle-norm $outDir/${winchester_outBin}_s$((stage))_inlined.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
+# noelle-meta-scc-embed $outDir/${winchester_outBin}_s$((stage))_inlined.bc -o scc.$outDir/${winchester_outBin}_s$((stage))_inlined.bc &
 clang++ \
   -fopenmp \
   -std=c++17 \
@@ -83,35 +83,35 @@ gino-load  \
   --terminator-craft-plan \
   --terminator-breaks=-1 \
   --noelle-verbose=2 \
-  -o $outDir/s$((stage))_terminated.bc \
-  $outDir/s$((stage-1))_inlined.bc
+  -o $outDir/${winchester_outBin}_s$((stage))_terminated.bc \
+  $outDir/${winchester_outBin}_s$((stage-1))_inlined.bc
 
-noelle-norm $outDir/s$((stage))_terminated.bc -o $outDir/s$((stage))_terminated.bc
-# noelle-meta-scc-embed $outDir/s$((stage))_terminated.bc -o scc.$outDir/s$((stage))_terminated.bc &
+noelle-norm $outDir/${winchester_outBin}_s$((stage))_terminated.bc -o $outDir/${winchester_outBin}_s$((stage))_terminated.bc
+# noelle-meta-scc-embed $outDir/${winchester_outBin}_s$((stage))_terminated.bc -o scc.$outDir/${winchester_outBin}_s$((stage))_terminated.bc &
 
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
 llvm-link \
-  $outDir/s$((stage-1))_terminated.bc \
+  $outDir/${winchester_outBin}_s$((stage-1))_terminated.bc \
   $outDir/Parallelizer_utils.bc \
   $outDir/NOELLE_APIs.bc \
-  -o $outDir/s$((stage))_linked.bc
+  -o $outDir/${winchester_outBin}_s$((stage))_linked.bc
 
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-noelle-norm $outDir/s$((stage-1))_linked.bc -o $outDir/s$((stage))_renormalized.bc
+noelle-norm $outDir/${winchester_outBin}_s$((stage-1))_linked.bc -o $outDir/${winchester_outBin}_s$((stage))_renormalized.bc
 
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-gino-loops $outDir/s$((stage-1))_renormalized.bc -o $outDir/s$((stage))_parallelized.bc
+gino-loops $outDir/${winchester_outBin}_s$((stage-1))_renormalized.bc -o $outDir/${winchester_outBin}_s$((stage))_parallelized.bc
 
 ################################################################################
 ((stage+=1))
 echo "Winchester: Stage $stage"
-noelle-load -PragmaEraser $outDir/s$((stage-1))_parallelized.bc -o $outDir/s$((stage))_nopragma.bc
+noelle-load -PragmaEraser $outDir/${winchester_outBin}_s$((stage-1))_parallelized.bc -o $outDir/${winchester_outBin}_s$((stage))_nopragma.bc
 
 ################################################################################
 ((stage+=1))
@@ -120,14 +120,14 @@ clang++ \
   $flags \
   -pthreads \
   -fopenmp \
-  $outDir/s$((stage-1))_nopragma.bc \
-  -o $outDir/s$((stage))_exe.out
+  $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
+  -o $outDir/${winchester_outBin}_s$((stage))_exe.out
 
 wait
 
 sleep 0.5
 
 if [[ -n $winchester_outBin ]]; then
-  cp $outDir/s$((stage))_exe.out $outDir/$winchester_outBin
+  cp $outDir/${winchester_outBin}_s$((stage))_exe.out $outDir/$winchester_outBin
 fi
 echo "Winchester: Done"
