@@ -9,7 +9,7 @@ else
 fi
 
 if [[ $# < 1 || $# > 2 ]]; then
-  echo "usage: `basename $0` <SOURCE> [<OUT_DIR>]"
+  echo "usage: `basename $0` <SOURCES>"
   exit 1
 fi
 
