@@ -54,13 +54,14 @@ public:
 
   __attribute__((always_inline)) void append(T value) {
     int k = container_.size() - 1;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_sequence_append<T>, this);
+    auto _p =
+        noelle_pragma_begin("ldtc", &k, 0, clause_sequence_append<T>, this);
     container_[k].push_back(value);
     noelle_pragma_end(_p);
   }
 
-  void append_as(int k, T value) {
-    container_[k].push_back(value);
+  void __append(int t, T value) {
+    container_[t].push_back(value);
   }
 
   T &operator[](size_t idx) {
@@ -98,7 +99,14 @@ public:
     }
   }
 
-private:
+  void clear() {
+#pragma omp parallel for
+    for (auto &block : container_) {
+      block.clear();
+    }
+  }
+
+  // private:
   std::vector<std::vector<T>> container_;
 
   std::pair<size_t, size_t> getCoordinate(size_t idx) const {
@@ -127,4 +135,4 @@ private:
   int k_;
 };
 
-}
+} // namespace skynet
