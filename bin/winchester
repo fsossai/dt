@@ -32,7 +32,7 @@ gclang++ \
   -fno-exceptions \
   -fno-vectorize \
   -c \
-  -O2 \
+  -O3 \
   -Xclang \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
@@ -117,7 +117,8 @@ noelle-load -PragmaEraser $outDir/${winchester_outBin}_s$((stage-1))_parallelize
 ((stage+=1))
 echo "Winchester: Stage $stage"
 clang++ \
-  $flags \
+  $winchester_flags \
+  $winchester_linker \
   -pthreads \
   -fopenmp \
   $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
