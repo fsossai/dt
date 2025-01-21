@@ -129,7 +129,6 @@ public:
     do {
       j -= container_[++i].size();
     } while (j >= 0);
-    return container_[i][container_[i].size() + j];
     std::pair<size_t, size_t> coord;
     coord.first = i;
     coord.second = container_[i].size() + j;
