@@ -8,6 +8,10 @@ else
   outDir=$winchester_outDir
 fi
 
+if [[ -z $winchester_flags ]]; then
+  winchester_flags="-std=c++17"
+fi
+
 if [[ $# < 1 || $# > 2 ]]; then
   echo "usage: `basename $0` <SOURCES>"
   exit 1

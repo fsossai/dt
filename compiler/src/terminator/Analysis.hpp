@@ -10,6 +10,7 @@
 
 #include "arcana/noelle/core/LoopContent.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
+#include "LeptoInstVisitor.hpp"
 
 #include "TClause.hpp"
 
@@ -63,7 +64,7 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   noelle::LoopContent *fetchLoopContent(noelle::LoopStructure *LS);
 
-  void printDependence(const Dependence *LCD) const;
+  void printDependence(const Dependence *LCD);
 
   bool isRelevant(noelle::LoopStructure *LS) const;
 
@@ -92,6 +93,7 @@ private:
   std::unordered_map<uint64_t, std::unordered_set<TClause *>> loopIdToClauses;
   std::unordered_map<uint64_t, uint64_t> loopIdToTag;
   noelle::PragmaForest doallMarkers;
+  LeptoInstVisitor LIV;
 
   void collectRelevantLCDs(noelle::LoopContent *LC);
 

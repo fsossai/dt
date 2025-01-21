@@ -29,6 +29,14 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(HandleLLVMOptions)
 include(AddLLVM)
 
+include(FetchContent)
+FetchContent_Declare(
+  leptoinst
+  GIT_REPOSITORY  "https://github.com/fsossai/lepto-inst"
+)
+FetchContent_MakeAvailable(leptoinst)
+FetchContent_GetProperties(leptoinst)
+
 get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 set(DT_CONFIG_VERSION 0.1.0)
 set(DT_CONFIG_LIB ${DT_CONFIG_PREFIX}/lib)

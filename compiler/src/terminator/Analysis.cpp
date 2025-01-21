@@ -104,11 +104,13 @@ bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
   return true;
 }
 
-void TerminatorAnalysis::printDependence(const Dependence *LCD) const {
+void TerminatorAnalysis::printDependence(const Dependence *LCD) {
   auto srcValue = LCD->getSrc();
   auto dstValue = LCD->getDst();
-  errs() << this->prefix << "Dependence: [src] " << *srcValue << "\n";
-  errs() << this->prefix << "Dependence: [dst] " << *dstValue << "\n";
+  errs() << this->prefix << "Dependence: [src] " << LIV.visitValue(*srcValue)
+         << "\n";
+  errs() << this->prefix << "Dependence: [dst] " << LIV.visitValue(*dstValue)
+         << "\n";
 }
 
 CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
@@ -157,6 +159,7 @@ string TerminatorAnalysis::coverageToString(CoverageType coverageType) {
     case FULL:
       return "fully-covered";
   }
+  return "impossible"; // to slience warnings
 }
 
 int TerminatorAnalysis::getCoverageCount(LoopStructure *LS,
@@ -175,6 +178,7 @@ int TerminatorAnalysis::getCoverageCount(LoopStructure *LS,
     case FULL:
       return coverageSummary.fullyCovered;
   }
+  return coverageSummary.notCovered; // to slience warnings
 }
 
 void TerminatorAnalysis::printCoverageSummary(LoopStructure *LS) {

@@ -4,5 +4,7 @@ add_llvm_library(
   Analysis.cpp
   Pass.cpp
   TClause.cpp
+  PrettyPrint.cpp
+  ${leptoinst_SOURCE_DIR}/src/LeptoInstVisitor.cpp
 )
 

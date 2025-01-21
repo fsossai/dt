@@ -5,22 +5,20 @@
 
 #include "arcana/noelle/core/Noelle.hpp"
 
-using namespace arcana::noelle;
-
 namespace arcana::dt {
 
-class TerminatorPass : public ModulePass {
+class TerminatorPass : public llvm::ModulePass {
 public:
   static char ID;
 
   TerminatorPass();
-  bool doInitialization(Module &M) override;
-  bool runOnModule(Module &M) override;
-  bool runOnFunction(Noelle &noelle,
-                     LoopForest &LF,
-                     Function &F,
+  bool doInitialization(llvm::Module &M) override;
+  bool runOnModule(llvm::Module &M) override;
+  bool runOnFunction(noelle::Noelle &noelle,
+                     noelle::LoopForest &LF,
+                     llvm::Function &F,
                      int &lastLoopOrder);
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 private:
   std::string prefix;
