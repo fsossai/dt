@@ -103,6 +103,16 @@ public:
     }
   }
 
+  void printStats() const {
+    size_t s = 0;
+    std::printf("[ ");
+    for (auto &cell : container_) {
+      s += cell.size();
+      std::printf("[%zu] ", cell.size());
+    }
+    std::printf("] (%zu)\n", s);
+  }
+
   void clear() {
 #pragma omp parallel for
     for (auto &block : container_) {
