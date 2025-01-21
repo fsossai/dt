@@ -65,8 +65,12 @@ public:
   }
 
   T &operator[](size_t idx) {
-    auto coord = getCoordinate(idx);
-    return container_[coord.first][coord.second];
+    int i = -1;
+    int64_t j = idx;
+    do {
+      j -= container_[++i].size();
+    } while (j >= 0);
+    return container_[i][container_[i].size() + j];
   }
 
   Iterator begin() {
@@ -110,25 +114,15 @@ public:
   std::vector<std::vector<T>> container_;
 
   std::pair<size_t, size_t> getCoordinate(size_t idx) const {
-    size_t c1 = 0;
-    size_t csum = container_[0].size();
-    while (csum <= idx) {
-      c1++;
-      assert(c1 != container_.size());
-      csum += container_[c1].size();
-    }
-
-    size_t c2 = 0;
-    if (c1 == 0) {
-      c2 = idx;
-    } else {
-      c2 = idx - (csum - container_[c1].size());
-    }
-
+    int i = -1;
+    int64_t j = idx;
+    do {
+      j -= container_[++i].size();
+    } while (j >= 0);
+    return container_[i][container_[i].size() + j];
     std::pair<size_t, size_t> coord;
-    coord.first = c1;
-    coord.second = c2;
-
+    coord.first = i;
+    coord.second = container_[i].size() + j;
     return coord;
   }
 
