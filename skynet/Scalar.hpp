@@ -8,11 +8,16 @@
 
 namespace skynet {
 
-template <class T>
+const uint32_t L1D_CACHE_LINE_SIZE = 64;
+
+template <class T,
+          uint32_t _PAD =
+              std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
 class Scalar;
 
-template <class T>
-void clause_scalar_sum(int N, Scalar<T> *s) {
+template <class T, uint32_t _PAD>
+void clause_scalar_sum(int N, Scalar<T, _PAD> *s) {
+  N *= _PAD;
 #ifdef DEBUG
   std::printf("%s(%i, %p, %i)\n", __func__, N, s);
 #endif
@@ -23,10 +28,10 @@ void clause_scalar_sum(int N, Scalar<T> *s) {
   s->container_.resize(N);
 }
 
-template <class T>
+template <class T, uint32_t _PAD>
 class Scalar {
 public:
-  friend void clause_scalar_sum<T>(int N, Scalar<T> *s);
+  friend void clause_scalar_sum<T, _PAD>(int N, Scalar<T, _PAD> *s);
 
   Scalar(T x) : container_{ x } {}
 
@@ -34,9 +39,12 @@ public:
 
   __attribute__((always_inline)) void sum(T x) {
     size_t k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, (size_t)0, clause_scalar_sum<T>, this);
-    container_[k] += x;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  (size_t)0,
+                                  clause_scalar_sum<T, _PAD>,
+                                  this);
+    container_[k * _PAD] += x;
     noelle_pragma_end(_p);
   }
 
@@ -56,7 +64,7 @@ public:
   }
 
   void __sum(size_t k, T x) {
-    container_[k] += x;
+    container_[k * _PAD] += x;
   }
 
   void printInternals() const {
