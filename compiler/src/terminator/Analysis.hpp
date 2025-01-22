@@ -67,6 +67,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   void printDependence(const Dependence *LCD);
 
+  void printUnknownLCDs(noelle::LoopContent *LC);
+
   bool isRelevant(noelle::LoopStructure *LS) const;
 
   std::unordered_set<TClause *> getClausesOf(noelle::LoopStructure *LS);

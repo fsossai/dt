@@ -17,7 +17,6 @@
 #include "arcana/dt/LoopBlocker.hpp"
 #include "Analysis.hpp"
 #include "Pass.hpp"
-#include "PrettyPrint.hpp"
 
 using namespace std;
 using namespace llvm;
@@ -225,7 +224,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     log.info().noPrefix() << "\n";
 
     if (!looksDoall) {
-      printUnknownLCDs(LC, noelle);
+      TA.printUnknownLCDs(LC);
     }
 
     if (treatAsDoall) {

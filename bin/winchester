@@ -12,6 +12,10 @@ if [[ -z $winchester_flags ]]; then
   winchester_flags="-std=c++17"
 fi
 
+if [[ -z $winchester_taggedOnly ]]; then
+  winchester_taggedOnly="false"
+fi
+
 if [[ $# < 1 || $# > 2 ]]; then
   echo "usage: `basename $0` <SOURCES>"
   exit 1
@@ -81,7 +85,7 @@ gino-load  \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   -Terminator \
-  --terminator-tagged-only=true \
+  --terminator-tagged-only=${winchester_taggedOnly} \
   --terminator-func= \
   --terminator-details \
   --terminator-craft-plan \
