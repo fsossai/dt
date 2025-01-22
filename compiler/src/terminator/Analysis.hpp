@@ -10,6 +10,7 @@
 
 #include "arcana/noelle/core/LoopContent.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
+#include "arcana/noelle/core/Lumberjack.hpp"
 #include "LeptoInstVisitor.hpp"
 
 #include "TClause.hpp"
@@ -79,7 +80,6 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
   bool details;
 
 private:
-  std::string prefix;
   noelle::Noelle &noelle;
   noelle::MetadataManager *MM;
   noelle::LoopForest *LF;
@@ -94,6 +94,7 @@ private:
   std::unordered_map<uint64_t, uint64_t> loopIdToTag;
   noelle::PragmaForest doallMarkers;
   LeptoInstVisitor LIV;
+  noelle::Logger log;
 
   void collectRelevantLCDs(noelle::LoopContent *LC);
 

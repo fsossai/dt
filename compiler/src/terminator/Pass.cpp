@@ -65,7 +65,7 @@ static cl::opt<bool> CraftPlan(
 
 TerminatorPass::TerminatorPass()
   : ModulePass{ ID },
-    prefix("Terminator: Pass: ") {}
+    log(NoelleLumberjack, "Terminator.Pass") {}
 
 bool TerminatorPass::doInitialization(Module &M) {
   return false;
@@ -147,11 +147,11 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     }
 
     // Printing new plan information
-    errs() << prefix << "Crafted a new parallel plan { ";
+    log.info() << "Crafted a new parallel plan { ";
     for (auto LS : relevantLoops) {
-      errs() << TA.getLoopDescription(LS) << " ";
+      log.info().noPrefix() << TA.getLoopDescription(LS) << " ";
     }
-    errs() << "}\n";
+    log.info().noPrefix() << "}\n";
   } else {
     if (CraftPlan) {
       assert(false && "A crafted plan is requested but there is one already");
@@ -169,7 +169,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto LD = TA.getLoopDescription(LS);
     if (TaggedOnly) {
       if (TA.getLoopTag(LS) == 0) {
-        errs() << this->prefix << "Skipping " << LD << "\n";
+        log.info() << "Skipping " << LD << "\n";
         continue;
       }
     }
@@ -177,8 +177,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     assert(LC != nullptr);
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
 
-    errs() << this->prefix << "Loop" << LD
-           << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
+    log.info()
+        << "Loop" << LD << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
 
     if (isDOALL) {
       MM->addMetadata(LS, "gino.doall", "yes");
@@ -195,7 +195,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   set<LoopContent *> terminationTargetLCs;
 
   noelle.addAnalysis(&TA);
-  errs() << this->prefix << "Added Termination engine to Noelle\n";
+  log.info() << "Added Termination engine to Noelle\n";
 
   for (auto *LS : retryLSs) {
     auto LC = noelle.getLoopContent(LS, optimizations);
@@ -204,30 +204,28 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     bool looksDoall =
         cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
 
-    errs() << this->prefix << "Loop" << LD << ": DOALL+TC: ";
-
-    errs() << (looksDoall ? "yes" : "no");
+    log.info() << "Loop" << LD << ": DOALL+TC: " << (looksDoall ? "yes" : "no");
 
     bool treatAsDoall = false;
     auto doallTag = TA.getDoallTag(LS);
     switch (doallTag) {
       case YES:
         treatAsDoall = true;
-        errs() << " (marked yes)";
+        log.info().noPrefix() << " (marked yes)";
         break;
       case NO:
         treatAsDoall = false;
-        errs() << " (marked no)";
+        log.info().noPrefix() << " (marked no)";
         break;
       case MAYBE:
         treatAsDoall = looksDoall;
         break;
     }
 
-    errs() << "\n";
+    log.info().noPrefix() << "\n";
 
     if (!looksDoall) {
-      printUnknownLCDs(LC, noelle, prefix + "Details: ");
+      printUnknownLCDs(LC, noelle);
     }
 
     if (treatAsDoall) {
@@ -262,10 +260,9 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
     if (NumBreaks < 0) {
-      errs() << this->prefix << "Loop" << LD << ": Blocks: auto\n";
+      log.info() << "Loop" << LD << ": Blocks: auto\n";
     } else {
-      errs() << this->prefix << "Loop" << LD << ": Blocks: " << (NumBreaks + 1)
-             << "\n";
+      log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
     }
     NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
     assert(NewHeader != nullptr && "Failed to block to loop");
@@ -280,8 +277,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     // Applying termination clauses
     int clauseID = 0;
     for (auto clause : TA.getClausesOf(LS)) {
-      errs() << this->prefix << "Loop" << LD << ": Handling: ";
-      clause->print(errs()) << "\n";
+      log.info() << "Loop" << LD << ": Handling: ";
+      log.info() << *clause << "\n";
       if (clause->isStrong()) {
         // This kind of clauses don't need to be handled
         continue;
@@ -311,8 +308,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
           } else if (isa<AllocaInst>(CurrentDef)) {
             break;
           } else {
-            errs() << this->prefix << "ERROR: Unhandled\n";
-            errs() << *A << "\n";
+            log.bypass() << "ERROR: Unhandled\n";
+            log.bypass() << *A << "\n";
             abort();
           }
         }

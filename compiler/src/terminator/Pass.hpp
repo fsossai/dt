@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "arcana/noelle/core/Noelle.hpp"
+#include "arcana/noelle/core/Lumberjack.hpp"
 
 namespace arcana::dt {
 
@@ -21,7 +22,7 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 private:
-  std::string prefix;
+  noelle::Logger log;
 };
 
 } // namespace arcana::dt

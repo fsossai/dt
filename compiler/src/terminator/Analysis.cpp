@@ -28,12 +28,12 @@ TerminatorAnalysis::TerminatorAnalysis(
     unordered_set<LoopContentOptimization> optimizations)
   : DependenceAnalysis("Terminator"),
     details(false),
-    prefix("Terminator: Analysis: "),
     noelle(noelle),
     LF(LF),
     F(F),
     PF(F, "ldtc"),
-    doallMarkers(F, "loop.doall") {
+    doallMarkers(F, "loop.doall"),
+    log(NoelleLumberjack, "Terminator.Analysis") {
 
   // We only care about loops with clauses. It is not the job of this analysis
   // to study loops that are unrelated to clauses even though they may be
@@ -42,15 +42,14 @@ TerminatorAnalysis::TerminatorAnalysis(
 
   this->MM = noelle.getMetadataManager();
   if (this->PF.getTrees().size() != 0) {
-    this->PF.print(errs(), this->prefix + "Pragmas: ");
+    log.info() << this->PF;
   }
 
   this->PF.visitPreOrder([&, this](PragmaTree *T, auto) -> bool {
     auto Begin = T->getBeginDelimiter();
     auto newClause = new TClause(*T);
     this->clauses.insert(newClause);
-    errs() << this->prefix << "Found: ";
-    newClause->print(errs()) << "\n";
+    log.info() << "Found: " << *newClause << "\n";
 
     auto InnerLT = LF->getInnermostLoopThatContains(Begin);
     if (InnerLT != nullptr) {
@@ -72,12 +71,11 @@ TerminatorAnalysis::TerminatorAnalysis(
   for (auto LS : this->relevantLoops) {
     auto ID = LS->getID().value();
     auto clauses = this->loopIdToClauses[ID];
-    errs()
-        << this->prefix << "Loop" << getLoopDescription(LS) << ": Clauses: { ";
+    log.info() << "Loop" << getLoopDescription(LS) << ": Clauses: { ";
     for (auto clause : clauses) {
-      errs() << clause->getUniqueName() << " ";
+      log.info().noPrefix() << clause->getUniqueName() << " ";
     }
-    errs() << "}\n";
+    log.info().noPrefix() << "}\n";
   }
 
   // We keep the set of dependencies for which at least on instruction that
@@ -107,10 +105,9 @@ bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
 void TerminatorAnalysis::printDependence(const Dependence *LCD) {
   auto srcValue = LCD->getSrc();
   auto dstValue = LCD->getDst();
-  errs() << this->prefix << "Dependence: [src] " << LIV.visitValue(*srcValue)
-         << "\n";
-  errs() << this->prefix << "Dependence: [dst] " << LIV.visitValue(*dstValue)
-         << "\n";
+  auto dep = log.namedSection("Dependence");
+  log.info() << "[src] " << LIV.visitValue(*srcValue);
+  log.info() << "[dst] " << LIV.visitValue(*dstValue);
 }
 
 CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
@@ -185,9 +182,8 @@ void TerminatorAnalysis::printCoverageSummary(LoopStructure *LS) {
   auto cTypes = vector{ NONE, SRC_ONLY, DST_ONLY, CROSS, FULL };
 
   for (auto cType : cTypes) {
-    errs() << this->prefix << "Loop" << getLoopDescription(LS) << ": "
-           << getCoverageCount(LS, cType) << " " << coverageToString(cType)
-           << "\n";
+    log.info() << getCoverageCount(LS, cType) << " " << coverageToString(cType)
+               << "\n";
   }
 }
 
@@ -238,8 +234,9 @@ void TerminatorAnalysis::collectRelevantLCDs(noelle::LoopContent *LC) {
   this->loopIdToCoverageSummary[ID] = coverageSummary;
   this->loopIdToContent[ID] = LC;
 
-  errs() << this->prefix << "Loop" << getLoopDescription(LS) << ": Found "
-         << lcdCounter << " unknown LCDs\n";
+  auto s = log.namedSection("Loop" + getLoopDescription(LS));
+  log.info() << "Found " << lcdCounter << " unknown LCDs\n";
+
   this->printCoverageSummary(LS);
 }
 
@@ -311,8 +308,8 @@ void TerminatorAnalysis::populateLoopTags() {
     auto BranchI = LS->getHeader()->getTerminator();
     auto p = LoopPF.findInnermostPragmaFor(BranchI);
     if (p == nullptr) {
-      errs() << this->prefix << "WARNING: loop.id=" << ID
-             << " does not have a loop.tag attribute\n";
+      log.info() << "WARNING: loop.id=" << ID
+                 << " does not have a loop.tag attribute\n";
       this->loopIdToTag[ID] = 0;
     } else {
       auto args = p->getArguments();

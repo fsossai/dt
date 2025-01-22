@@ -12,7 +12,8 @@ using namespace arcana::noelle;
 
 namespace arcana::dt {
 
-void printUnknownLCDs(noelle::LoopContent *LC, Noelle &noelle, string prefix) {
+void printUnknownLCDs(noelle::LoopContent *LC, Noelle &noelle) {
+  string prefix = "";
   auto sccManager = LC->getSCCManager();
   auto SCCNodes = DOALL::getSCCsThatBlockDOALLToBeApplicable(LC, noelle);
   LeptoInstVisitor LIV;
