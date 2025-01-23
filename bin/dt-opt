@@ -11,6 +11,7 @@ source $noelleSrc/enable
 gino-load  \
   -noelle-disable-dswp \
   -noelle-disable-helix \
+  -load $installDir/lib/Dot.so \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
   --terminator-details \
