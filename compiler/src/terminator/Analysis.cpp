@@ -14,7 +14,7 @@
 #include "arcana/noelle/core/Noelle.hpp"
 #include "arcana/gino/core/DOALL.hpp"
 
-#include "Analysis.hpp"
+#include "arcana/dt/Analysis.hpp"
 
 using namespace std;
 using namespace llvm;

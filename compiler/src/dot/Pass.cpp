@@ -37,8 +37,6 @@ bool DotPass::doInitialization(Module &M) {
 void DotPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<NoellePass>();
   AU.addRequired<HeuristicsPass>();
-
-  return;
 }
 
 bool DotPass::runOnModule(Module &M) {

@@ -3,7 +3,7 @@
 #include "llvm/IR/Operator.h"
 
 #include "arcana/noelle/core/PragmaForest.hpp"
-#include "TClause.hpp"
+#include "arcana/dt/TClause.hpp"
 
 using namespace std;
 using namespace llvm;

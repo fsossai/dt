@@ -15,7 +15,7 @@
 #include "arcana/noelle/core/PragmaAnalysis.hpp"
 
 #include "arcana/dt/LoopBlocker.hpp"
-#include "Analysis.hpp"
+#include "arcana/dt/Analysis.hpp"
 #include "Pass.hpp"
 
 using namespace std;
