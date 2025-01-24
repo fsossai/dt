@@ -64,12 +64,13 @@ void dumpToDotFormat(LoopContent *LC,
 
   LeptoInstVisitor LIV;
 
-  string graphTemplate = "digraph G {\n"
-                         "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
-                         "node [color=\"transparent\", fontname=\"Verdana\"]\n"
-                         "@NODES@\n"
-                         "@SUBGRAPHS@"
-                         "}\n";
+  string graphTemplate =
+      "digraph G {\n"
+      "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
+      "node [color=\"transparent\", fontname=\"Verdana\"]\n"
+      "@NODES@\n"
+      "@SUBGRAPHS@\n"
+      "}\n";
   string subgraphTemplate = "subgraph cluster_scc@ID@ {\n"
                             "\tcolor=\"@COLOR@\"\n"
                             "@EDGES@"
@@ -92,6 +93,7 @@ void dumpToDotFormat(LoopContent *LC,
     if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
       map<string, string> subgraph;
       subgraph["@ID@"] = to_string(subgraphId);
+      subgraph["@EDGES@"] = "";
       if (isa<LoopCarriedUnknownSCC>(LCS)) {
         // unknown
         subgraph["@COLOR@"] = "red";
@@ -141,7 +143,7 @@ void dumpToDotFormat(LoopContent *LC,
         }
 
         if (isa<MemoryDependence<Value, Value>>(LCD)) {
-          edge["@STYLE@"] = "normal";
+          edge["@STYLE@"] = "solid";
         } else if (isa<VariableDependence<Value, Value>>(LCD)) {
           edge["@STYLE@"] = "dashed";
         }
@@ -153,7 +155,7 @@ void dumpToDotFormat(LoopContent *LC,
         }
         subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
       }
-      graph["@SUBGRAPHS@"] += patchTemplate(subgraphTemplate, subgraph) + "\n";
+      graph["@SUBGRAPHS@"] += patchTemplate(subgraphTemplate, subgraph);
       subgraphId++;
     }
   }
