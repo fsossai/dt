@@ -12,6 +12,7 @@
 #include "arcana/noelle/core/NoellePass.hpp"
 #include "arcana/noelle/core/PragmaAnalysis.hpp"
 
+#include "arcana/dt/Analysis.hpp"
 #include "arcana/dt/Dot.hpp"
 #include "Pass.hpp"
 
@@ -104,7 +105,6 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     return true;
   }
 
-  auto *LC = noelle.getLoopContent(targetLS);
 
   string outputFile;
   if (DotOutput.getNumOccurrences() == 0) {
@@ -113,7 +113,13 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     outputFile = DotOutput;
   }
 
-  dumpToDotFormat(LC, outputFile);
+  auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
+                         LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
+
+  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
+  auto LC = noelle.getLoopContent(targetLS);
+  dumpToDotFormat(LC, outputFile, &TA);
+
   log.info() << "Dot file written to " << outputFile << "\n";
 
   return true;

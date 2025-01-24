@@ -143,10 +143,12 @@ void dumpToDotFormat(LoopContent *LC,
           edge["@STYLE@"] = "dashed";
         }
 
-        edge["@COLOR@"] = "black";
         if (DA && !DA->canThisDependenceBeLoopCarried(LCD, *LS)) {
           // terminable
           edge["@COLOR@"] = "orange";
+        } else {
+          // non-terminable
+          edge["@COLOR@"] = "black";
         }
         subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
       }
