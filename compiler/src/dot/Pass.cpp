@@ -24,7 +24,7 @@ namespace arcana::dt {
 
 static cl::opt<string> DotOutput("dot-output", cl::Hidden);
 
-static cl::opt<int> TargetFunc("dot-tag", cl::Hidden);
+static cl::opt<uint64_t> DotTag("dot-tag", cl::Hidden);
 
 DotPass::DotPass()
   : ModulePass{ ID },
@@ -65,7 +65,7 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     auto args = PT->getArguments();
     assert(args.size() >= 1);
     auto tag = cast<ConstantInt>(args[0])->getZExtValue();
-    if (tag == 123) {
+    if (tag == DotTag) {
       targetPragma = PT;
       return true;
     }
@@ -82,15 +82,15 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
   for (auto LT : LF.getTrees()) {
     LT->visitPreOrder([&](LoopTree *LT, auto) {
       auto LS = LT->getLoop();
-      if (LS->getFunction() == &F) {
-        return true;
+      if (LS->getFunction() != &F) {
+        return true; // stop traversal
       }
       auto p = PF.findInnermostPragmaFor(LS->getHeader());
       if (p == nullptr) {
-        return false;
+        return false; // continue traversal
       } else {
         targetLS = LS;
-        return true;
+        return true; // stop traversal
       }
     });
   }
@@ -100,7 +100,8 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     return true;
   }
 
-  dumpToDotFormat(nullptr, "");
+  auto *LC = noelle.getLoopContent(targetLS);
+  dumpToDotFormat(LC, "graph.dot");
 
   return true;
 }
