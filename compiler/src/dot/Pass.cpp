@@ -56,7 +56,7 @@ bool DotPass::runOnModule(Module &M) {
   }
 
   if (!found) {
-    log.info() << "ERORR: target loop not found\n";
+    log.info() << "ERROR: target loop not found\n";
   }
 
   return false;
@@ -105,7 +105,6 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     return true;
   }
 
-
   string outputFile;
   if (DotOutput.getNumOccurrences() == 0) {
     outputFile = "graph_tag_" + to_string(DotTag) + ".dot";
@@ -117,6 +116,8 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
 
   TerminatorAnalysis TA(noelle, &LF, F, optimizations);
+  TA.setAdmissibleCoverage(NONE);
+  noelle.addAnalysis(&TA);
   auto LC = noelle.getLoopContent(targetLS);
   dumpToDotFormat(LC, outputFile, &TA);
 

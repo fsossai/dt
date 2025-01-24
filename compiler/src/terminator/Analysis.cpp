@@ -28,6 +28,18 @@ TerminatorAnalysis::TerminatorAnalysis(
     LoopForest *LF,
     Function &F,
     unordered_set<LoopContentOptimization> optimizations)
+  : TerminatorAnalysis(noelle,
+                       LF,
+                       F,
+                       optimizations,
+                       FULL | SRC_ONLY | DST_ONLY | CROSS) {}
+
+TerminatorAnalysis::TerminatorAnalysis(
+    Noelle &noelle,
+    LoopForest *LF,
+    Function &F,
+    unordered_set<LoopContentOptimization> optimizations,
+    CoverageType admissibleCoverage)
   : DependenceAnalysis("Terminator"),
     details(false),
     noelle(noelle),
@@ -35,6 +47,7 @@ TerminatorAnalysis::TerminatorAnalysis(
     F(F),
     PF(F, "ldtc"),
     doallMarkers(F, "loop.doall"),
+    admissibleCoverage(admissibleCoverage),
     log(NoelleLumberjack, "Terminator.Analysis") {
 
   // We only care about loops with clauses. It is not the job of this analysis
@@ -98,7 +111,7 @@ TerminatorAnalysis::~TerminatorAnalysis() {
 bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
                                                         LoopStructure &LS) {
   auto coverageType = this->getCoverageType(LCD);
-  if (coverageType & (FULL | SRC_ONLY | DST_ONLY | CROSS)) {
+  if (coverageType & this->admissibleCoverage) {
     return false;
   }
   return true;
@@ -390,4 +403,9 @@ void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
     }
   }
 }
+
+void TerminatorAnalysis::setAdmissibleCoverage(CoverageType coverage) {
+  this->admissibleCoverage = coverage;
+}
+
 } // namespace arcana::dt

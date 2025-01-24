@@ -17,13 +17,16 @@
 
 namespace arcana::dt {
 
-enum CoverageType {
-  NONE = 1,
-  SRC_ONLY = 2,
-  DST_ONLY = 4,
-  CROSS = 8,
-  FULL = 16
+enum CoverageType_value {
+  NONE = 0, 
+  UNCOVERED = 1 << 0,
+  SRC_ONLY = 1 << 1,
+  DST_ONLY = 1 << 2,
+  CROSS = 1 << 3,
+  FULL = 1 << 4
 };
+
+using CoverageType = unsigned int;
 
 enum DoallTag { YES, NO, MAYBE };
 
@@ -45,6 +48,13 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
       noelle::LoopForest *LF,
       llvm::Function &F,
       std::unordered_set<noelle::LoopContentOptimization> optimizations);
+
+  TerminatorAnalysis(
+      noelle::Noelle &noelle,
+      noelle::LoopForest *LF,
+      llvm::Function &F,
+      std::unordered_set<noelle::LoopContentOptimization> optimizations,
+      CoverageType admissibleCoverage);
 
   ~TerminatorAnalysis();
 
@@ -79,6 +89,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   uint64_t getLoopTag(noelle::LoopStructure *LS);
 
+  void setAdmissibleCoverage(CoverageType coverage);
+
   bool details;
 
 private:
@@ -95,6 +107,7 @@ private:
   std::unordered_map<uint64_t, std::unordered_set<TClause *>> loopIdToClauses;
   std::unordered_map<uint64_t, uint64_t> loopIdToTag;
   noelle::PragmaForest doallMarkers;
+  CoverageType admissibleCoverage;
   LeptoInstVisitor LIV;
   noelle::Logger log;
 
