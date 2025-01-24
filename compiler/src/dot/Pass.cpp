@@ -27,6 +27,8 @@ static cl::opt<string> DotOutput("dot-output", cl::Hidden);
 
 static cl::opt<uint64_t> DotTag("dot-tag", cl::Hidden);
 
+static cl::opt<bool> DotTerm("dot-term", cl::Hidden);
+
 DotPass::DotPass()
   : ModulePass{ ID },
     log(NoelleLumberjack, "Terminator.Dot") {}
@@ -116,7 +118,11 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
 
   TerminatorAnalysis TA(noelle, &LF, F, optimizations);
-  TA.setAdmissibleCoverage(NONE);
+  if (DotTerm) {
+    TA.setAdmissibleCoverage(FULL | SRC_ONLY | DST_ONLY | CROSS);
+  } else {
+    TA.setAdmissibleCoverage(NONE);
+  }
   noelle.addAnalysis(&TA);
   auto LC = noelle.getLoopContent(targetLS);
   dumpToDotFormat(LC, outputFile, /*collapseEdges=*/true, &TA);

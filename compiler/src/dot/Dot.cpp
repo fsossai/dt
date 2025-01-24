@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "arcana/noelle/core/DataDependence.hpp"
 #include "arcana/noelle/core/LoopCarriedSCC.hpp"
@@ -76,11 +77,18 @@ void dumpToDotFormat(LoopContent *LC,
       "\t@SRC@ -> @DST@ [color=\"@COLOR@\", style=\"@STYLE@\", arrowhead=\"@ARROWHEAD@\"]\n";
 
   map<string, string> graph;
-
+  set<pair<Value *, Value *>> addedEdges;
   unordered_set<Value *> addedNodes;
 
-  auto notAlreadyAdded = [&](Value *V) {
+  auto shouldAddNode = [&](Value *V) {
     return addedNodes.find(V) == addedNodes.end();
+  };
+
+  auto shouldAddEdge = [&](Value *src, Value *dst) {
+    if (collapseEdges) {
+      return addedEdges.find({ src, dst }) == addedEdges.end();
+    }
+    return true;
   };
 
   int subgraphId = 0;
@@ -115,43 +123,46 @@ void dumpToDotFormat(LoopContent *LC,
         edge["@SRC@"] = srcId;
         edge["@DST@"] = dstId;
 
-        if (notAlreadyAdded(src)) {
+        if (shouldAddNode(src)) {
           node["@ID@"] = srcId;
           node["@LABEL@"] = LIV.visitValue(*src);
           graph["@NODES@"] += patchTemplate(nodeTemplate, node);
           addedNodes.insert(src);
         }
 
-        if (notAlreadyAdded(dst)) {
+        if (shouldAddNode(dst)) {
           node["@ID@"] = dstId;
           node["@LABEL@"] = LIV.visitValue(*dst);
           graph["@NODES@"] += patchTemplate(nodeTemplate, node);
           addedNodes.insert(dst);
         }
 
-        auto DD = cast<DataDependence<Value, Value>>(LCD);
-        if (DD->isRAWDependence()) {
-          edge["@ARROWHEAD@"] = "normal";
-        } else if (DD->isWARDependence()) {
-          edge["@ARROWHEAD@"] = "inv";
-        } else if (DD->isWAWDependence()) {
-          edge["@ARROWHEAD@"] = "none";
-        }
+        if (shouldAddEdge(src, dst)) {
+          auto DD = cast<DataDependence<Value, Value>>(LCD);
+          if (DD->isRAWDependence()) {
+            edge["@ARROWHEAD@"] = "normal";
+          } else if (DD->isWARDependence()) {
+            edge["@ARROWHEAD@"] = "inv";
+          } else if (DD->isWAWDependence()) {
+            edge["@ARROWHEAD@"] = "none";
+          }
 
-        if (isa<MemoryDependence<Value, Value>>(LCD)) {
-          edge["@STYLE@"] = "solid";
-        } else if (isa<VariableDependence<Value, Value>>(LCD)) {
-          edge["@STYLE@"] = "dashed";
-        }
+          if (isa<MemoryDependence<Value, Value>>(LCD)) {
+            edge["@STYLE@"] = "solid";
+          } else if (isa<VariableDependence<Value, Value>>(LCD)) {
+            edge["@STYLE@"] = "dashed";
+          }
 
-        if (DA && !DA->canThisDependenceBeLoopCarried(LCD, *LS)) {
-          // terminable
-          edge["@COLOR@"] = "orange";
-        } else {
-          // non-terminable
-          edge["@COLOR@"] = "black";
+          if (DA && !DA->canThisDependenceBeLoopCarried(LCD, *LS)) {
+            // terminable
+            edge["@COLOR@"] = "orange";
+          } else {
+            // non-terminable
+            edge["@COLOR@"] = "black";
+          }
+          subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
+          addedEdges.insert({ src, dst });
         }
-        subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
       }
       graph["@SUBGRAPHS@"] += patchTemplate(subgraphTemplate, subgraph);
       subgraphId++;
