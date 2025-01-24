@@ -56,8 +56,8 @@ void dumpToDotFormat(LoopContent *LC,
                      DependenceAnalysis *DA) {
 
   auto LS = LC->getLoopStructure();
-  auto sccManager = LC->getSCCManager();
-  auto SCCDAG = sccManager->getSCCDAG();
+  auto SCCManager = LC->getSCCManager();
+  auto SCCDAG = SCCManager->getSCCDAG();
 
   LeptoInstVisitor LIV;
 
@@ -86,14 +86,15 @@ void dumpToDotFormat(LoopContent *LC,
 
   auto shouldAddEdge = [&](Value *src, Value *dst) {
     if (collapseEdges) {
-      return addedEdges.find({ src, dst }) == addedEdges.end();
+      return addedEdges.find({ src, dst }) == addedEdges.end()
+             && addedEdges.find({ dst, src }) == addedEdges.end();
     }
     return true;
   };
 
   int subgraphId = 0;
-  for (auto sccNode : SCCDAG->getSCCs()) {
-    auto genericSCC = sccManager->getSCCAttrs(sccNode);
+  for (auto SCCNode : SCCDAG->getSCCs()) {
+    auto genericSCC = SCCManager->getSCCAttrs(SCCNode);
     if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
       map<string, string> subgraph;
       subgraph["@ID@"] = to_string(subgraphId);
@@ -139,12 +140,16 @@ void dumpToDotFormat(LoopContent *LC,
 
         if (shouldAddEdge(src, dst)) {
           auto DD = cast<DataDependence<Value, Value>>(LCD);
-          if (DD->isRAWDependence()) {
-            edge["@ARROWHEAD@"] = "normal";
-          } else if (DD->isWARDependence()) {
-            edge["@ARROWHEAD@"] = "inv";
-          } else if (DD->isWAWDependence()) {
+          if (collapseEdges) {
             edge["@ARROWHEAD@"] = "none";
+          } else {
+            if (DD->isRAWDependence()) {
+              edge["@ARROWHEAD@"] = "normal";
+            } else if (DD->isWARDependence()) {
+              edge["@ARROWHEAD@"] = "inv";
+            } else if (DD->isWAWDependence()) {
+              edge["@ARROWHEAD@"] = "none";
+            }
           }
 
           if (isa<MemoryDependence<Value, Value>>(LCD)) {

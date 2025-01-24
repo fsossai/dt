@@ -24,10 +24,12 @@ using namespace arcana::noelle;
 namespace arcana::dt {
 
 static cl::opt<string> DotOutput("dot-output", cl::Hidden);
-
 static cl::opt<uint64_t> DotTag("dot-tag", cl::Hidden);
-
 static cl::opt<bool> DotTerm("dot-term", cl::Hidden);
+static cl::opt<bool> DotCollapse("dot-collapse", cl::Hidden);
+static cl::opt<int> DotCoverage("dot-coverage",
+                                cl::Hidden,
+                                cl::init(FULL | SRC_ONLY | DST_ONLY | CROSS));
 
 DotPass::DotPass()
   : ModulePass{ ID },
@@ -117,15 +119,12 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
   auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
                          LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
 
-  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
+  TerminatorAnalysis TA(noelle, &LF, F, optimizations, DotCoverage);
   if (DotTerm) {
-    TA.setAdmissibleCoverage(FULL | SRC_ONLY | DST_ONLY | CROSS);
-  } else {
-    TA.setAdmissibleCoverage(NONE);
+    noelle.addAnalysis(&TA);
   }
-  noelle.addAnalysis(&TA);
   auto LC = noelle.getLoopContent(targetLS);
-  dumpToDotFormat(LC, outputFile, /*collapseEdges=*/true, &TA);
+  dumpToDotFormat(LC, outputFile, DotCollapse, &TA);
 
   log.info() << "Dot file written to " << outputFile << "\n";
 
