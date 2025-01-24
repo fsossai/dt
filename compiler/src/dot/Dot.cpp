@@ -53,33 +53,29 @@ string pointerToString(const Value *V) {
 string SCCKindToString(GenericSCC::SCCKind type) {
   switch (type) {
     case GenericSCC::LOOP_CARRIED:
-      return "LOOP_CARRIED";
+      return "Loop Carried";
     case GenericSCC::REDUCTION:
-      return "REDUCTION";
+      return "Reduction";
     case GenericSCC::BINARY_REDUCTION:
-      return "BINARY_REDUCTION";
+      return "Binary Reduction";
     case GenericSCC::RECOMPUTABLE:
-      return "RECOMPUTABLE";
+      return "Recomputable";
     case GenericSCC::SINGLE_ACCUMULATOR_RECOMPUTABLE:
-      return "SINGLE_ACCUMULATOR_RECOMPUTABLE";
+      return "Single Accumulator Recomputable";
     case GenericSCC::INDUCTION_VARIABLE:
-      return "INDUCTION_VARIABLE";
+      return "IV";
     case GenericSCC::LINEAR_INDUCTION_VARIABLE:
-      return "LINEAR_INDUCTION_VARIABLE";
+      return "Linear IV";
     case GenericSCC::PERIODIC_VARIABLE:
-      return "PERIODIC_VARIABLE";
+      return "Periodic Variable";
     case GenericSCC::UNKNOWN_CLOSED_FORM:
-      return "UNKNOWN_CLOSED_FORM";
+      return "Unknown Closed Form";
     case GenericSCC::MEMORY_CLONABLE:
-      return "MEMORY_CLONABLE";
+      return "Memory Clonable";
     case GenericSCC::STACK_OBJECT_CLONABLE:
-      return "STACK_OBJECT_CLONABLE";
-    case GenericSCC::LOOP_CARRIED_UNKNOWN:
-      return "LOOP_CARRIED_UNKNOWN";
-    case GenericSCC::LOOP_ITERATION:
-      return "LOOP_ITERATION";
+      return "Stack Object Clonable";
     default:
-      assert(false);
+      return "";
   }
 }
 
