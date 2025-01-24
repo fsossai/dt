@@ -50,6 +50,39 @@ string pointerToString(const Value *V) {
   return oss.str();
 }
 
+string SCCKindToString(GenericSCC::SCCKind type) {
+  switch (type) {
+    case GenericSCC::LOOP_CARRIED:
+      return "LOOP_CARRIED";
+    case GenericSCC::REDUCTION:
+      return "REDUCTION";
+    case GenericSCC::BINARY_REDUCTION:
+      return "BINARY_REDUCTION";
+    case GenericSCC::RECOMPUTABLE:
+      return "RECOMPUTABLE";
+    case GenericSCC::SINGLE_ACCUMULATOR_RECOMPUTABLE:
+      return "SINGLE_ACCUMULATOR_RECOMPUTABLE";
+    case GenericSCC::INDUCTION_VARIABLE:
+      return "INDUCTION_VARIABLE";
+    case GenericSCC::LINEAR_INDUCTION_VARIABLE:
+      return "LINEAR_INDUCTION_VARIABLE";
+    case GenericSCC::PERIODIC_VARIABLE:
+      return "PERIODIC_VARIABLE";
+    case GenericSCC::UNKNOWN_CLOSED_FORM:
+      return "UNKNOWN_CLOSED_FORM";
+    case GenericSCC::MEMORY_CLONABLE:
+      return "MEMORY_CLONABLE";
+    case GenericSCC::STACK_OBJECT_CLONABLE:
+      return "STACK_OBJECT_CLONABLE";
+    case GenericSCC::LOOP_CARRIED_UNKNOWN:
+      return "LOOP_CARRIED_UNKNOWN";
+    case GenericSCC::LOOP_ITERATION:
+      return "LOOP_ITERATION";
+    default:
+      assert(false);
+  }
+}
+
 void dumpToDotFormat(LoopContent *LC,
                      string outputFile,
                      bool collapseEdges,
@@ -65,12 +98,13 @@ void dumpToDotFormat(LoopContent *LC,
       "digraph G {\n"
       "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
       "node [color=\"transparent\", fontname=\"Verdana\"]\n"
-      "@NODES@\n"
       "@SUBGRAPHS@\n"
+      "@EDGES@\n"
       "}\n";
   string subgraphTemplate = "subgraph cluster_scc@ID@ {\n"
+                            "\tlabel=\"@LABEL@\"\n"
                             "\tcolor=\"@COLOR@\"\n"
-                            "@EDGES@"
+                            "@NODES@"
                             "}\n";
   string nodeTemplate = "\t@ID@ [label=\"@LABEL@\"]\n";
   string edgeTemplate =
@@ -98,7 +132,6 @@ void dumpToDotFormat(LoopContent *LC,
     if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
       map<string, string> subgraph;
       subgraph["@ID@"] = to_string(subgraphId);
-      subgraph["@EDGES@"] = "";
       if (isa<LoopCarriedUnknownSCC>(LCS)) {
         // unknown
         subgraph["@COLOR@"] = "red";
@@ -106,6 +139,7 @@ void dumpToDotFormat(LoopContent *LC,
         // known
         subgraph["@COLOR@"] = "green";
       }
+      subgraph["@LABEL@"] = SCCKindToString(genericSCC->getKind());
       auto LCDs = LCS->getLoopCarriedDependences();
       for (auto LCD : LCDs) {
         if (isa<ControlDependence<Value, Value>>(LCD)) {
@@ -114,8 +148,8 @@ void dumpToDotFormat(LoopContent *LC,
 
         assert(LCD->isLoopCarriedDependence());
 
-        map<string, string> edge;
         map<string, string> node;
+        map<string, string> edge;
         auto src = LCD->getSrc();
         auto dst = LCD->getDst();
         auto srcId = "i" + pointerToString(src);
@@ -127,14 +161,14 @@ void dumpToDotFormat(LoopContent *LC,
         if (shouldAddNode(src)) {
           node["@ID@"] = srcId;
           node["@LABEL@"] = LIV.visitValue(*src);
-          graph["@NODES@"] += patchTemplate(nodeTemplate, node);
+          subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
           addedNodes.insert(src);
         }
 
         if (shouldAddNode(dst)) {
           node["@ID@"] = dstId;
           node["@LABEL@"] = LIV.visitValue(*dst);
-          graph["@NODES@"] += patchTemplate(nodeTemplate, node);
+          subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
           addedNodes.insert(dst);
         }
 
@@ -165,7 +199,9 @@ void dumpToDotFormat(LoopContent *LC,
             // non-terminable
             edge["@COLOR@"] = "black";
           }
-          subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
+          if (subgraph["@NODES@"] != "") {
+            graph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
+          }
           addedEdges.insert({ src, dst });
         }
       }
