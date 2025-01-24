@@ -36,11 +36,6 @@ string patchTemplate(const string &templateStr,
 }
 
 void emitDotFile(const string &dotContent, string outputFile) {
-  ifstream templateFile(DOT_TEMPLATE_FILE);
-  assert(templateFile.is_open());
-  string templateContent((istreambuf_iterator<char>(templateFile)),
-                         istreambuf_iterator<char>());
-  templateFile.close();
   ofstream outputStream(outputFile);
   assert(outputStream.is_open());
   outputStream << dotContent;
