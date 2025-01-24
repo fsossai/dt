@@ -5,13 +5,16 @@
 #include <string>
 #include <unordered_set>
 
+#include "arcana/noelle/core/DataDependence.hpp"
 #include "arcana/noelle/core/LoopCarriedSCC.hpp"
 #include "arcana/noelle/core/LoopCarriedUnknownSCC.hpp"
+#include "arcana/noelle/core/MemoryDependence.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
 #include "arcana/noelle/core/SCCDAGAttrs.hpp"
 #include "LeptoInstVisitor.hpp"
 
 #include "arcana/dt/Dot.hpp"
+#include "llvm/IR/Value.h"
 
 using namespace std;
 using namespace llvm;
@@ -62,7 +65,8 @@ void dumpToDotFormat(LoopContent *LC,
   LeptoInstVisitor LIV;
 
   string graphTemplate = "digraph G {\n"
-                         "graph [style=\"filled\", fillcolor=\"white\"]\n"
+                         "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
+                         "node [color=\"transparent\", fontname=\"Verdana\"]\n"
                          "@NODES@\n"
                          "@SUBGRAPHS@"
                          "}\n";
@@ -71,12 +75,10 @@ void dumpToDotFormat(LoopContent *LC,
                             "@EDGES@"
                             "}\n";
   string nodeTemplate = "\t@ID@ [label=\"@LABEL@\"]\n";
-  string edgeTemplate = "\t@SRC@ -> @DST@ @EXTRA@\n";
+  string edgeTemplate =
+      "\t@SRC@ -> @DST@ [color=\"@COLOR@\", style=\"@STYLE@\", arrowhead=\"@ARROWHEAD@\"]\n";
 
   map<string, string> graph;
-  map<string, string> subgraph;
-  map<string, string> node;
-  map<string, string> edge;
 
   unordered_set<Value *> addedNodes;
 
@@ -88,6 +90,7 @@ void dumpToDotFormat(LoopContent *LC,
   for (auto sccNode : SCCDAG->getSCCs()) {
     auto genericSCC = sccManager->getSCCAttrs(sccNode);
     if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
+      map<string, string> subgraph;
       subgraph["@ID@"] = to_string(subgraphId);
       if (isa<LoopCarriedUnknownSCC>(LCS)) {
         // unknown
@@ -102,12 +105,14 @@ void dumpToDotFormat(LoopContent *LC,
           continue;
         }
 
+        assert(LCD->isLoopCarriedDependence());
+
+        map<string, string> edge;
+        map<string, string> node;
         auto src = LCD->getSrc();
         auto dst = LCD->getDst();
-        auto srcId = pointerToString(src);
-        auto dstId = pointerToString(dst);
-        errs() << srcId << "->" << dstId << "\n";
-        errs() << LCD->toString() << "\n";
+        auto srcId = "i" + pointerToString(src);
+        auto dstId = "i" + pointerToString(dst);
 
         edge["@SRC@"] = srcId;
         edge["@DST@"] = dstId;
@@ -126,11 +131,25 @@ void dumpToDotFormat(LoopContent *LC,
           addedNodes.insert(dst);
         }
 
+        auto DD = cast<DataDependence<Value, Value>>(LCD);
+        if (DD->isRAWDependence()) {
+          edge["@ARROWHEAD@"] = "normal";
+        } else if (DD->isWARDependence()) {
+          edge["@ARROWHEAD@"] = "inv";
+        } else if (DD->isWAWDependence()) {
+          edge["@ARROWHEAD@"] = "none";
+        }
+
+        if (isa<MemoryDependence<Value, Value>>(LCD)) {
+          edge["@STYLE@"] = "normal";
+        } else if (isa<VariableDependence<Value, Value>>(LCD)) {
+          edge["@STYLE@"] = "dashed";
+        }
+
+        edge["@COLOR@"] = "black";
         if (DA && !DA->canThisDependenceBeLoopCarried(LCD, *LS)) {
           // terminable
-          edge["@EXTRA@"] = "[color=\"orange\"]";
-        } else {
-          edge["@EXTRA@"] = "";
+          edge["@COLOR@"] = "orange";
         }
         subgraph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
       }

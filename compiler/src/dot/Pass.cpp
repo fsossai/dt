@@ -48,10 +48,16 @@ bool DotPass::runOnModule(Module &M) {
   PragmaAnalysis PA;
   noelle.addAnalysis(&PA);
 
+  bool found = false;
   for (auto &F : M) {
     if (runOnFunction(F, noelle, LF)) {
+      found = true;
       break;
     }
+  }
+
+  if (!found) {
+    log.info() << "ERORR: target loop not found\n";
   }
 
   return false;
@@ -101,7 +107,16 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
   }
 
   auto *LC = noelle.getLoopContent(targetLS);
-  dumpToDotFormat(LC, "graph.dot");
+
+  string outputFile;
+  if (DotOutput.getNumOccurrences() == 0) {
+    outputFile = "graph_tag_" + to_string(DotTag) + ".dot";
+  } else {
+    outputFile = DotOutput;
+  }
+
+  dumpToDotFormat(LC, outputFile);
+  log.info() << "Dot file written to " << outputFile << "\n";
 
   return true;
 }
