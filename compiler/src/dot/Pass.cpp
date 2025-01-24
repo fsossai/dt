@@ -119,7 +119,7 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
   TA.setAdmissibleCoverage(NONE);
   noelle.addAnalysis(&TA);
   auto LC = noelle.getLoopContent(targetLS);
-  dumpToDotFormat(LC, outputFile, &TA);
+  dumpToDotFormat(LC, outputFile, /*collapseEdges=*/true, &TA);
 
   log.info() << "Dot file written to " << outputFile << "\n";
 

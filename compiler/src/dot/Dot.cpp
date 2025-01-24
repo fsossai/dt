@@ -51,6 +51,7 @@ string pointerToString(const Value *V) {
 
 void dumpToDotFormat(LoopContent *LC,
                      string outputFile,
+                     bool collapseEdges,
                      DependenceAnalysis *DA) {
 
   auto LS = LC->getLoopStructure();
