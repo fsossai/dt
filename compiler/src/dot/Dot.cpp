@@ -179,7 +179,7 @@ void dumpToDotFormat(LoopContent *LC,
         } else if (DD->isWARDependence()) {
           edge["@ARROWHEAD@"] = "inv";
         } else if (DD->isWAWDependence()) {
-          edge["@ARROWHEAD@"] = "none";
+          edge["@ARROWHEAD@"] = "empty";
         }
       }
 
