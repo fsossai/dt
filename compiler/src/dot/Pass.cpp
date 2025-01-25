@@ -27,6 +27,8 @@ static cl::opt<string> DotOutput("dot-output", cl::Hidden);
 static cl::opt<uint64_t> DotTag("dot-tag", cl::Hidden);
 static cl::opt<bool> DotTerm("dot-term", cl::Hidden);
 static cl::opt<bool> DotCollapse("dot-collapse", cl::Hidden);
+static cl::opt<bool> DotOnlyLC("dot-only-lc", cl::Hidden);
+static cl::opt<bool> DotHideKnown("dot-hide-known", cl::Hidden);
 static cl::opt<int> DotCoverage("dot-coverage",
                                 cl::Hidden,
                                 cl::init(FULL | SRC_ONLY | DST_ONLY | CROSS));
@@ -123,8 +125,18 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
   if (DotTerm) {
     noelle.addAnalysis(&TA);
   }
+  DotOptions options = 0;
+  if (DotCollapse) {
+    options |= COLLAPSE_EDGES;
+  }
+  if (DotOnlyLC) {
+    options |= ONLY_LC_EDGES;
+  }
+  if (DotHideKnown) {
+    options |= HIDE_KNOWN_SCCS;
+  }
   auto LC = noelle.getLoopContent(targetLS);
-  dumpToDotFormat(LC, outputFile, DotCollapse, &TA);
+  dumpToDotFormat(LC, outputFile, options, &TA);
 
   log.info() << "Dot file written to " << outputFile << "\n";
 
