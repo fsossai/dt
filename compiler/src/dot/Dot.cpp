@@ -110,7 +110,7 @@ void dumpToDotFormat(LoopContent *LC,
 
   string graphTemplate =
       "digraph G {\n"
-      "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
+      "graph [style=\"filled,rounded\", fillcolor=\"white\", layout=\"fdb\"]\n"
       "node [color=\"transparent\", fontname=\"Verdana\"]\n"
       "@SUBGRAPHS@\n"
       "@EDGES@\n"
