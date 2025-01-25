@@ -207,7 +207,7 @@ void dumpToDotFormat(LoopContent *LC,
               edge["@COLOR@"] = "red";
             }
           } else {
-              edge["@COLOR@"] = "green";
+            edge["@COLOR@"] = "green";
           }
         } else {
           edge["@COLOR@"] = "lightgrey";

@@ -18,5 +18,4 @@ typename std::enable_if<std::is_arithmetic<T>::value, int>::type hasher(T val) {
   return val;
 };
 
-
 } // namespace skynet

@@ -14,7 +14,7 @@ int main() {
 
   skynet::clause_sequence_append(2, &a);
   for (int i = 3; i < 10; i++) {
-    a.__append(i%2,i);
+    a.__append(i % 2, i);
   }
 
   skynet::Scalar<int> result;

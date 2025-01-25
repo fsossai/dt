@@ -74,7 +74,8 @@ public:
 
   // This function should be a method of `ApatheticArray` that, at the moment is
   // not implemented
-  __attribute__((always_inline)) bool replace_if_negative(size_t idx, T new_val) {
+  __attribute__((always_inline)) bool replace_if_negative(size_t idx,
+                                                          T new_val) {
     auto _p = noelle_pragma_begin("ldtc");
     auto *addr = &container_[0][idx];
     auto val = *addr;

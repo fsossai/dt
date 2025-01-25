@@ -18,7 +18,7 @@
 namespace arcana::dt {
 
 enum CoverageType_value {
-  NONE = 0, 
+  NONE = 0,
   UNCOVERED = 1 << 0,
   SRC_ONLY = 1 << 1,
   DST_ONLY = 1 << 2,

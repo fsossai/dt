@@ -32,9 +32,7 @@ static cl::opt<bool> DotOnlyLC("dot-only-lc", cl::Hidden);
 static cl::opt<bool> DotHideKnown("dot-hide-known", cl::Hidden);
 static cl::opt<bool> DotControlDeps("dot-control", cl::Hidden);
 static cl::opt<uint64_t> DotLoopId("dot-id", cl::Hidden);
-static cl::opt<int> DotCoverage("dot-coverage",
-                                cl::Hidden,
-                                cl::init(FULL | SRC_ONLY | DST_ONLY | CROSS));
+static cl::opt<int> DotCoverage("dot-coverage", cl::Hidden);
 
 DotPass::DotPass()
   : ModulePass{ ID },
@@ -101,7 +99,10 @@ void DotPass::process(Noelle &noelle, LoopStructure *LS) {
   auto &F = *LS->getFunction();
   auto &LF =
       *noelle.organizeLoopsInTheirNestingForest(*noelle.getLoopStructures(&F));
-  TerminatorAnalysis TA(noelle, &LF, F, optimizations, DotCoverage);
+  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
+  if (DotCoverage.getNumOccurrences() > 0) {
+    TA.setAdmissibleCoverage(DotCoverage);
+  }
   if (DotTerm) {
     noelle.addAnalysis(&TA);
   }

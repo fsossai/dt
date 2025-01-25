@@ -16,8 +16,8 @@ public:
   bool doInitialization(llvm::Module &M) override;
   bool runOnModule(llvm::Module &M) override;
   bool searchForTag(llvm::Function &F,
-                     noelle::Noelle &noelle,
-                     noelle::LoopForest &LF);
+                    noelle::Noelle &noelle,
+                    noelle::LoopForest &LF);
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
   void process(noelle::Noelle &noelle, noelle::LoopStructure *LS);
 
