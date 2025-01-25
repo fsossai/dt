@@ -74,9 +74,27 @@ string SCCKindToString(GenericSCC::SCCKind type) {
       return "Memory Clonable";
     case GenericSCC::STACK_OBJECT_CLONABLE:
       return "Stack Object Clonable";
-    default:
+    case GenericSCC::LOOP_ITERATION:
+      return "Loop Iteration";
+    case GenericSCC::LOOP_CARRIED_UNKNOWN:
       return "";
+    default:
+      return to_string(type);
   }
+}
+
+string fixEscapes(const string &str) {
+  string escaped;
+  for (char c : str) {
+    if (c == '"') {
+      escaped += "\\\""; // Add escaped double quote
+    } else if (c == '\\') {
+      escaped += "\\\\"; // Add escaped double quote
+    } else {
+      escaped += c;
+    }
+  }
+  return escaped;
 }
 
 void dumpToDotFormat(LoopContent *LC,
@@ -92,7 +110,7 @@ void dumpToDotFormat(LoopContent *LC,
 
   string graphTemplate =
       "digraph G {\n"
-      "graph [style=\"filled,rounded\", fillcolor=\"white\"]\n"
+      "graph [style=\"filled,rounded\", fillcolor=\"white\", layout=\"fdp\"]\n"
       "node [color=\"transparent\", fontname=\"Verdana\"]\n"
       "@SUBGRAPHS@\n"
       "@EDGES@\n"
@@ -123,87 +141,103 @@ void dumpToDotFormat(LoopContent *LC,
   };
 
   int subgraphId = 0;
+  graph["@EDGES@"] = "";
   for (auto SCCNode : SCCDAG->getSCCs()) {
     auto genericSCC = SCCManager->getSCCAttrs(SCCNode);
-    if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
-      map<string, string> subgraph;
-      subgraph["@ID@"] = to_string(subgraphId);
-      if (isa<LoopCarriedUnknownSCC>(LCS)) {
-        // unknown
-        subgraph["@COLOR@"] = "red";
-      } else {
-        // known
-        subgraph["@COLOR@"] = "green";
+    map<string, string> subgraph;
+    subgraph["@ID@"] = to_string(subgraphId);
+    subgraph["@LABEL@"] = SCCKindToString(genericSCC->getKind());
+    genericSCC->getSCC()->getEdges();
+    // if (auto LCS = dyn_cast<LoopCarriedSCC>(genericSCC)) {
+    if (isa<LoopCarriedUnknownSCC>(genericSCC)) {
+      // unknown
+      subgraph["@COLOR@"] = "red";
+    } else {
+      // known
+      subgraph["@COLOR@"] = "green";
+    }
+    for (auto I : SCCNode->getInstructions()) {
+      map<string, string> node;
+      auto srcId = "i" + pointerToString(I);
+      node["@ID@"] = srcId;
+      node["@LABEL@"] = fixEscapes(LIV.visitValue(*I));
+      subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
+      addedNodes.insert(I);
+    }
+    auto deps = SCCNode->getEdges();
+    for (auto dep : deps) {
+      if (isa<ControlDependence<Value, Value>>(dep)) {
+        continue;
       }
-      subgraph["@LABEL@"] = SCCKindToString(genericSCC->getKind());
-      auto LCDs = LCS->getLoopCarriedDependences();
-      for (auto LCD : LCDs) {
-        if (isa<ControlDependence<Value, Value>>(LCD)) {
-          continue;
-        }
 
-        assert(LCD->isLoopCarriedDependence());
+      map<string, string> node;
+      map<string, string> edge;
+      auto src = dep->getSrc();
+      auto dst = dep->getDst();
+      auto srcId = "i" + pointerToString(src);
+      auto dstId = "i" + pointerToString(dst);
 
-        map<string, string> node;
-        map<string, string> edge;
-        auto src = LCD->getSrc();
-        auto dst = LCD->getDst();
-        auto srcId = "i" + pointerToString(src);
-        auto dstId = "i" + pointerToString(dst);
+      if (addedNodes.find(src) == addedNodes.end()
+          || addedNodes.find(dst) == addedNodes.end()) {
+        errs() << "ERROR: unexpected node\n";
+      }
 
-        edge["@SRC@"] = srcId;
-        edge["@DST@"] = dstId;
+      edge["@SRC@"] = srcId;
+      edge["@DST@"] = dstId;
 
-        if (shouldAddNode(src)) {
-          node["@ID@"] = srcId;
-          node["@LABEL@"] = LIV.visitValue(*src);
-          subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
-          addedNodes.insert(src);
-        }
+      // if (shouldAddNode(src)) {
+      //   node["@ID@"] = srcId;
+      //   node["@LABEL@"] = LIV.visitValue(*src);
+      //   subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
+      //   addedNodes.insert(src);
+      // }
+      // if (shouldAddNode(dst)) {
+      //   node["@ID@"] = dstId;
+      //   node["@LABEL@"] = LIV.visitValue(*dst);
+      //   subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
+      //   addedNodes.insert(dst);
+      // }
 
-        if (shouldAddNode(dst)) {
-          node["@ID@"] = dstId;
-          node["@LABEL@"] = LIV.visitValue(*dst);
-          subgraph["@NODES@"] += patchTemplate(nodeTemplate, node);
-          addedNodes.insert(dst);
-        }
-
-        if (shouldAddEdge(src, dst)) {
-          auto DD = cast<DataDependence<Value, Value>>(LCD);
-          if (collapseEdges) {
+      if (true || shouldAddEdge(src, dst)) {
+        auto DD = cast<DataDependence<Value, Value>>(dep);
+        if (collapseEdges) {
+          edge["@ARROWHEAD@"] = "none";
+        } else {
+          if (DD->isRAWDependence()) {
+            edge["@ARROWHEAD@"] = "normal";
+          } else if (DD->isWARDependence()) {
+            edge["@ARROWHEAD@"] = "inv";
+          } else if (DD->isWAWDependence()) {
             edge["@ARROWHEAD@"] = "none";
-          } else {
-            if (DD->isRAWDependence()) {
-              edge["@ARROWHEAD@"] = "normal";
-            } else if (DD->isWARDependence()) {
-              edge["@ARROWHEAD@"] = "inv";
-            } else if (DD->isWAWDependence()) {
-              edge["@ARROWHEAD@"] = "none";
-            }
           }
+        }
 
-          if (isa<MemoryDependence<Value, Value>>(LCD)) {
-            edge["@STYLE@"] = "solid";
-          } else if (isa<VariableDependence<Value, Value>>(LCD)) {
-            edge["@STYLE@"] = "dashed";
-          }
+        if (isa<MemoryDependence<Value, Value>>(dep)) {
+          edge["@STYLE@"] = "solid";
+        } else if (isa<VariableDependence<Value, Value>>(dep)) {
+          edge["@STYLE@"] = "dashed";
+        }
 
-          if (DA && !DA->canThisDependenceBeLoopCarried(LCD, *LS)) {
+        if (dep->isLoopCarriedDependence()) {
+          if (DA && !DA->canThisDependenceBeLoopCarried(dep, *LS)) {
             // terminable
             edge["@COLOR@"] = "orange";
           } else {
             // non-terminable
             edge["@COLOR@"] = "black";
           }
-          if (subgraph["@NODES@"] != "") {
-            graph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
-          }
+        } else {
+          edge["@COLOR@"] = "grey";
+        }
+        if (subgraph["@NODES@"] != "" && dep->isLoopCarriedDependence()) {
+          graph["@EDGES@"] += patchTemplate(edgeTemplate, edge);
           addedEdges.insert({ src, dst });
         }
       }
-      graph["@SUBGRAPHS@"] += patchTemplate(subgraphTemplate, subgraph);
-      subgraphId++;
     }
+
+    graph["@SUBGRAPHS@"] += patchTemplate(subgraphTemplate, subgraph);
+    subgraphId++;
   }
 
   string dotContent = patchTemplate(graphTemplate, graph);
