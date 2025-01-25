@@ -30,6 +30,7 @@ static cl::opt<bool> DotTerm("dot-term", cl::Hidden);
 static cl::opt<bool> DotCollapse("dot-collapse", cl::Hidden);
 static cl::opt<bool> DotOnlyLC("dot-only-lc", cl::Hidden);
 static cl::opt<bool> DotHideKnown("dot-hide-known", cl::Hidden);
+static cl::opt<bool> DotControlDeps("dot-control", cl::Hidden);
 static cl::opt<uint64_t> DotLoopId("dot-id", cl::Hidden);
 static cl::opt<int> DotCoverage("dot-coverage",
                                 cl::Hidden,

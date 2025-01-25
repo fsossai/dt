@@ -127,6 +127,7 @@ void dumpToDotFormat(LoopContent *LC,
   map<string, string> graph;
   set<pair<Value *, Value *>> addedEdges;
   unordered_set<Value *> addedNodes;
+  set<tuple<Value *, Value *, DataDependenceType>> a;
 
   graph["@EDGES@"] = "";
   int subgraphId = 0;
@@ -156,10 +157,6 @@ void dumpToDotFormat(LoopContent *LC,
     }
     auto deps = SCCNode->getEdges();
     for (auto dep : deps) {
-      if (isa<ControlDependence<Value, Value>>(dep)) {
-        continue;
-      }
-
       map<string, string> node;
       map<string, string> edge;
       auto src = dep->getSrc();
@@ -170,35 +167,51 @@ void dumpToDotFormat(LoopContent *LC,
       edge["@SRC@"] = srcId;
       edge["@DST@"] = dstId;
 
-      auto DD = cast<DataDependence<Value, Value>>(dep);
-      if (options & COLLAPSE_EDGES) {
-        edge["@ARROWHEAD@"] = "none";
-      } else {
-        if (DD->isRAWDependence()) {
-          edge["@ARROWHEAD@"] = "normal";
-        } else if (DD->isWARDependence()) {
-          edge["@ARROWHEAD@"] = "inv";
-        } else if (DD->isWAWDependence()) {
-          edge["@ARROWHEAD@"] = "empty";
-        }
-      }
-
-      if (isa<MemoryDependence<Value, Value>>(dep)) {
-        edge["@STYLE@"] = "solid";
-      } else if (isa<VariableDependence<Value, Value>>(dep)) {
+      if (isa<ControlDependence<Value, Value>>(dep)) {
         edge["@STYLE@"] = "dashed";
-      }
-
-      if (dep->isLoopCarriedDependence()) {
-        if (DA && !DA->canThisDependenceBeLoopCarried(dep, *LS)) {
-          // terminable
-          edge["@COLOR@"] = "orange";
-        } else {
-          // non-terminable
-          edge["@COLOR@"] = "red";
-        }
+        edge["@ARROWHEAD@"] = "normal";
+        edge["@COLOR@"] = "lightskyblue";
       } else {
-        edge["@COLOR@"] = "lightgrey";
+        edge["@STYLE@"] = "solid";
+        auto DD = cast<DataDependence<Value, Value>>(dep);
+        if (options & COLLAPSE_EDGES) {
+          edge["@ARROWHEAD@"] = "none";
+        } else {
+          if (DD->isRAWDependence()) {
+            if (isa<MemoryDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "normal";
+            } else if (isa<VariableDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "empty";
+            }
+          } else if (DD->isWARDependence()) {
+            if (isa<MemoryDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "inv";
+            } else if (isa<VariableDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "invempty";
+            }
+          } else if (DD->isWAWDependence()) {
+            if (isa<MemoryDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "dot";
+            } else if (isa<VariableDependence<Value, Value>>(dep)) {
+              edge["@ARROWHEAD@"] = "odot";
+            }
+          }
+        }
+        if (dep->isLoopCarriedDependence()) {
+          if (isa<LoopCarriedUnknownSCC>(genericSCC)) {
+            if (DA && !DA->canThisDependenceBeLoopCarried(dep, *LS)) {
+              // terminable
+              edge["@COLOR@"] = "orange";
+            } else {
+              // non-terminable
+              edge["@COLOR@"] = "red";
+            }
+          } else {
+              edge["@COLOR@"] = "green";
+          }
+        } else {
+          edge["@COLOR@"] = "lightgrey";
+        }
       }
 
       bool add = true;
@@ -210,6 +223,11 @@ void dumpToDotFormat(LoopContent *LC,
       }
       if (options & ONLY_LC_EDGES) {
         if (!dep->isLoopCarriedDependence()) {
+          add = false;
+        }
+      }
+      if (!(options & SHOW_CONTROL_DEPS)) {
+        if (isa<ControlDependence<Value, Value>>(dep)) {
           add = false;
         }
       }

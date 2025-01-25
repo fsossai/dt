@@ -11,6 +11,7 @@ enum DotOptions_value {
   ONLY_LC_EDGES = 1 << 0,
   HIDE_KNOWN_SCCS = 1 << 1,
   COLLAPSE_EDGES = 1 << 2,
+  SHOW_CONTROL_DEPS = 1 << 3,
 };
 
 using DotOptions = unsigned int;
