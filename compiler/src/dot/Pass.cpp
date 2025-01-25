@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <string>
 
 #include "llvm/ADT/ArrayRef.h"
@@ -24,11 +25,12 @@ using namespace arcana::noelle;
 namespace arcana::dt {
 
 static cl::opt<string> DotOutput("dot-output", cl::Hidden);
-static cl::opt<uint64_t> DotTag("dot-tag", cl::Hidden);
+static cl::opt<uint64_t> DotLoopTag("dot-tag", cl::Hidden);
 static cl::opt<bool> DotTerm("dot-term", cl::Hidden);
 static cl::opt<bool> DotCollapse("dot-collapse", cl::Hidden);
 static cl::opt<bool> DotOnlyLC("dot-only-lc", cl::Hidden);
 static cl::opt<bool> DotHideKnown("dot-hide-known", cl::Hidden);
+static cl::opt<uint64_t> DotLoopId("dot-id", cl::Hidden);
 static cl::opt<int> DotCoverage("dot-coverage",
                                 cl::Hidden,
                                 cl::init(FULL | SRC_ONLY | DST_ONLY | CROSS));
@@ -54,10 +56,22 @@ bool DotPass::runOnModule(Module &M) {
   noelle.addAnalysis(&PA);
 
   bool found = false;
-  for (auto &F : M) {
-    if (runOnFunction(F, noelle, LF)) {
-      found = true;
-      break;
+
+  if (DotLoopId.getNumOccurrences() > 0) {
+    auto &LSs = *noelle.getLoopStructures();
+    for (auto LS : LSs) {
+      if (LS->getID().value() == DotLoopId) {
+        process(noelle, LS);
+        found = true;
+        break;
+      }
+    }
+  } else {
+    for (auto &F : M) {
+      if (searchForTag(F, noelle, LF)) {
+        found = true;
+        break;
+      }
     }
   }
 
@@ -68,7 +82,45 @@ bool DotPass::runOnModule(Module &M) {
   return false;
 }
 
-bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
+void DotPass::process(Noelle &noelle, LoopStructure *LS) {
+  string outputFile;
+  if (DotOutput.getNumOccurrences() == 0) {
+    if (DotLoopTag.getNumOccurrences() == 0) {
+      outputFile = "graph_loopid_" + to_string(DotLoopId) + ".dot";
+    } else {
+      outputFile = "graph_looptag_" + to_string(DotLoopTag) + ".dot";
+    }
+  } else {
+    outputFile = DotOutput;
+  }
+
+  auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
+                         LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
+
+  auto &F = *LS->getFunction();
+  auto &LF =
+      *noelle.organizeLoopsInTheirNestingForest(*noelle.getLoopStructures(&F));
+  TerminatorAnalysis TA(noelle, &LF, F, optimizations, DotCoverage);
+  if (DotTerm) {
+    noelle.addAnalysis(&TA);
+  }
+  DotOptions options = 0;
+  if (DotCollapse) {
+    options |= COLLAPSE_EDGES;
+  }
+  if (DotOnlyLC) {
+    options |= ONLY_LC_EDGES;
+  }
+  if (DotHideKnown) {
+    options |= HIDE_KNOWN_SCCS;
+  }
+  auto LC = noelle.getLoopContent(LS);
+  dumpToDotFormat(LC, outputFile, options, &TA);
+
+  log.info() << "Dot file written to " << outputFile << "\n";
+}
+
+bool DotPass::searchForTag(Function &F, Noelle &noelle, LoopForest &LF) {
   PragmaForest PF(F, "loop.tag");
 
   PragmaTree *targetPragma = nullptr;
@@ -76,7 +128,7 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     auto args = PT->getArguments();
     assert(args.size() >= 1);
     auto tag = cast<ConstantInt>(args[0])->getZExtValue();
-    if (tag == DotTag) {
+    if (tag == DotLoopTag) {
       targetPragma = PT;
       return true;
     }
@@ -111,34 +163,7 @@ bool DotPass::runOnFunction(Function &F, Noelle &noelle, LoopForest &LF) {
     return true;
   }
 
-  string outputFile;
-  if (DotOutput.getNumOccurrences() == 0) {
-    outputFile = "graph_tag_" + to_string(DotTag) + ".dot";
-  } else {
-    outputFile = DotOutput;
-  }
-
-  auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
-                         LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
-
-  TerminatorAnalysis TA(noelle, &LF, F, optimizations, DotCoverage);
-  if (DotTerm) {
-    noelle.addAnalysis(&TA);
-  }
-  DotOptions options = 0;
-  if (DotCollapse) {
-    options |= COLLAPSE_EDGES;
-  }
-  if (DotOnlyLC) {
-    options |= ONLY_LC_EDGES;
-  }
-  if (DotHideKnown) {
-    options |= HIDE_KNOWN_SCCS;
-  }
-  auto LC = noelle.getLoopContent(targetLS);
-  dumpToDotFormat(LC, outputFile, options, &TA);
-
-  log.info() << "Dot file written to " << outputFile << "\n";
+  process(noelle, targetLS);
 
   return true;
 }
