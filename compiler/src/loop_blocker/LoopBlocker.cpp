@@ -221,7 +221,10 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   }
 
   Builder.SetInsertPoint(OuterHeader);
-  auto OuterCmp = Builder.CreateICmpSLT(LGOuterPHI, NumBlocks);
+  // make sure that types are comparable
+  auto NewNumBlocks =
+      Builder.CreateZExtOrTrunc(NumBlocks, LGOuterPHI->getType());
+  auto OuterCmp = Builder.CreateICmpSLT(LGOuterPHI, NewNumBlocks);
   Builder.CreateCondBr(OuterCmp, InnerHeader, ExitBB);
 
   if (NewIVPHI != nullptr) {
