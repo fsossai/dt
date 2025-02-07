@@ -239,18 +239,27 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // Applying loop blocking transformation to the termination targets.
   // This phase only applies to the collected DOALL loops
 
+  bool unordered = true;
   IRBuilder<> Builder(F.getContext());
   auto &M = *F.getParent();
   Value *NumBlocks;
   if (NumBreaks < 0) {
-    auto &EntryBB = F.getEntryBlock();
-    NumBlocks = Builder.CreateCall(M.getOrInsertFunction(
-        "omp_get_max_threads",
-        FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
-    auto NumBlocksI = cast<Instruction>(NumBlocks);
-    NumBlocksI->insertBefore(EntryBB.getTerminator());
+    if (unordered) {
+      // TODO
+    } else {
+      auto &EntryBB = F.getEntryBlock();
+      NumBlocks = Builder.CreateCall(M.getOrInsertFunction(
+          "omp_get_max_threads",
+          FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
+      auto NumBlocksI = cast<Instruction>(NumBlocks);
+      NumBlocksI->insertBefore(EntryBB.getTerminator());
+    }
   } else {
-    NumBlocks = Builder.getInt32(NumBreaks + 1);
+    if (unordered) {
+      // TODO
+    } else {
+      NumBlocks = Builder.getInt32(NumBreaks + 1);
+    }
   }
 
   for (auto LC : terminationTargetLCs) {
@@ -258,12 +267,24 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto LD = TA.getLoopDescription(LS);
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
-    if (NumBreaks < 0) {
-      log.info() << "Loop" << LD << ": Blocks: auto\n";
+    if (unordered) {
+      log.info() << "Loop" << LD << ": Unordered\n";
     } else {
-      log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
+      if (NumBreaks < 0) {
+        log.info() << "Loop" << LD << ": Blocks: auto\n";
+      } else {
+        log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
+      }
     }
-    NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
+    if (unordered) {
+      NewHeader = LS->getHeader();
+      NewIVPHI = LC->getInductionVariableManager()
+                     ->getLoopGoverningInductionVariable()
+                     ->getInductionVariable()
+                     ->getLoopEntryPHI();
+    } else {
+      NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
+    }
     assert(NewHeader != nullptr && "Failed to block to loop");
     assert(NewIVPHI != nullptr);
 
