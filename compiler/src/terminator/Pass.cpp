@@ -62,6 +62,12 @@ static cl::opt<bool> CraftPlan(
     cl::Hidden,
     cl::desc("Only target loops become part of the plan"));
 
+static cl::opt<bool> Unordered("terminator-unordered",
+                               cl::ZeroOrMore,
+                               cl::init(false),
+                               cl::Hidden,
+                               cl::desc("Specified orderness of LCDs"));
+
 TerminatorPass::TerminatorPass()
   : ModulePass{ ID },
     log(NoelleLumberjack, "Terminator.Pass") {}
@@ -239,12 +245,11 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // Applying loop blocking transformation to the termination targets.
   // This phase only applies to the collected DOALL loops
 
-  bool unordered = true;
   IRBuilder<> Builder(F.getContext());
   auto &M = *F.getParent();
   Value *NumBlocks;
   if (NumBreaks < 0) {
-    if (unordered) {
+    if (Unordered) {
       // TODO
     } else {
       auto &EntryBB = F.getEntryBlock();
@@ -255,7 +260,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       NumBlocksI->insertBefore(EntryBB.getTerminator());
     }
   } else {
-    if (unordered) {
+    if (Unordered) {
       // TODO
     } else {
       NumBlocks = Builder.getInt32(NumBreaks + 1);
@@ -267,7 +272,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto LD = TA.getLoopDescription(LS);
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
-    if (unordered) {
+    if (Unordered) {
       log.info() << "Loop" << LD << ": Unordered\n";
     } else {
       if (NumBreaks < 0) {
@@ -276,7 +281,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
       }
     }
-    if (unordered) {
+    if (Unordered) {
       NewHeader = LS->getHeader();
       NewIVPHI = LC->getInductionVariableManager()
                      ->getLoopGoverningInductionVariable()
@@ -375,6 +380,9 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
     // Marking the new loop as DOALL
     MM->addMetadata(NewHeader->getTerminator(), "gino.doall", "yes");
+    MM->addMetadata(NewHeader->getTerminator(),
+                    "tc.order",
+                    Unordered ? "no" : "yes");
   }
 
   return true;
