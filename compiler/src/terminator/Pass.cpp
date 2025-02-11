@@ -79,8 +79,6 @@ bool TerminatorPass::doInitialization(Module &M) {
 void TerminatorPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<NoellePass>();
   AU.addRequired<HeuristicsPass>();
-
-  return;
 }
 
 bool TerminatorPass::runOnModule(Module &M) {
@@ -249,22 +247,14 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   auto &M = *F.getParent();
   Value *NumBlocks;
   if (NumBreaks < 0) {
-    if (Unordered) {
-      // TODO
-    } else {
-      auto &EntryBB = F.getEntryBlock();
-      NumBlocks = Builder.CreateCall(M.getOrInsertFunction(
-          "omp_get_max_threads",
-          FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
-      auto NumBlocksI = cast<Instruction>(NumBlocks);
-      NumBlocksI->insertBefore(EntryBB.getTerminator());
-    }
+    auto &EntryBB = F.getEntryBlock();
+    NumBlocks = Builder.CreateCall(M.getOrInsertFunction(
+        "omp_get_max_threads",
+        FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
+    auto NumBlocksI = cast<Instruction>(NumBlocks);
+    NumBlocksI->insertBefore(EntryBB.getTerminator());
   } else {
-    if (Unordered) {
-      // TODO
-    } else {
-      NumBlocks = Builder.getInt32(NumBreaks + 1);
-    }
+    NumBlocks = Builder.getInt32(NumBreaks + 1);
   }
 
   for (auto LC : terminationTargetLCs) {
@@ -281,13 +271,21 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
       }
     }
+    bool willBeUnordered = Unordered;
     if (Unordered) {
       NewHeader = LS->getHeader();
-      NewIVPHI = LC->getInductionVariableManager()
-                     ->getLoopGoverningInductionVariable()
-                     ->getInductionVariable()
-                     ->getLoopEntryPHI();
-    } else {
+      auto IVM = LC->getInductionVariableManager();
+      auto LGIV = IVM->getLoopGoverningInductionVariable();
+
+      if (LGIV == nullptr) {
+        log.info()
+            << "WARNING: " << LD << " does not have a LGIV (implies ordered)\n";
+        willBeUnordered = false;
+      } else {
+        NewIVPHI = LGIV->getInductionVariable()->getLoopEntryPHI();
+      }
+    }
+    if (!willBeUnordered) {
       NewHeader = blockLoop(LC, NumBlocks, &NewIVPHI);
     }
     assert(NewHeader != nullptr && "Failed to block to loop");
@@ -363,10 +361,14 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       // Type manipulation of the `t` induction variable
       // auto SrcTy = NewIVPHI->getType();
       auto DestTy = clause->getVariable()->getType()->getPointerElementType();
-      // Value *CastedIV;
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      auto CastedIV = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
-      Builder.CreateStore(CastedIV, clause->getVariable());
+      if (Unordered) {
+        // auto ThreadNum =
+        // Builder.CreateCall(M.getFunction("omp_get_thread_num"),
+      } else {
+        auto Replacement = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
+        Builder.CreateStore(Replacement, clause->getVariable());
+      }
       clauseID++;
     }
 

@@ -5,6 +5,7 @@
 
 #include "arcana/noelle/core/Noelle.hpp"
 #include "arcana/noelle/core/Lumberjack.hpp"
+#include "LeptoInstVisitor.hpp"
 
 namespace arcana::dt {
 
@@ -23,6 +24,7 @@ public:
 
 private:
   noelle::Logger log;
+  LeptoInstVisitor lepto;
 };
 
 } // namespace arcana::dt
