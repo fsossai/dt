@@ -87,9 +87,9 @@ gino-load  \
   -load $installDir/lib/Terminator.so \
   -Terminator \
   --terminator-tagged-only=${winchester_taggedOnly} \
-  --terminator-func= \
+  --terminator-func=${winchester_func} \
   --terminator-details \
-  --terminator-craft-plan \
+  --terminator-craft-plan=${winchester_craftPlan} \
   --terminator-breaks=-1 \
   --terminator-unordered=true \
   --noelle-verbose=2 \

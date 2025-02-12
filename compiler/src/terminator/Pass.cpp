@@ -34,7 +34,7 @@ static cl::opt<int> NumBreaks("terminator-breaks",
 static cl::opt<string> TargetFunc("terminator-func",
                                   cl::init(""),
                                   cl::Hidden,
-                                  cl::desc("Run only on one function"));
+                                  cl::desc("Run on one function only"));
 
 static cl::opt<bool> EraseClauses("erase-clauses",
                                   cl::ZeroOrMore,
@@ -55,12 +55,11 @@ static cl::opt<bool> TaggedOnly(
     cl::Hidden,
     cl::desc("Only terminate loops with a loop.tag attribute"));
 
-static cl::opt<bool> CraftPlan(
-    "terminator-craft-plan",
-    cl::ZeroOrMore,
-    cl::init(false),
-    cl::Hidden,
-    cl::desc("Only target loops become part of the plan"));
+static cl::list<int> CraftPlan("terminator-craft-plan",
+                               cl::ZeroOrMore,
+                               cl::CommaSeparated,
+                               cl::Hidden,
+                               cl::desc("A new parallel plan is generated"));
 
 static cl::opt<bool> Unordered("terminator-unordered",
                                cl::ZeroOrMore,
@@ -91,6 +90,7 @@ bool TerminatorPass::runOnModule(Module &M) {
   noelle.addAnalysis(&PA);
 
   if (TargetFunc != "") {
+    log.info() << "Running pass only on " << TargetFunc << "\n";
     auto &F = *M.getFunction(TargetFunc);
     if (!F.empty()) {
       runOnFunction(noelle, LF, F, lastLoopOrder);
@@ -138,27 +138,53 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     return false;
   }
 
+  set<LoopStructure *> plannedLSs;
   // A new plan may or may not be crafted
-  if (loopsInPlan.size() == 0) {
-    // Analyze all loops that contain termination clauses
-    if (CraftPlan) {
-      for (auto LS : relevantLoops) {
-        MM->addMetadata(LS,
-                        "noelle.parallelizer.looporder",
-                        to_string(lastLoopOrder++));
+  if (CraftPlan.getNumOccurrences() > 0) {
+    assert(loopsInPlan.size() == 0
+           && "A crafted plan is requested but there is one already");
+
+    for (auto LS : relevantLoops) {
+      bool addToPlan = false;
+      if (CraftPlan.size() > 0) {
+        if (std::find(CraftPlan.begin(), CraftPlan.end(), TA.getLoopTag(LS))
+            != std::end(CraftPlan)) {
+          addToPlan = true;
+        }
+      } else {
+        if (TaggedOnly) {
+          if (TA.getLoopTag(LS) != 0) {
+            addToPlan = true;
+          }
+        } else {
+          addToPlan = true;
+        }
+      }
+
+      if (addToPlan) {
+        plannedLSs.insert(LS);
       }
     }
 
-    // Printing new plan information
-    log.info() << "Crafted a new parallel plan { ";
-    for (auto LS : relevantLoops) {
-      log.info().noPrefix() << TA.getLoopDescription(LS) << " ";
+    for (auto LS : plannedLSs) {
+      MM->addMetadata(LS,
+                      "noelle.parallelizer.looporder",
+                      to_string(lastLoopOrder++));
     }
-    log.info().noPrefix() << "}\n";
   } else {
-    if (CraftPlan) {
-      assert(false && "A crafted plan is requested but there is one already");
-    }
+    plannedLSs = loopsInPlan;
+  }
+
+  // Printing plan information
+  log.info() << "Parallel plan { ";
+  for (auto LS : plannedLSs) {
+    log.info().noPrefix() << TA.getLoopDescription(LS) << " ";
+  }
+  log.info().noPrefix() << "}\n";
+
+  if (plannedLSs.size() == 0) {
+    log.info() << "WARNING: Empty plan for " << F.getName() << "\n";
+    ;
   }
 
   // Phase 2
@@ -168,14 +194,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   const gino::DOALL doall(noelle);
   auto heuristics = getAnalysis<HeuristicsPass>().getHeuristics(noelle);
 
-  for (auto *LS : relevantLoops) {
+  for (auto *LS : plannedLSs) {
     auto LD = TA.getLoopDescription(LS);
-    if (TaggedOnly) {
-      if (TA.getLoopTag(LS) == 0) {
-        log.info() << "Skipping " << LD << "\n";
-        continue;
-      }
-    }
     auto LC = TA.fetchLoopContent(LS);
     assert(LC != nullptr);
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
@@ -300,8 +320,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     // Applying termination clauses
     int clauseID = 0;
     for (auto clause : TA.getClausesOf(LS)) {
-      log.info() << "Loop" << LD << ": Handling: ";
-      log.info() << *clause << "\n";
+      log.info() << "Loop" << LD << ": Handling: " << *clause << "\n";
       if (clause->isStrong()) {
         // This kind of clauses don't need to be handled
         continue;
