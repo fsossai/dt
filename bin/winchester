@@ -1,5 +1,18 @@
 #!/bin/bash -e
 
+timer_file=/tmp/timer_stamp
+
+lap_timer_init() {
+  date +%s > "$timer_file"
+}
+
+lap_timer() {
+  if [[ -f $timer_file ]]; then
+    echo "Winchester: Stage $stage: Elapsed time: $(( $(date +%s) - $(<"$timer_file") ))s"
+  fi
+  date +%s > "$timer_file"
+}
+
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
 if [[ -z $winchester_outDir ]]; then
@@ -31,10 +44,11 @@ ginoSrc=/nfs-scratch/fsv1684/gino-dt
 noelleSrc=/nfs-scratch/fsv1684/noelle-dt
 source $ginoSrc/enable
 source $noelleSrc/enable
+lap_timer_init # timer initialization
 
 ################################################################################
 stage=0
-echo "Winchester: Stage $stage"
+echo "Winchester: Stage $stage: Bitcode extraction"
 
 source /project/gllvm/enable
 gclang++ \
@@ -53,10 +67,11 @@ gclang++ \
   $@
 get-bc -o $outDir/${winchester_outBin}_s$((stage))_input.bc $outDir/${winchester_outBin}_s$((stage))_input.o
 noelle-norm $outDir/${winchester_outBin}_s$((stage))_input.bc -o $outDir/${winchester_outBin}_s$((stage))_input.bc
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=1
+echo "Winchester: Stage $stage: Inlining"
 opt --inline $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
 noelle-norm $outDir/${winchester_outBin}_s$((stage))_inlined.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
 # noelle-meta-scc-embed $outDir/${winchester_outBin}_s$((stage))_inlined.bc -o scc.$outDir/${winchester_outBin}_s$((stage))_inlined.bc &
@@ -80,10 +95,11 @@ clang \
   -o $outDir/NOELLE_APIs.bc \
   $ginoSrc/src/core/runtime/NOELLE_APIs.c \
   2>&1
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=2
+echo "Winchester: Stage $stage: Termination"
 gino-load  \
   -noelle-disable-dswp \
   -noelle-disable-helix \
@@ -102,34 +118,39 @@ gino-load  \
 
 noelle-norm $outDir/${winchester_outBin}_s$((stage))_terminated.bc -o $outDir/${winchester_outBin}_s$((stage))_terminated.bc
 # noelle-meta-scc-embed $outDir/${winchester_outBin}_s$((stage))_terminated.bc -o scc.$outDir/${winchester_outBin}_s$((stage))_terminated.bc &
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=3
+echo "Winchester: Stage $stage: Linking runtime"
 llvm-link \
   $outDir/${winchester_outBin}_s$((stage-1))_terminated.bc \
   $outDir/Parallelizer_utils.bc \
   $outDir/NOELLE_APIs.bc \
   -o $outDir/${winchester_outBin}_s$((stage))_linked.bc
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=4
+echo "Winchester: Stage $stage: Renormalization"
 noelle-norm $outDir/${winchester_outBin}_s$((stage-1))_linked.bc -o $outDir/${winchester_outBin}_s$((stage))_renormalized.bc
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=5
+echo "Winchester: Stage $stage: Parallelization"
 gino-loops $outDir/${winchester_outBin}_s$((stage-1))_renormalized.bc -o $outDir/${winchester_outBin}_s$((stage))_parallelized.bc
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=6
+echo "Winchester: Stage $stage: Pragma erasure"
 noelle-load -PragmaEraser $outDir/${winchester_outBin}_s$((stage-1))_parallelized.bc -o $outDir/${winchester_outBin}_s$((stage))_nopragma.bc
+lap_timer
 
 ################################################################################
-((stage+=1))
-echo "Winchester: Stage $stage"
+stage=7
+echo "Winchester: Stage $stage: Binary generation"
 clang++ \
   $winchester_flags \
   $winchester_linker \
@@ -138,11 +159,11 @@ clang++ \
   $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
   -o $outDir/${winchester_outBin}_s$((stage))_exe.out
 
-wait
-
 sleep 0.5
 
 if [[ -n $winchester_outBin ]]; then
   cp $outDir/${winchester_outBin}_s$((stage))_exe.out $outDir/$winchester_outBin
 fi
+lap_timer
+
 echo "Winchester: Done"
