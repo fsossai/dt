@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <set>
 #include <stack>
+#include <unordered_set>
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/DataLayout.h"
@@ -82,6 +83,8 @@ void TerminatorPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool TerminatorPass::runOnModule(Module &M) {
   auto &noelle = getAnalysis<NoellePass>().getNoelle();
+  this->MM = noelle.getMetadataManager();
+
   auto &LF = *noelle.getLoopNestingForest();
   int lastLoopOrder = 0;
 
@@ -110,7 +113,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
                                    LoopForest &LF,
                                    Function &F,
                                    int &lastLoopOrder) {
-  auto MM = noelle.getMetadataManager();
+  this->MM = noelle.getMetadataManager();
 
   if (EraseClauses) {
     assert(false && "Unimplemented");
@@ -120,72 +123,78 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // Indentifying which loops to analyze
 
   // Collecting the embedded parallel plan
-  set<LoopStructure *> loopsInPlan;
-  for (auto LS : *noelle.getLoopStructures(&F)) {
+  auto &functionLSs = *noelle.getLoopStructures(&F);
+  set<LoopStructure *> loopsAlreadyInPlan;
+  for (auto LS : functionLSs) {
     if (MM->doesHaveMetadata(LS, "noelle.parallelizer.looporder")) {
-      loopsInPlan.insert(LS);
+      loopsAlreadyInPlan.insert(LS);
     }
   }
 
-  auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
-                         LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
+  populateLoopTags(F, functionLSs);
 
-  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
-  TA.details = Details;
-
-  auto relevantLoops = TA.getRelevantLoopStructures();
-  if (relevantLoops.size() == 0) {
-    return false;
+  if (CraftPlan.getNumOccurrences() > 0) {
+    assert(loopsAlreadyInPlan.size() == 0
+           && "A crafted plan is requested but there is one already");
   }
 
-  set<LoopStructure *> plannedLSs;
+  unordered_set<LoopStructure *> plannedLSs;
   // A new plan may or may not be crafted
-  if (CraftPlan.getNumOccurrences() > 0) {
-    assert(loopsInPlan.size() == 0
-           && "A crafted plan is requested but there is one already");
-
-    for (auto LS : relevantLoops) {
-      bool addToPlan = false;
-      if (CraftPlan.size() > 0) {
-        if (std::find(CraftPlan.begin(), CraftPlan.end(), TA.getLoopTag(LS))
-            != std::end(CraftPlan)) {
+  for (auto LS : functionLSs) {
+    bool addToPlan = false;
+    if (CraftPlan.getNumOccurrences() > 0) {
+      auto Tag = getLoopTag(LS);
+      if (Tag != 0
+          && std::find(CraftPlan.begin(), CraftPlan.end(), Tag)
+                 != std::end(CraftPlan)) {
+        addToPlan = true;
+      }
+    } else {
+      if (TaggedOnly) {
+        if (getLoopTag(LS) != 0) {
           addToPlan = true;
         }
       } else {
-        if (TaggedOnly) {
-          if (TA.getLoopTag(LS) != 0) {
-            addToPlan = true;
-          }
-        } else {
-          addToPlan = true;
-        }
-      }
-
-      if (addToPlan) {
-        plannedLSs.insert(LS);
+        addToPlan = true;
       }
     }
-
-    for (auto LS : plannedLSs) {
-      MM->addMetadata(LS,
-                      "noelle.parallelizer.looporder",
-                      to_string(lastLoopOrder++));
+    if (addToPlan) {
+      plannedLSs.insert(LS);
     }
-  } else {
-    plannedLSs = loopsInPlan;
+  }
+
+  if (plannedLSs.size() == 0) {
+    return false;
+  }
+
+  // setting metadata to create the parallel plan
+  for (auto LS : plannedLSs) {
+    auto MD = "noelle.parallelizer.looporder";
+    if (this->MM->doesHaveMetadata(LS, MD)) {
+      this->MM->setMetadata(LS, MD, to_string(lastLoopOrder++));
+    } else {
+      this->MM->addMetadata(LS, MD, to_string(lastLoopOrder++));
+    }
   }
 
   // Printing plan information
   log.info() << "Parallel plan { ";
   for (auto LS : plannedLSs) {
-    log.info().noPrefix() << TA.getLoopDescription(LS) << " ";
+    log.info().noPrefix() << getLoopDescription(LS) << " ";
   }
   log.info().noPrefix() << "}\n";
 
-  if (plannedLSs.size() == 0) {
-    log.info() << "WARNING: Empty plan for " << F.getName() << "\n";
-    ;
+  unordered_set<uint64_t> plannedIDs;
+  for (auto LS : plannedLSs) {
+    auto ID = LS->getID().value();
+    plannedIDs.insert(ID);
   }
+
+  auto optimizations = { LoopContentOptimization::MEMORY_CLONING_ID,
+                         LoopContentOptimization::THREAD_SAFE_LIBRARY_ID };
+
+  TerminatorAnalysis TA(noelle, &LF, F, plannedIDs, optimizations);
+  TA.details = Details;
 
   // Phase 2
   // Identifying non-DOALL loops from the loop with clauses
@@ -195,9 +204,12 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   auto heuristics = getAnalysis<HeuristicsPass>().getHeuristics(noelle);
 
   for (auto *LS : plannedLSs) {
-    auto LD = TA.getLoopDescription(LS);
+    auto LD = getLoopDescription(LS);
     auto LC = TA.fetchLoopContent(LS);
-    assert(LC != nullptr);
+    if (LC == nullptr) {
+      // This loop might be in the plan but might not have been analyzed by TA
+      LC = noelle.getLoopContent(LS);
+    }
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
 
     log.info()
@@ -222,7 +234,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   for (auto *LS : retryLSs) {
     auto LC = noelle.getLoopContent(LS, optimizations);
-    auto LD = TA.getLoopDescription(LS);
+    auto LD = getLoopDescription(LS);
     auto cert = doall.getCertificate(LC, heuristics);
     bool looksDoall =
         cert == DOALL::Certificate::YES || cert == DOALL::Certificate::NO_IV;
@@ -279,7 +291,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   for (auto LC : terminationTargetLCs) {
     auto LS = LC->getLoopStructure();
-    auto LD = TA.getLoopDescription(LS);
+    auto LD = getLoopDescription(LS);
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
     if (Unordered) {
@@ -407,6 +419,40 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   }
 
   return true;
+}
+
+void TerminatorPass::populateLoopTags(Function &F,
+                                      const vector<LoopStructure *> &LSs) {
+  PragmaForest LoopPF(F, "loop.tag");
+
+  for (auto LS : LSs) {
+    auto ID = LS->getID().value();
+    auto BranchI = LS->getHeader()->getTerminator();
+    auto p = LoopPF.findInnermostPragmaFor(BranchI);
+    if (p != nullptr) {
+      auto args = p->getArguments();
+      assert(args.size() >= 1);
+      auto tag = cast<ConstantInt>(args[0])->getZExtValue();
+      this->loopIdToTag[ID] = tag;
+      this->loopTagToId[tag] = ID;
+    }
+  }
+}
+
+string TerminatorPass::getLoopDescription(LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
+  auto tag =
+      (this->loopIdToTag[ID] == 0) ? "" : to_string(this->loopIdToTag[ID]);
+  return "(id=" + to_string(ID) + ", tag=" + tag + ", order=" + order + ")";
+}
+
+uint64_t TerminatorPass::getLoopTag(LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  if (this->loopIdToTag.find(ID) != this->loopIdToTag.end()) {
+    return this->loopIdToTag[ID];
+  }
+  return 0;
 }
 
 char TerminatorPass::ID = 0;

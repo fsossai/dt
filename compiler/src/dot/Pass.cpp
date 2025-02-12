@@ -99,7 +99,7 @@ void DotPass::process(Noelle &noelle, LoopStructure *LS) {
   auto &F = *LS->getFunction();
   auto &LF =
       *noelle.organizeLoopsInTheirNestingForest(*noelle.getLoopStructures(&F));
-  TerminatorAnalysis TA(noelle, &LF, F, optimizations);
+  TerminatorAnalysis TA(noelle, &LF, F, {}, optimizations);
   if (DotCoverage.getNumOccurrences() > 0) {
     TA.setAdmissibleCoverage(DotCoverage);
   }

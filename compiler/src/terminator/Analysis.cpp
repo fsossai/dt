@@ -27,10 +27,12 @@ TerminatorAnalysis::TerminatorAnalysis(
     Noelle &noelle,
     LoopForest *LF,
     Function &F,
+    unordered_set<uint64_t> loopIDs,
     unordered_set<LoopContentOptimization> optimizations)
   : TerminatorAnalysis(noelle,
                        LF,
                        F,
+                       loopIDs,
                        optimizations,
                        FULL | SRC_ONLY | DST_ONLY | CROSS) {}
 
@@ -38,17 +40,18 @@ TerminatorAnalysis::TerminatorAnalysis(
     Noelle &noelle,
     LoopForest *LF,
     Function &F,
+    unordered_set<uint64_t> loopIDs,
     unordered_set<LoopContentOptimization> optimizations,
     CoverageType admissibleCoverage)
   : DependenceAnalysis("Terminator"),
     details(false),
+    log(NoelleLumberjack, "Terminator.Analysis"),
     noelle(noelle),
     LF(LF),
     F(F),
     PF(F, "ldtc"),
     doallMarkers(F, "loop.doall"),
-    admissibleCoverage(admissibleCoverage),
-    log(NoelleLumberjack, "Terminator.Analysis") {
+    admissibleCoverage(admissibleCoverage) {
 
   // We only care about loops with clauses. It is not the job of this analysis
   // to study loops that are unrelated to clauses even though they may be
@@ -80,8 +83,6 @@ TerminatorAnalysis::TerminatorAnalysis(
     return false;
   });
 
-  populateLoopTags();
-
   // Print relation among loops and clauses
   for (auto LS : this->relevantLoops) {
     auto ID = LS->getID().value();
@@ -93,12 +94,22 @@ TerminatorAnalysis::TerminatorAnalysis(
     log.info().noPrefix() << "}\n";
   }
 
+  auto isSelected = [&](LoopStructure *LS) {
+    if (loopIDs.size() == 0) {
+      return true;
+    }
+    auto ID = LS->getID().value();
+    return loopIDs.find(ID) != loopIDs.end();
+  };
+
   // We keep the set of dependencies for which at least on instruction that
   // composes it is in contained in a clause. We call these `relevant` LCDs.
 
   for (auto LS : this->relevantLoops) {
-    auto LC = noelle.getLoopContent(LS, optimizations);
-    this->collectRelevantLCDs(LC);
+    if (isSelected(LS)) {
+      auto LC = noelle.getLoopContent(LS, optimizations);
+      this->collectRelevantLCDs(LC);
+    }
   }
 }
 
@@ -121,8 +132,8 @@ void TerminatorAnalysis::printDependence(const Dependence *LCD) {
   auto srcValue = LCD->getSrc();
   auto dstValue = LCD->getDst();
   auto s = log.namedSection("Dependence");
-  log.info() << "[src] " << LIV.visitValue(*srcValue);
-  log.info() << "[dst] " << LIV.visitValue(*dstValue);
+  log.info() << "[src] " << lepto(*srcValue);
+  log.info() << "[dst] " << lepto(*dstValue);
 }
 
 CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
@@ -259,6 +270,11 @@ unordered_set<LoopStructure *> TerminatorAnalysis::getRelevantLoopStructures() {
   return this->relevantLoops;
 }
 
+string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
+  auto ID = LS->getID().value();
+  return "(id=" + to_string(ID) + ")";
+}
+
 bool TerminatorAnalysis::isRelevant(noelle::LoopStructure *LS) const {
   auto ID = LS->getID().value();
   if (this->loopIdToCoverageSummary.find(ID)
@@ -284,15 +300,7 @@ unordered_set<TClause *> TerminatorAnalysis::getClausesOf(
   if (it != this->loopIdToClauses.end()) {
     return it->second;
   }
-  assert(false && "Cannot get claues for non relevant loops");
-}
-
-string TerminatorAnalysis::getLoopDescription(LoopStructure *LS) {
-  auto ID = LS->getID().value();
-  auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
-  auto tag =
-      (this->loopIdToTag[ID] == 0) ? "" : to_string(this->loopIdToTag[ID]);
-  return "(id=" + to_string(ID) + ", tag=" + tag + ", order=" + order + ")";
+  return {};
 }
 
 DoallTag TerminatorAnalysis::getDoallTag(LoopStructure *LS) {
@@ -315,39 +323,10 @@ DoallTag TerminatorAnalysis::getDoallTag(LoopStructure *LS) {
   return DoallTag::MAYBE;
 }
 
-void TerminatorAnalysis::populateLoopTags() {
-  PragmaForest LoopPF(F, "loop.tag");
-
-  for (auto LS : this->relevantLoops) {
-    auto ID = LS->getID().value();
-    auto BranchI = LS->getHeader()->getTerminator();
-    auto p = LoopPF.findInnermostPragmaFor(BranchI);
-    if (p == nullptr) {
-      log.info() << "WARNING: loop.id=" << ID
-                 << " does not have a loop.tag attribute\n";
-      this->loopIdToTag[ID] = 0;
-    } else {
-      auto args = p->getArguments();
-      assert(args.size() >= 1);
-      auto tag = cast<ConstantInt>(args[0]);
-      this->loopIdToTag[ID] = tag->getZExtValue();
-    }
-  }
-}
-
-uint64_t TerminatorAnalysis::getLoopTag(LoopStructure *LS) {
-  auto ID = LS->getID().value();
-  if (loopIdToTag.find(ID) != loopIdToTag.end()) {
-    return loopIdToTag[ID];
-  }
-  return 0;
-}
-
 void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
   string prefix = "";
   auto sccManager = LC->getSCCManager();
   auto SCCNodes = DOALL::getSCCsThatBlockDOALLToBeApplicable(LC, noelle);
-  LeptoInstVisitor LIV;
   using dep_t = pair<Value *, Value *>;
   set<size_t> toSkip;
   vector<dep_t> LCDs_seen;
@@ -381,7 +360,7 @@ void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
     auto dst = LCDs_seen[i].second;
 
     if (src == dst) {
-      log.info() << " \u21bb " << LIV.visitValue(*src) << "\n";
+      log.info() << " \u21bb " << lepto(*src) << "\n";
     } else {
       bool isSelf = false;
       for (size_t j = 0; j < LCDs_seen.size(); j++) {
@@ -395,11 +374,11 @@ void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
       }
 
       if (isSelf) {
-        log.info() << "\u250f\u2192 " << LIV.visitValue(*src) << "\n";
+        log.info() << "\u250f\u2192 " << lepto(*src) << "\n";
       } else {
-        log.info() << "\u250f\u2501 " << LIV.visitValue(*src) << "\n";
+        log.info() << "\u250f\u2501 " << lepto(*src) << "\n";
       }
-      log.info() << "\u2517\u2192 " << LIV.visitValue(*dst) << "\n";
+      log.info() << "\u2517\u2192 " << lepto(*dst) << "\n";
     }
   }
 }

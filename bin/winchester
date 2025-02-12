@@ -12,6 +12,10 @@ if [[ -z $winchester_flags ]]; then
   winchester_flags="-std=c++17"
 fi
 
+if [[ -z $winchester_craftPlan ]]; then
+  winchester_craftPlan="0"
+fi
+
 if [[ -z $winchester_taggedOnly ]]; then
   winchester_taggedOnly="false"
 fi

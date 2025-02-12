@@ -2,6 +2,7 @@
 #define __TERMINATOR_ANALYSIS_HPP__
 
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -47,12 +48,14 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
       noelle::Noelle &noelle,
       noelle::LoopForest *LF,
       llvm::Function &F,
+      std::unordered_set<uint64_t> loopIDs,
       std::unordered_set<noelle::LoopContentOptimization> optimizations);
 
   TerminatorAnalysis(
       noelle::Noelle &noelle,
       noelle::LoopForest *LF,
       llvm::Function &F,
+      std::unordered_set<uint64_t> loopIDs,
       std::unordered_set<noelle::LoopContentOptimization> optimizations,
       CoverageType admissibleCoverage);
 
@@ -83,17 +86,17 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   std::unordered_set<TClause *> getClausesOf(noelle::LoopStructure *LS);
 
-  std::string getLoopDescription(noelle::LoopStructure *LS);
-
   DoallTag getDoallTag(noelle::LoopStructure *LS);
 
-  uint64_t getLoopTag(noelle::LoopStructure *LS);
-
   void setAdmissibleCoverage(CoverageType coverage);
+
+  std::string getLoopDescription(noelle::LoopStructure *LS);
 
   bool details;
 
 private:
+  noelle::Logger log;
+  LeptoInstVisitor lepto;
   noelle::Noelle &noelle;
   noelle::MetadataManager *MM;
   noelle::LoopForest *LF;
@@ -105,17 +108,12 @@ private:
   std::unordered_map<uint64_t, CoverageSummary> loopIdToCoverageSummary;
   std::unordered_map<uint64_t, noelle::LoopContent *> loopIdToContent;
   std::unordered_map<uint64_t, std::unordered_set<TClause *>> loopIdToClauses;
-  std::unordered_map<uint64_t, uint64_t> loopIdToTag;
   noelle::PragmaForest doallMarkers;
   CoverageType admissibleCoverage;
-  LeptoInstVisitor LIV;
-  noelle::Logger log;
 
   void collectRelevantLCDs(noelle::LoopContent *LC);
 
   CoverageType getCoverageTypeFromPragmaTree(Dependence *LCD);
-
-  void populateLoopTags();
 };
 
 } // namespace arcana::dt
