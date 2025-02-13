@@ -439,7 +439,6 @@ void TerminatorPass::populateLoopTags(Noelle &noelle,
         auto tag = cast<ConstantInt>(args[0])->getZExtValue();
         this->loopIdToTag[ID] = tag;
         this->loopTagToId[tag] = ID;
-        log.bypass() << "ID=" << ID << ", Tag=" << tag << "\n";
         return true; // stop visit
       }
       return false;
