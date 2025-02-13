@@ -131,7 +131,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     }
   }
 
-  populateLoopTags(F, functionLSs);
+  populateLoopTags(noelle, F, functionLSs);
 
   if (CraftPlan.getNumOccurrences() > 0) {
     assert(loopsAlreadyInPlan.size() == 0
@@ -421,21 +421,29 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   return true;
 }
 
-void TerminatorPass::populateLoopTags(Function &F,
+void TerminatorPass::populateLoopTags(Noelle &noelle,
+                                      Function &F,
                                       const vector<LoopStructure *> &LSs) {
   PragmaForest LoopPF(F, "loop.tag");
 
-  for (auto LS : LSs) {
-    auto ID = LS->getID().value();
-    auto BranchI = LS->getHeader()->getTerminator();
-    auto p = LoopPF.findInnermostPragmaFor(BranchI);
-    if (p != nullptr) {
-      auto args = p->getArguments();
-      assert(args.size() >= 1);
-      auto tag = cast<ConstantInt>(args[0])->getZExtValue();
-      this->loopIdToTag[ID] = tag;
-      this->loopTagToId[tag] = ID;
-    }
+  auto LF = noelle.organizeLoopsInTheirNestingForest(LSs);
+
+  for (auto LT : LF->getTrees()) {
+    LT->visitPreOrder([&](LoopTree *T, auto) {
+      auto LS = T->getLoop();
+      auto ID = LS->getID().value();
+      auto p = LoopPF.findInnermostPragmaFor(LS);
+      if (p != nullptr) {
+        auto args = p->getArguments();
+        assert(args.size() >= 1);
+        auto tag = cast<ConstantInt>(args[0])->getZExtValue();
+        this->loopIdToTag[ID] = tag;
+        this->loopTagToId[tag] = ID;
+        log.bypass() << "ID=" << ID << ", Tag=" << tag << "\n";
+        return true; // stop visit
+      }
+      return false;
+    });
   }
 }
 
