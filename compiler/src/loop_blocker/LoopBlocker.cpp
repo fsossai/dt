@@ -3,6 +3,7 @@
 #include "llvm/IR/Instructions.h"
 
 #include "arcana/noelle/core/Noelle.hpp"
+#include "arcana/noelle/core/Lumberjack.hpp"
 #include "arcana/dt/LoopBlocker.hpp"
 
 using namespace std;
@@ -18,6 +19,8 @@ BasicBlock *blockLoop(LoopContent *LC, int numBlocks, PHINode **NewIVPHI) {
 }
 
 BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
+  Logger log(NoelleLumberjack, "LoopBlocker");
+
   auto LS = LC->getLoopStructure();
   auto IVM = LC->getInductionVariableManager();
   auto LGIV = IVM->getLoopGoverningInductionVariable(*LC->getLoopStructure());
@@ -49,7 +52,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   // }
 
   if (LGInnerPHI) {
-    errs() << "LoopBlocker: LGInnerPHI = " << *LGInnerPHI << "\n";
+    log.debug() << "LGInnerPHI = " << *LGInnerPHI << "\n";
     // TODO can be simplified through the use of the preheader
     // All predecessors of the original header (InnerHeader) must
     // now branch to the new header
@@ -66,7 +69,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
       }
     }
   } else {
-    errs() << "LoopBlocker: No LGInnerPHI\n";
+    log.debug() << "No LGInnerPHI\n";
   }
 
   auto OuterLatch = BasicBlock::Create(Context, "", F);
@@ -139,6 +142,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   auto Latch = *InnerLatches.begin();
   map<Instruction *, Instruction *> OldToNewLiveOuts;
   for (auto LO : InnerLiveOuts) {
+    log.debug() << "LiveOut: " << *LO << "\n";
     auto NewLO = LO->clone();
     NewLO->insertAfter(LGOuterPHI);
     if (auto NewPHI = dyn_cast<PHINode>(NewLO)) {
@@ -181,7 +185,6 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
 
   // IV increment for the outermost loop
   Builder.SetInsertPoint(OuterLatch);
-  // errs() << "LGOuterPHI [post]" << *LGOuterPHI << "\n";
   auto OuterTy = LGOuterPHI->getType();
   auto OuterIncrement =
       Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1));
@@ -230,8 +233,6 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   if (NewIVPHI != nullptr) {
     *NewIVPHI = LGOuterPHI;
   }
-
-  // errs() << *F << "\n";
 
   return OuterHeader;
 }
