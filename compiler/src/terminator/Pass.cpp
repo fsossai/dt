@@ -391,15 +391,18 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
       // Type manipulation of the `t` induction variable
       // auto SrcTy = NewIVPHI->getType();
+      Value *Replacement;
       auto DestTy = clause->getVariable()->getType()->getPointerElementType();
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
       if (Unordered) {
-        // auto ThreadNum =
-        // Builder.CreateCall(M.getFunction("omp_get_thread_num"),
+        auto ThreadNum = Builder.CreateCall(M.getOrInsertFunction(
+            "omp_get_thread_num",
+            FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
+        Replacement = Builder.CreateZExtOrTrunc(ThreadNum, DestTy);
       } else {
-        auto Replacement = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
-        Builder.CreateStore(Replacement, clause->getVariable());
+        Replacement = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
       }
+      Builder.CreateStore(Replacement, clause->getVariable());
       clauseID++;
     }
 
