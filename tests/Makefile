@@ -20,6 +20,10 @@ bfs_%:
 $(TARGETS): % : %.cpp
 	$(CXX) $(STD) -fopenmp $(INCLUDE) $(OPT) $(FLAGS) $^ -o $@.out
 
+%.bc : %.cpp
+	$(CXX) $(STD) -fopenmp $(INCLUDE) $(FLAGS) -c -emit-llvm -O1 -Xclang -disable-llvm-passes -fno-exceptions $^ -o $@
+	noelle-norm $@ -o $@
+
 clean:
 	rm -f *.out *.bc *.ll
 	@for dir in $(DIRS); do \
