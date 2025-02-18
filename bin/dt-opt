@@ -14,8 +14,6 @@ gino-load  \
   -load $installDir/lib/Dot.so \
   -load $installDir/lib/LoopBlocker.so \
   -load $installDir/lib/Terminator.so \
-  --terminator-details \
-  --terminator-craft-plan \
   --noelle-verbose=2 \
   $@
 
