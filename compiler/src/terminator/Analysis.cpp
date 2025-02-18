@@ -128,6 +128,16 @@ bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
   return true;
 }
 
+bool TerminatorAnalysis::canThereBeAMemoryDataDependence(Instruction *src,
+                                                         Instruction *dst,
+                                                         LoopStructure &LS) {
+  auto coverageType = getCoverageTypeFromPragmaTree(src, dst);
+  if (coverageType & this->admissibleCoverage) {
+    return false;
+  }
+  return true;
+}
+
 void TerminatorAnalysis::printDependence(const Dependence *LCD) {
   auto srcValue = LCD->getSrc();
   auto dstValue = LCD->getDst();
@@ -148,11 +158,17 @@ CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
 
 CoverageType TerminatorAnalysis::getCoverageTypeFromPragmaTree(
     Dependence *LCD) {
-  auto srcValue = cast<Instruction>(LCD->getSrc());
-  auto dstValue = cast<Instruction>(LCD->getDst());
+  auto src = cast<Instruction>(LCD->getSrc());
+  auto dst = cast<Instruction>(LCD->getDst());
+  return getCoverageTypeFromPragmaTree(src, dst);
+}
 
-  auto srcClause = this->PF.findInnermostPragmaFor(srcValue);
-  auto dstClause = this->PF.findInnermostPragmaFor(dstValue);
+CoverageType TerminatorAnalysis::getCoverageTypeFromPragmaTree(
+    Instruction *src,
+    Instruction *dst) {
+
+  auto srcClause = this->PF.findInnermostPragmaFor(src);
+  auto dstClause = this->PF.findInnermostPragmaFor(dst);
 
   if (srcClause != nullptr && dstClause == nullptr) {
     return SRC_ONLY;

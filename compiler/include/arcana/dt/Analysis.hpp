@@ -10,6 +10,7 @@
 #include "llvm/IR/Instructions.h"
 
 #include "arcana/noelle/core/LoopContent.hpp"
+#include "arcana/noelle/core/LoopStructure.hpp"
 #include "arcana/noelle/core/Noelle.hpp"
 #include "arcana/noelle/core/Lumberjack.hpp"
 #include "LeptoInstVisitor.hpp"
@@ -64,6 +65,10 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
   bool canThisDependenceBeLoopCarried(Dependence *LCD,
                                       noelle::LoopStructure &LS) override;
 
+  bool canThereBeAMemoryDataDependence(llvm::Instruction *src,
+                                       llvm::Instruction *dst,
+                                       noelle::LoopStructure &LS) override;
+
   std::string coverageToString(CoverageType coverageType);
 
   CoverageType getCoverageType(Dependence *LCD);
@@ -114,6 +119,9 @@ private:
   void collectRelevantLCDs(noelle::LoopContent *LC);
 
   CoverageType getCoverageTypeFromPragmaTree(Dependence *LCD);
+
+  CoverageType getCoverageTypeFromPragmaTree(Instruction *src,
+                                             Instruction *dst);
 };
 
 } // namespace arcana::dt
