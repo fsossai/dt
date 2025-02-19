@@ -138,12 +138,14 @@ bool TerminatorAnalysis::canThereBeAMemoryDataDependence(Instruction *src,
   return true;
 }
 
-void TerminatorAnalysis::printDependence(const Dependence *LCD) {
-  auto srcValue = LCD->getSrc();
-  auto dstValue = LCD->getDst();
+void TerminatorAnalysis::printDependence(Value *src, Value *dst) {
   auto s = log.namedSection("Dependence");
-  log.info() << "[src] " << lepto(*srcValue);
-  log.info() << "[dst] " << lepto(*dstValue);
+  log.info() << "[src] " << lepto(*src);
+  log.info() << "[dst] " << lepto(*dst);
+}
+
+void TerminatorAnalysis::printDependence(Dependence *dep) {
+  printDependence(dep->getSrc(), dep->getDst());
 }
 
 CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
@@ -153,7 +155,7 @@ CoverageType TerminatorAnalysis::getCoverageType(Dependence *LCD) {
       return coverageType;
     }
   }
-  return NONE;
+  return UNCOVERED;
 }
 
 CoverageType TerminatorAnalysis::getCoverageTypeFromPragmaTree(
@@ -182,12 +184,12 @@ CoverageType TerminatorAnalysis::getCoverageTypeFromPragmaTree(
     }
     return CROSS;
   }
-  return NONE;
+  return UNCOVERED;
 }
 
 string TerminatorAnalysis::coverageToString(CoverageType coverageType) {
   switch (coverageType) {
-    case NONE:
+    case UNCOVERED:
       return "uncovered";
     case SRC_ONLY:
       return "source-only-covered";
@@ -206,7 +208,7 @@ int TerminatorAnalysis::getCoverageCount(LoopStructure *LS,
   auto ID = LS->getID().value();
   auto coverageSummary = this->loopIdToCoverageSummary[ID];
   switch (coverageType) {
-    case NONE:
+    case UNCOVERED:
       return coverageSummary.notCovered;
     case SRC_ONLY:
       return coverageSummary.srcOnlyCovered;
@@ -221,7 +223,7 @@ int TerminatorAnalysis::getCoverageCount(LoopStructure *LS,
 }
 
 void TerminatorAnalysis::printCoverageSummary(LoopStructure *LS) {
-  auto cTypes = vector{ NONE, SRC_ONLY, DST_ONLY, CROSS, FULL };
+  auto cTypes = vector{ UNCOVERED, SRC_ONLY, DST_ONLY, CROSS, FULL };
 
   for (auto cType : cTypes) {
     log.info() << getCoverageCount(LS, cType) << " " << coverageToString(cType)
@@ -252,7 +254,7 @@ void TerminatorAnalysis::collectRelevantLCDs(noelle::LoopContent *LC) {
           this->relevantLCDs[LCD] = coverageType;
 
           switch (coverageType) {
-            case NONE:
+            case UNCOVERED:
               coverageSummary.notCovered++;
               break;
             case SRC_ONLY:

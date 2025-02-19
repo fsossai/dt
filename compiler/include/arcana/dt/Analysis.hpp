@@ -83,7 +83,9 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   noelle::LoopContent *fetchLoopContent(noelle::LoopStructure *LS);
 
-  void printDependence(const Dependence *LCD);
+  void printDependence(Dependence *dep);
+
+  void printDependence(Value *src, Value *dst);
 
   void printUnknownLCDs(noelle::LoopContent *LC);
 
