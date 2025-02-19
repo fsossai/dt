@@ -401,6 +401,23 @@ void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
   }
 }
 
+bool TerminatorAnalysis::isUnordered(LoopStructure *LS) {
+  PragmaForest OrderPF(F, "unordered");
+  bool unordered = false;
+  for (auto LT : this->LF->getTrees()) {
+    LT->visitPreOrder([&](LoopTree *T, auto) {
+      auto LS = T->getLoop();
+      auto p = OrderPF.findInnermostPragmaFor(LS);
+      if (p != nullptr) {
+        unordered = true;
+        return true; // stop visit
+      }
+      return false;
+    });
+  }
+  return unordered;
+}
+
 void TerminatorAnalysis::setAdmissibleCoverage(CoverageType coverage) {
   this->admissibleCoverage = coverage;
 }

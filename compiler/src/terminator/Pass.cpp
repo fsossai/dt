@@ -62,12 +62,6 @@ static cl::list<int> CraftPlan("terminator-craft-plan",
                                cl::Hidden,
                                cl::desc("A new parallel plan is generated"));
 
-static cl::opt<bool> Unordered("terminator-unordered",
-                               cl::ZeroOrMore,
-                               cl::init(false),
-                               cl::Hidden,
-                               cl::desc("Specified orderness of LCDs"));
-
 TerminatorPass::TerminatorPass()
   : ModulePass{ ID },
     log(NoelleLumberjack, "Terminator.Pass") {}
@@ -292,9 +286,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   for (auto LC : terminationTargetLCs) {
     auto LS = LC->getLoopStructure();
     auto LD = getLoopDescription(LS);
+    auto isUnordered = TA.isUnordered(LS);
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
-    if (Unordered) {
+    if (isUnordered) {
       log.info() << "Loop" << LD << ": Unordered\n";
     } else {
       if (NumBreaks < 0) {
@@ -303,8 +298,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         log.info() << "Loop" << LD << ": Blocks: " << (NumBreaks + 1) << "\n";
       }
     }
-    bool willBeUnordered = Unordered;
-    if (Unordered) {
+    bool willBeUnordered = isUnordered;
+    if (isUnordered) {
       NewHeader = LS->getHeader();
       auto IVM = LC->getInductionVariableManager();
       auto LGIV = IVM->getLoopGoverningInductionVariable();
@@ -394,7 +389,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       Value *Replacement;
       auto DestTy = clause->getVariable()->getType()->getPointerElementType();
       Builder.SetInsertPoint(clause->getPragmaTree().getBeginDelimiter());
-      if (Unordered) {
+      if (isUnordered) {
         auto ThreadNum = Builder.CreateCall(M.getOrInsertFunction(
             "omp_get_thread_num",
             FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
@@ -418,7 +413,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     MM->addMetadata(NewHeader->getTerminator(), "gino.doall", "yes");
     MM->addMetadata(NewHeader->getTerminator(),
                     "tc.order",
-                    Unordered ? "no" : "yes");
+                    isUnordered ? "no" : "yes");
   }
 
   return true;

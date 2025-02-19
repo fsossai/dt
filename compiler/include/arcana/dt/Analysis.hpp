@@ -99,6 +99,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   std::string getLoopDescription(noelle::LoopStructure *LS);
 
+  bool isUnordered(noelle::LoopStructure *LS);
+
   bool details;
 
 private:
