@@ -7,6 +7,7 @@
 // #define DEBUG
 
 #include "Array.hpp"
+#include "HSequence.hpp"
 #include "Scalar.hpp"
 #include "Sequence.hpp"
 #include "Set.hpp"

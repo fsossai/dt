@@ -5,14 +5,50 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <omp.h>
 #include <vector>
+#include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
+
+int tc_chain_id() {
+  return omp_get_thread_num();
+}
+
+int tc_chain_length() {
+  return omp_get_team_size(omp_get_level());
+}
+
+template <typename T>
+class HSequence;
+
+template <typename T>
+HSequence<T> *clause_split(int N, HSequence<T> *hs) {
+  auto a = hs;
+  auto p = noelle_pragma_begin("ldtc", hs, clause_split<T>, hs);
+  if (hs->leaf) {
+    hs->bloom(N);
+  } else {
+    assert(hs->level.size() != 0);
+    int offset = hs->level.size() - tc_chain_length();
+    int k = tc_chain_id();
+    hs = hs->level[offset + k];
+    hs->bloom(N);
+  }
+  noelle_pragma_end(p);
+  return hs;
+}
 
 template <typename T>
 class HSequence {
 public:
-  HSequence(bool leaf = true) : leaf(leaf) {}
+  HSequence(bool leaf) : leaf(leaf) {
+    if (!leaf) {
+      this->level.push_back(new HSequence(true));
+    }
+  }
+
+  HSequence() : HSequence(false) {}
 
   ~HSequence() {
     for (auto hs : this->level) {
@@ -20,23 +56,8 @@ public:
     }
   }
 
-  void __split(int t, int nsplits) {
-    if (nsplits == 1) {
-      return;
-    }
-    auto hs = this->findNthLeaf(t);
-    assert(hs != nullptr);
-    assert(hs->leaf);
-    hs->leaf = false;
-    hs->level.clear();
-    for (int i = 0; i < nsplits; i++) {
-      hs->level.push_back(new HSequence(true));
-    }
-    hs->level[0]->data = std::move(hs->data);
-  }
-
   void split(int nsplits) {
-    __split(0, nsplits);
+    clause_split(nsplits, this);
   }
 
   HSequence &operator[](size_t idx) {
@@ -81,16 +102,32 @@ public:
   }
 
   void append(T value) {
+    auto hs = this;
+    auto p = noelle_pragma_begin("ldtc", hs, clause_split<T>, hs);
     if (this->leaf) {
       this->data.push_back(value);
     } else {
-      this->level[this->level.size() - 1]->append(value);
+      int offset = hs->level.size() - tc_chain_length();
+      int k = tc_chain_id();
+      this->level[offset + k]->append(value);
     }
+    noelle_pragma_end(p);
   }
 
-  void __append(int t, T value) {
-    auto holder = findNthLeaf(t);
-    holder->append(value);
+  void bloom(int N) {
+    if (this->leaf) {
+      assert(this->level.size() == 0);
+      this->leaf = false;
+      for (int i = 0; i < N; i++) {
+        this->level.push_back(new HSequence<T>(true));
+      }
+      this->level[0]->data = std::move(this->data);
+    } else {
+      assert(this->level.size() != 0);
+      for (int i = 0; i < N - 1; i++) {
+        this->level.push_back(new HSequence<T>(true));
+      }
+    }
   }
 
   void print() {

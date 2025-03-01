@@ -4,10 +4,7 @@
 #include <string>
 #include <fstream>
 
-#include "Sequence.hpp"
-#include "Set.hpp"
 #include "Skynet.hpp"
-#include "HSequence.hpp"
 
 using namespace std;
 
@@ -22,6 +19,11 @@ int main(int argc, char *argv[]) {
   ifstream file(argv[1]);
   if (!file) {
     cerr << "ERROR: cannot open file\n";
+    return 1;
+  }
+
+  if (argc < 4) {
+    cerr << "Usage: <INPUT> <T1> <T2>\n";
     return 1;
   }
 
@@ -47,54 +49,32 @@ int main(int argc, char *argv[]) {
   // parallel
   const int T = omp_get_max_threads();
 
-  const int T1 = T / 2;
-  const int T2 = T / T1;
-  assert(T1 * T2 == T);
+  const int T1 = atoi(argv[2]);
+  const int T2 = atoi(argv[3]);
+  assert(T1 * T2 > 0);
+  assert(T1 * T2 <= T);
 
   cout << "T1 = " << T1 << "\n";
   cout << "T2 = " << T2 << "\n";
 
   omp_set_max_active_levels(2);
-  letters.split(T1);
-  // letters.__append(0, 'a');
-  // letters.__append(1, 'b');
-  // letters.__append(2, 'c');
-  // letters.__append(3, 'd');
-  // letters.printInternals("");
-  //
-  // letters.__split(0, 2);
-  // letters.printInternals("");
-  // return 0;
-  // letters.__split(1, 2);
-  // letters.printInternals("");
-
-  // #pragma omp parallel for num_threads(T1)
-  // for (int i = 0; i < T1; i++) {
-  //   skynet::HSequence<char> *hs;
-  //   hs = letters.findNthLeaf(omp_get_thread_num());
-  //   hs->split(T2);
-  // }
-  // letters.printInternals();
-  // return 0;
+  auto h0 = &letters;
+  auto h1 = skynet::clause_split(T1, h0);
 
 #pragma omp parallel num_threads(T1)
   {
-    int t = omp_get_thread_num();
-    auto hs = letters.findNthLeaf(t);
-#pragma omp barrier
 #pragma omp for
     for (int i = 0; i < words.size(); i++) {
       auto &word = words[i];
-      hs->split(T2);
+      auto h2 = skynet::clause_split(T2, h1);
+
 #pragma omp parallel num_threads(T2)
       {
-        int tt = t * T2 + omp_get_thread_num();
 #pragma omp for
         for (int j = 0; j < word.size(); j++) {
           auto &c = word[j];
           if (isLetter(c)) {
-            // letters.__append(tt, c);
-            hs->__append(omp_get_thread_num(), c);
+            h2->append(c);
           }
         }
       }
