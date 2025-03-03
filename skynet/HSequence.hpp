@@ -189,6 +189,27 @@ public:
   }
 
   void printInternals(std::string separator = " ") {
+    printInternals(separator, 0);
+  }
+
+  void printInternals(std::string separator, int l) {
+    if (l != 0) {
+      std::cout << std::string(2 * (l - 1), ' ') << "| ";
+    }
+    if (this->leaf) {
+      for (auto value : this->data) {
+        std::cout << value << separator;
+      }
+      std::cout << " (" << this->data.size() << ")\n";
+    } else {
+      std::cout << "+\n";
+    }
+    for (auto hs : this->level) {
+      hs->printInternals(separator, l + 1);
+    }
+  }
+
+  void printInternals2(std::string separator = " ") {
     std::cout << "{\n";
     visitPreorder([&](int l, auto *hs) {
       if (hs->leaf) {
