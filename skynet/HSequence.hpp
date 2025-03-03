@@ -209,21 +209,6 @@ public:
     }
   }
 
-  void printInternals2(std::string separator = " ") {
-    std::cout << "{\n";
-    visitPreorder([&](int l, auto *hs) {
-      if (hs->leaf) {
-        std::cout << "|" << std::string(l, '-') << " ";
-        for (auto value : hs->data) {
-          std::cout << value << separator;
-        }
-        std::cout << " (" << hs->data.size() << ")\n";
-      }
-      return false;
-    });
-    std::cout << "}\n";
-  }
-
   void clear() {
     visitLeaves([](auto, auto &data) {
       data.clear();

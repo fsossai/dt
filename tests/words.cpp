@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if (argc < 4) {
-    cerr << "Usage: <INPUT> <T1> <T2>\n";
+  if (argc < 5) {
+    cerr << "Usage: <INPUT> <T1> <T2> <T3>\n";
     return 1;
   }
 
@@ -35,13 +35,26 @@ int main(int argc, char *argv[]) {
 
   cout << "Words: " << words.size() << "\n";
 
+  const int n_batches = 2;
+  vector<vector<string>> batches(n_batches);
+  for (int i = 0; i < n_batches; i++) {
+    for (int j = words.size() * i / n_batches;
+         j < words.size() * (i + 1) / n_batches;
+         j++) {
+      batches[i].push_back(words[j]);
+    }
+  }
+
   // reference
-  for (int i = 0; i < words.size(); i++) {
-    auto &word = words[i];
-    for (int j = 0; j < word.size(); j++) {
-      auto &c = word[j];
-      if (isLetter(c)) {
-        letters_ref.append(c);
+  for (int i = 0; i < batches.size(); i++) {
+    auto &batch = batches[i];
+    for (int j = 0; j < batch.size(); j++) {
+      auto &word = batch[j];
+      for (int k = 0; k < word.size(); k++) {
+        auto &c = word[k];
+        if (isLetter(c)) {
+          letters_ref.append(c);
+        }
       }
     }
   }
@@ -51,31 +64,33 @@ int main(int argc, char *argv[]) {
 
   const int T1 = atoi(argv[2]);
   const int T2 = atoi(argv[3]);
-  assert(T1 * T2 > 0);
-  assert(T1 * T2 <= T);
+  const int T3 = atoi(argv[4]);
+  assert(T1 * T2 * T3 > 0);
+  assert(T1 * T2 * T3 <= T);
 
   cout << "T1 = " << T1 << "\n";
   cout << "T2 = " << T2 << "\n";
+  cout << "T3 = " << T3 << "\n";
 
-  omp_set_max_active_levels(2);
+  omp_set_max_active_levels(3);
   auto h0 = &letters;
   auto h1 = skynet::clause_split(T1, h0);
 
-#pragma omp parallel num_threads(T1)
-  {
-#pragma omp for
-    for (int i = 0; i < words.size(); i++) {
-      auto &word = words[i];
-      auto h2 = skynet::clause_split(T2, h1);
+#pragma omp parallel for num_threads(T1)
+  for (int i = 0; i < batches.size(); i++) {
+    auto &batch = batches[i];
+    auto h2 = skynet::clause_split(T2, h1);
 
-#pragma omp parallel num_threads(T2)
-      {
-#pragma omp for
-        for (int j = 0; j < word.size(); j++) {
-          auto &c = word[j];
-          if (isLetter(c)) {
-            h2->append(c);
-          }
+#pragma omp parallel for num_threads(T2)
+    for (int j = 0; j < batch.size(); j++) {
+      auto &word = batch[j];
+      auto h3 = skynet::clause_split(T3, h2);
+
+#pragma omp parallel for num_threads(T3)
+      for (int k = 0; k < word.size(); k++) {
+        auto &c = word[k];
+        if (isLetter(c)) {
+          h3->append(c);
         }
       }
     }
