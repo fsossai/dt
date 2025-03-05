@@ -104,8 +104,11 @@ public:
     } else {
       int offset = hs->level.size() - tc_chain_length();
       int k = tc_chain_id();
-      // this->level[offset + k]->append(value);
-      hs->level[offset + k]->data.push_back(value);
+      hs = hs->level[offset + k];
+      while (!hs->leaf) {
+        hs = hs->level[hs->level.size() - 1];
+      }
+      hs->data.push_back(value);
     }
     noelle_pragma_end(p);
   }
