@@ -94,8 +94,10 @@ public:
     return false;
   }
 
-  __attribute__((always_inline)) void append(T value) {
-    auto hs = this;
+  __attribute__((always_inline)) void append(T value, HSequence<T> *hs = nullptr) {
+    if (hs == nullptr) {
+      hs = this;
+    }
     auto p = noelle_pragma_begin("ldtc", &hs, clause_split<T>, hs);
     if (hs->leaf) {
       hs->data.push_back(value);
