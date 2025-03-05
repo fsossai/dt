@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+#include "HSequence.hpp"
+#include "Interface.hpp"
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
@@ -21,6 +23,21 @@ void clause_array_add(int N, Array<T> *array) {
   }
 }
 
+template <typename T>
+int clause_array_add2(int N, Array<T> *array, int M, int offset = 0) {
+  auto p =
+      noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, array, N * M);
+  if (N * M > array->container_.size()) {
+    array->container_.resize(N * M);
+    for (auto &row : array->container_) {
+      row.resize(array->size_);
+    }
+  }
+  int retVal = (offset + tc_chain_id()) * N;
+  noelle_pragma_end(p);
+  return retVal;
+}
+
 template <class T>
 class Array {
 public:
@@ -28,6 +45,7 @@ public:
   using ContainerType = std::vector<U>;
 
   friend void clause_array_add<T>(int N, Array<T> *base);
+  friend int clause_array_add2<T>(int N, Array<T> *base, int M, int offset);
 
   class Iterator {
   public:
@@ -70,6 +88,13 @@ public:
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
     container_[k][idx] += value;
     noelle_pragma_end(_p);
+  }
+
+  void add2(size_t idx, T value, int offset = 0) {
+    auto p =
+        noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, this, 1);
+    this->container_[offset + tc_chain_id()][idx] += value;
+    noelle_pragma_end(p);
   }
 
   // This function should be a method of `ApatheticArray` that, at the moment is

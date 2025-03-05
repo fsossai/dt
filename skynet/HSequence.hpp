@@ -7,25 +7,18 @@
 #include <string>
 #include <omp.h>
 #include <vector>
+
 #include "arcana/noelle/core/Pragma.h"
+#include "Interface.hpp"
 
 namespace skynet {
-
-int tc_chain_id() {
-  return omp_get_thread_num();
-}
-
-int tc_chain_length() {
-  return omp_get_team_size(omp_get_level());
-}
 
 template <typename T>
 class HSequence;
 
 template <typename T>
-HSequence<T> *clause_split(int N, HSequence<T> *hs) {
-  auto a = hs;
-  auto p = noelle_pragma_begin("ldtc", hs, clause_split<T>, hs);
+__attribute__((always_inline)) HSequence<T> *clause_split(int N, HSequence<T> *hs) {
+  auto p = noelle_pragma_begin("ldtc", &hs, clause_split<T>, hs);
   if (hs->leaf) {
     hs->bloom(N);
   } else {
@@ -101,15 +94,16 @@ public:
     return false;
   }
 
-  void append(T value) {
+  __attribute__((always_inline)) void append(T value) {
     auto hs = this;
-    auto p = noelle_pragma_begin("ldtc", hs, clause_split<T>, hs);
-    if (this->leaf) {
-      this->data.push_back(value);
+    auto p = noelle_pragma_begin("ldtc", &hs, clause_split<T>, hs);
+    if (hs->leaf) {
+      hs->data.push_back(value);
     } else {
       int offset = hs->level.size() - tc_chain_length();
       int k = tc_chain_id();
-      this->level[offset + k]->append(value);
+      // this->level[offset + k]->append(value);
+      hs->level[offset + k]->data.push_back(value);
     }
     noelle_pragma_end(p);
   }
