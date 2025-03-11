@@ -83,6 +83,15 @@ public:
     container_[k][idx] = value;
   }
 
+  void fill(T value) {
+#pragma omp parallel for
+    for (auto &subc : container_) {
+      for (auto &x : subc) {
+        x = value;
+      }
+    }
+  }
+
   __attribute__((always_inline)) void add(size_t idx, T value) {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
@@ -93,7 +102,7 @@ public:
   void add2(size_t idx, T value, int offset = 0) {
     auto p =
         noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, this, 1);
-    this->container_[offset + tc_chain_id()][idx] += value;
+    container_[offset + tc_chain_id()][idx] += value;
     noelle_pragma_end(p);
   }
 

@@ -47,9 +47,25 @@ public:
     Sequence<T> *base;
   };
 
-  Sequence() {
+  Sequence() : k_(0) {
     container_.emplace_back();
-    k_ = 0;
+  }
+
+  Sequence(size_t size) : k_(0) {
+    container_.emplace_back(size);
+  }
+
+  Sequence(size_t size, T init) : k_(0) {
+    container_.emplace_back(size, init);
+  }
+
+  void fill(T value) {
+    for (auto &subc : container_) {
+#pragma omp parallel for
+      for (auto &x : subc) {
+        x = value;
+      }
+    }
   }
 
   __attribute__((always_inline)) void append(T value) {
@@ -62,6 +78,15 @@ public:
 
   void __append(int t, T value) {
     container_[t].push_back(value);
+  }
+
+  T operator[](size_t idx) const {
+    int i = -1;
+    int64_t j = idx;
+    do {
+      j -= container_[++i].size();
+    } while (j >= 0);
+    return container_[i][container_[i].size() + j];
   }
 
   T &operator[](size_t idx) {
