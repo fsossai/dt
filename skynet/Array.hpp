@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <type_traits>
 #include <vector>
 
 #include "HSequence.hpp"
@@ -99,10 +100,56 @@ public:
     noelle_pragma_end(_p);
   }
 
+  void __add(int t, size_t idx, T value) {
+    container_[t][idx] += value;
+  }
+
   void add2(size_t idx, T value, int offset = 0) {
     auto p =
         noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, this, 1);
     container_[offset + tc_chain_id()][idx] += value;
+    noelle_pragma_end(p);
+  }
+
+  void lean_add_bypass(std::vector<T> *container, size_t idx, T value) {
+    auto p = noelle_pragma_begin("ldtc");
+    using U =
+        std::conditional_t<sizeof(T) == 4,
+                           uint32_t,
+                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+    static_assert(!std::is_same_v<U, void>, "Unsupported type size!");
+
+    auto addr = reinterpret_cast<U *>(&(*container)[idx]);
+    T old_value;
+    T new_value;
+    do {
+      old_value = *addr;
+      new_value = old_value + value;
+    } while (!__sync_bool_compare_and_swap(static_cast<U *>(addr),
+                                           static_cast<U>(old_value),
+                                           static_cast<U>(new_value)));
+    noelle_pragma_end(p);
+  }
+
+  void lean_add(size_t idx, T value) {
+    auto p = noelle_pragma_begin("ldtc");
+    using U =
+        std::conditional_t<sizeof(T) == 4,
+                           uint32_t,
+                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+    static_assert(!std::is_same_v<U, void>, "Unsupported type size!");
+
+    auto addr = reinterpret_cast<U *>(&container_[0][idx]);
+    T old_value;
+    T new_value;
+    do {
+      old_value = *addr;
+      new_value = old_value + value;
+    } while (!__sync_bool_compare_and_swap(static_cast<U *>(addr),
+                                           static_cast<U>(old_value),
+                                           static_cast<U>(new_value)));
     noelle_pragma_end(p);
   }
 
@@ -122,8 +169,8 @@ public:
     return false;
   }
 
-  T operator[](size_t idx) {
-    T v = container_[0][idx];
+  T &operator[](size_t idx) {
+    T &v = container_[0][idx];
     for (int i = 1; i < container_.size(); i++) {
       v += container_[i][idx];
     }
@@ -156,7 +203,7 @@ public:
     }
   }
 
-private:
+  // private:
   std::vector<std::vector<T>> container_;
   size_t size_;
 };
