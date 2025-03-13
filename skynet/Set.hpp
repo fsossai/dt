@@ -39,20 +39,13 @@ void clause_set_insert(int N, Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, set);
 #endif
-  if (set->n_rows_ == N) {
+  if (set->n_cols_ == N) {
     return;
   }
-  assert(set->n_rows_ == 1);
-  set->n_rows_ = N;
+  assert(set->n_cols_ < N);
   set->n_cols_ = N;
-  set->container_.resize(N);
   for (auto &row : set->container_) {
     row.resize(N);
-  }
-  auto previously_inserted = set->container_[0][0];
-  set->container_[0][0].clear();
-  for (auto e : previously_inserted) {
-    set->insert(e);
   }
 }
 
@@ -65,7 +58,41 @@ void clause_set_op_plusplus(int N, SetIterator<T, C> *it) {
 #else
   assert(it->row_its_.size() == 1);
 #endif
-  clause_set_insert(N, it->set_);
+  // Container reshaping
+  auto &set = *it->set_;
+
+  if (set.n_rows_ == N) {
+    // in good shape, nothing to do
+  } else {
+    // We assume that if the set need to be reshaped it is only because it has
+    // never been reshaped through this clause before.
+    // This simplifies the relocation of elements.
+    assert(set.n_rows_ == 1);
+    set.container_.resize(N);
+    set.n_rows_ = N;
+    for (auto &row : set.container_) {
+      row.resize(set.n_cols_);
+    }
+// Relocation:
+// Elements that are already present at this point need to be relocated in
+// order to satisfy the property that "same hash, same row"
+#ifdef DEBUG
+    printf("%s: heavy relocation of %zu elements... ", __func__, set.size());
+    fflush(stdout);
+#endif
+    auto &first_row = set.container_[0];
+    for (auto &cell : first_row) {
+      auto cell_copy = cell;
+      cell.clear();
+      for (auto &x : cell_copy) {
+        set.__insert(0, x);
+      }
+    }
+#ifdef DEBUG
+    printf("done\n");
+#endif
+  }
+
   it->reshape(N);
 }
 
