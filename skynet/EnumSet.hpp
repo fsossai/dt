@@ -26,7 +26,7 @@ void clause_enumset_insert(int N, EnumSet<T, M, Padding, Resizable> *enumset) {
   }
 }
 
-template <class T, int M, size_t Padding, bool Resizable>
+template <class T = size_t, int M, size_t Padding, bool Resizable>
 class EnumSet {
 public:
   EnumSet(size_t size) {
@@ -34,7 +34,7 @@ public:
     capacity_ = buf_[0].size() * 8;
   }
 
-  void __insert(int t, T value) {
+  void __insert(int t, size_t value) {
     auto &row = buf_[t / M];
     if constexpr (Resizable) {
       if ((value * Padding) >= capacity_) {
@@ -44,19 +44,22 @@ public:
     }
 
     if constexpr (M == 1) {
-      row[(value * Padding) / 8] |= 1 << ((value * Padding) % 8);
+      row[(value * Padding) / 8] |= 1ULL << ((value * Padding) % 8ULL);
     } else {
-      uint8_t old_value;
-      uint8_t new_value;
-      uint8_t *addr = &row[(value * Padding) / 8];
-      do {
-        old_value = *addr;
-        new_value = old_value | (1 << ((value * Padding) % 8));
-      } while (!__sync_bool_compare_and_swap(addr, old_value, new_value));
+      __atomic_fetch_or(&row[(value * Padding) / 8],
+                        1ULL << ((value * Padding) % 8),
+                        __ATOMIC_RELAXED);
+      // uint8_t old_value;
+      // uint8_t new_value;
+      // uint8_t *addr = &row[(value * Padding) / 8];
+      // do {
+      //   old_value = *addr;
+      // new_value = old_value | (1 << ((value * Padding) % 8));
+      // } while (!__sync_bool_compare_and_swap(addr, old_value, new_value));
     }
   }
 
-  __attribute__((always_inline)) void insert(T value) {
+  __attribute__((always_inline)) void insert(size_t value) {
     int t = 0;
     auto p =
         noelle_pragma_begin("ldtc",
@@ -68,14 +71,14 @@ public:
     noelle_pragma_end(p);
   }
 
-  bool contains(T value) const {
+  bool contains(size_t value) const {
     if constexpr (Resizable) {
       if ((value * Padding) >= capacity_) {
         return false;
       }
     }
     for (auto &row : buf_) {
-      if (row[(value * Padding) / 8] & (1 << ((value * Padding) % 8))) {
+      if (row[(value * Padding) / 8] & (1ULL << ((value * Padding) % 8ULL))) {
         return true;
       }
     }
@@ -91,7 +94,9 @@ public:
   }
 
   void clear() {
-    memset(buf_.data(), 0x00, sizeof(uint8_t) * buf_.size());
+    for (auto &row : buf_) {
+      memset(row.data(), 0x00, sizeof(uint8_t) * row.size());
+    }
   }
 
   // private:
