@@ -113,43 +113,13 @@ public:
 
   void lean_add_bypass(std::vector<T> *container, size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
-    using U =
-        std::conditional_t<sizeof(T) == 4,
-                           uint32_t,
-                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
-
-    static_assert(!std::is_same_v<U, void>, "Unsupported type size!");
-
-    auto addr = reinterpret_cast<U *>(&(*container)[idx]);
-    T old_value;
-    T new_value;
-    do {
-      old_value = *addr;
-      new_value = old_value + value;
-    } while (!__sync_bool_compare_and_swap(static_cast<U *>(addr),
-                                           static_cast<U>(old_value),
-                                           static_cast<U>(new_value)));
+    __atomic_fetch_add(&(*container)[idx], value, __ATOMIC_RELAXED);
     noelle_pragma_end(p);
   }
 
   void lean_add(size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
-    using U =
-        std::conditional_t<sizeof(T) == 4,
-                           uint32_t,
-                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
-
-    static_assert(!std::is_same_v<U, void>, "Unsupported type size!");
-
-    auto addr = reinterpret_cast<U *>(&container_[0][idx]);
-    T old_value;
-    T new_value;
-    do {
-      old_value = *addr;
-      new_value = old_value + value;
-    } while (!__sync_bool_compare_and_swap(static_cast<U *>(addr),
-                                           static_cast<U>(old_value),
-                                           static_cast<U>(new_value)));
+    __atomic_fetch_add(&container_[0][idx], value, __ATOMIC_RELAXED);
     noelle_pragma_end(p);
   }
 
