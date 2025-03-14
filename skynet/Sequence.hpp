@@ -68,6 +68,43 @@ public:
     }
   }
 
+  void rebalance() {
+    const int P = container_.size();
+    size_t avg = 0;
+
+    // computing ideal average
+    for (auto &row : container_) {
+      avg += row.size();
+    }
+    avg = (avg + P - 1) / P;
+
+    for (int t = 0; t < P - 1; t++) {
+      size_t smaller_i = 0;
+      size_t bigger_i = 0;
+      size_t smaller = container_[0].size();
+      size_t bigger = smaller;
+      for (int i = 1; i < P; i++) {
+        size_t v = container_[i].size();
+        if (v < smaller) {
+          smaller = v;
+          smaller_i = i;
+        }
+        if (v > bigger) {
+          bigger = v;
+          bigger_i = i;
+        }
+      }
+
+      // copy
+      auto delta = std::min<size_t>(avg - smaller, bigger - avg);
+      for (size_t i = 0; i < delta; i++) {
+        container_[smaller_i].push_back(
+            container_[bigger_i][bigger - delta + i]);
+        container_[bigger_i].resize(bigger - delta);
+      }
+    }
+  }
+
   __attribute__((always_inline)) void append(T value) {
     int k = container_.size() - 1;
     auto _p =

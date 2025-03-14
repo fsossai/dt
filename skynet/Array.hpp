@@ -128,10 +128,9 @@ public:
     noelle_pragma_end(p);
   }
 
+  // __attribute__((always_inline))
   void __add(int t, size_t idx, T value) {
-    auto p = noelle_pragma_begin("ldtc");
     __atomic_fetch_add(&container_[t / M_][idx], value, __ATOMIC_RELAXED);
-    noelle_pragma_end(p);
   }
 
   __attribute__((always_inline)) void add(size_t idx, T value) {
