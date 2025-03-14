@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <iostream>
 #include <type_traits>
 #include <vector>
@@ -15,19 +16,34 @@ class Array;
 
 template <typename T>
 void clause_array_add(int N, Array<T> *array) {
-  if (array->container_.size() == N) {
+  int K = (N + array->M_ - 1) / array->M_;
+  auto currentK = array->container_.size();
+  if (currentK == K) {
+#ifdef DEBUG
+    printf("%s: no resize\n", __func__);
+#endif
     return;
   }
-  array->container_.resize(N);
-  for (auto &row : array->container_) {
-    row.resize(array->size_);
+#ifdef DEBUG
+  printf("%s: resize\n", __func__);
+#endif
+
+  assert(currentK < K);
+  array->container_.resize(K);
+  auto L = array->size_;
+  for (size_t i = currentK; i < K; i++) {
+    auto &new_row = array->container_[i];
+    new_row.resize(L);
   }
 }
 
 template <typename T>
-int clause_array_add2(int N, Array<T> *array, int M, int offset = 0) {
-  auto p =
-      noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, array, N * M);
+int clause_array_add_nested(int N, Array<T> *array, int M, int offset = 0) {
+  auto p = noelle_pragma_begin("ldtc",
+                               &offset,
+                               clause_array_add_nested<T>,
+                               array,
+                               N * M);
   if (N * M > array->container_.size()) {
     array->container_.resize(N * M);
     for (auto &row : array->container_) {
@@ -42,11 +58,11 @@ int clause_array_add2(int N, Array<T> *array, int M, int offset = 0) {
 template <class T>
 class Array {
 public:
-  template <typename U>
-  using ContainerType = std::vector<U>;
-
   friend void clause_array_add<T>(int N, Array<T> *base);
-  friend int clause_array_add2<T>(int N, Array<T> *base, int M, int offset);
+  friend int clause_array_add_nested<T>(int N,
+                                        Array<T> *base,
+                                        int M,
+                                        int offset);
 
   class Iterator {
   public:
@@ -70,7 +86,7 @@ public:
     Array<T> *base_;
   };
 
-  Array(size_t size, bool init = true) : size_(size) {
+  Array(size_t size, bool init = true) : size_(size), M_(1) {
     container_.emplace_back();
     if (init) {
       container_[0].resize(size);
@@ -79,9 +95,18 @@ public:
     }
   }
 
-  void set(size_t idx, T value) {
-    int k = 0;
-    container_[k][idx] = value;
+  void setSharing(int M) {
+    assert(M >= 1);
+    M_ = M;
+  }
+
+  void __set(int t, size_t idx, T value) {
+    container_[t][idx] = value;
+  }
+
+  __attribute__((always_inline)) void set(size_t idx, T value) {
+    int t = 0;
+    __set(t, idx, value);
   }
 
   void fill(T value) {
@@ -93,33 +118,26 @@ public:
     }
   }
 
-  __attribute__((always_inline)) void add(size_t idx, T value) {
-    int k = 0;
-    auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_array_add<T>, this);
-    container_[k][idx] += value;
-    noelle_pragma_end(_p);
-  }
-
-  void __add(int t, size_t idx, T value) {
-    container_[t][idx] += value;
-  }
-
-  void add2(size_t idx, T value, int offset = 0) {
-    auto p =
-        noelle_pragma_begin("ldtc", &offset, clause_array_add2<T>, this, 1);
+  void add_nested(size_t idx, T value, int offset = 0) {
+    auto p = noelle_pragma_begin("ldtc",
+                                 &offset,
+                                 clause_array_add_nested<T>,
+                                 this,
+                                 1);
     container_[offset + tc_chain_id()][idx] += value;
     noelle_pragma_end(p);
   }
 
-  void lean_add_bypass(std::vector<T> *container, size_t idx, T value) {
+  void __add(int t, size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
-    __atomic_fetch_add(&(*container)[idx], value, __ATOMIC_RELAXED);
+    __atomic_fetch_add(&container_[t / M_][idx], value, __ATOMIC_RELAXED);
     noelle_pragma_end(p);
   }
 
-  void lean_add(size_t idx, T value) {
-    auto p = noelle_pragma_begin("ldtc");
-    __atomic_fetch_add(&container_[0][idx], value, __ATOMIC_RELAXED);
+  __attribute__((always_inline)) void add(size_t idx, T value) {
+    int t = 0;
+    auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array_add<T>, this);
+    __add(t, idx, value);
     noelle_pragma_end(p);
   }
 
@@ -139,9 +157,9 @@ public:
     return false;
   }
 
-  T &operator[](size_t idx) {
-    T &v = container_[0][idx];
-    for (int i = 1; i < container_.size(); i++) {
+  T operator[](size_t idx) {
+    T v = container_[0][idx];
+    for (size_t i = 1; i < container_.size(); i++) {
       v += container_[i][idx];
     }
     return v;
@@ -164,7 +182,7 @@ public:
   }
 
   void printInternals() const {
-    for (auto c : container_) {
+    for (auto &c : container_) {
       std::cout << "> ";
       for (auto x : c) {
         std::cout << x << " ";
@@ -173,9 +191,14 @@ public:
     }
   }
 
+  void printShape() const {
+    std::cout << container_.size() << " x " << container_[0].size() << "\n";
+  }
+
   // private:
   std::vector<std::vector<T>> container_;
   size_t size_;
+  int M_;
 };
 
 } // namespace skynet
