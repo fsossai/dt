@@ -36,15 +36,12 @@ public:
     Array<T> *base_;
   };
 
-  Array(size_t size, bool init = true) : size_(size) {
-    if (init) {
-      // container_.resize(size);
-      container_ = new T[size];
-      fill(T{});
-    } else {
-      container_ = new T[size];
-      // container_.reserve(size);
-    }
+  Array(size_t size) : size_(size) {
+    container_ = new T[size];
+  }
+
+  Array(size_t size, T default_value) : Array(size) {
+    fill(default_value);
   }
 
   ~Array() {
@@ -53,6 +50,18 @@ public:
 
   __attribute__((always_inline)) void set(size_t idx, T value) {
     container_[idx] = value;
+  }
+
+  bool update_if(size_t idx, T old_value, T new_value) {
+    auto p = noelle_pragma_begin("ldtc");
+    auto *addr = &container_[idx];
+    if (*addr == old_value) {
+      if (__sync_bool_compare_and_swap(addr, old_value, new_value)) {
+        return true;
+      }
+    }
+    noelle_pragma_end(p);
+    return false;
   }
 
   void fill(T value) {
