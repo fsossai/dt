@@ -81,6 +81,10 @@ public:
     return container_[idx];
   }
 
+  const T &operator[](size_t idx) const {
+    return container_[idx];
+  }
+
   T stale_read(size_t idx) {
     auto p = noelle_pragma_begin("ldtc");
     return container_[idx];
