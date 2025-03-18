@@ -17,7 +17,7 @@ template <class T,
 class Scalar;
 
 template <class T, uint32_t _PAD>
-void clause_scalar_sum(int N, Scalar<T, _PAD> *s) {
+void clause_scalar_add(int N, Scalar<T, _PAD> *s) {
   N *= _PAD;
 #ifdef DEBUG
   std::printf("%s(%i, %p, %i)\n", __func__, N, s);
@@ -32,18 +32,18 @@ void clause_scalar_sum(int N, Scalar<T, _PAD> *s) {
 template <class T, uint32_t _PAD>
 class Scalar {
 public:
-  friend void clause_scalar_sum<T, _PAD>(int N, Scalar<T, _PAD> *s);
+  friend void clause_scalar_add<T, _PAD>(int N, Scalar<T, _PAD> *s);
 
   Scalar(T x) : container_{ x } {}
 
   Scalar() : Scalar(T{}) {}
 
-  __attribute__((always_inline)) void sum(T x) {
+  __attribute__((always_inline)) void add(T x) {
     size_t k = 0;
     auto _p = noelle_pragma_begin("ldtc",
                                   &k,
                                   (size_t)0,
-                                  clause_scalar_sum<T, _PAD>,
+                                  clause_scalar_add<T, _PAD>,
                                   this);
     container_[k * _PAD] += x;
     noelle_pragma_end(_p);
@@ -64,7 +64,7 @@ public:
     return acc;
   }
 
-  void __sum(size_t k, T x) {
+  void __add(size_t k, T x) {
     container_[k * _PAD] += x;
   }
 

@@ -1,6 +1,8 @@
 CXX = clang++
 STD = -std=c++20
 INCLUDE =-I ../skynet -I $(shell noelle-config --include)
+CXX_ARGS = $(INCLUDE)
+CXX_ARGS += -L/nfs-scratch/fsv1684/.local/lib64 -ltbb
 OUTDIR ?= .
 OPT ?= -g
 FLAGS=
@@ -18,7 +20,7 @@ bfs_%:
 	$(CXX) $(STD) -DBFS_IMPL=$@ -fopenmp $(INCLUDE) $(OPT) $(FLAGS) bfs.cpp -o $(OUTDIR)/$@.out
 
 $(TARGETS): % : %.cpp
-	$(CXX) $(STD) -fopenmp $(INCLUDE) $(OPT) $(FLAGS) $^ -o $@.out
+	$(CXX) $(STD) -fopenmp $(CXX_ARGS) $(OPT) $(FLAGS) $^ -o $@.out
 
 %.bc : %.cpp
 	$(CXX) $(STD) -fopenmp $(INCLUDE) $(FLAGS) -c -emit-llvm -O1 -Xclang -disable-llvm-passes -fno-exceptions $^ -o $@
