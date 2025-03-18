@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
+#include <oneapi/tbb.h>
 #include <vector>
 
 #include "arcana/noelle/core/Pragma.h"
@@ -24,7 +25,7 @@ constexpr int PAD = 1;
 
 namespace skynet {
 
-enum SetCellContainerT { VectorT, SetT };
+enum SetCellContainerT { VectorT, SetT, CSetT };
 
 template <class T, SetCellContainerT C = SetT>
 class Set;
@@ -39,13 +40,17 @@ void clause_set_insert(int N, Set<T, C> *set) {
 #ifdef DEBUG
   std::printf("%s(%i, %p)\n", __func__, N, set);
 #endif
-  if (set->n_cols_ == N) {
+  int K = N;
+  if constexpr (C == CSetT) {
+    K = (N + set->M_ - 1) / set->M_;
+  }
+  if (set->n_cols_ == K) {
     return;
   }
-  assert(set->n_cols_ < N);
-  set->n_cols_ = N;
+  assert(set->n_cols_ < K);
+  set->n_cols_ = K;
   for (auto &row : set->container_) {
-    row.resize(N);
+    row.resize(K);
   }
 }
 
@@ -102,25 +107,39 @@ class Set {
   friend class SetIterator<T, C>;
 
 public:
-  using cell_container_t = typename std::
-      conditional<C == SetT, std::unordered_set<T>, std::vector<T>>::type;
+  using cell_container_t = typename std::conditional_t<
+      C == SetT,
+      std::unordered_set<T>,
+      typename std::conditional_t<C == VectorT,
+                                  std::vector<T>,
+                                  oneapi::tbb::concurrent_set<T>>>;
 
-  Set() : n_rows_(1), n_cols_(1) {
+  Set() : n_rows_(1), n_cols_(1), M_(1) {
     container_.resize(n_rows_ * n_cols_);
     for (auto &row : container_) {
       row.resize(n_cols_);
     }
   }
 
+  void setSharing(int M) {
+    assert(M >= 1);
+    M_ = M;
+  }
+
   __attribute__((always_inline)) void insert(T value) {
     int i = hasher(value) % n_rows_;
     int j = 0;
-    // j = rand() % n_cols_;
 
     if constexpr (C == SetT) {
       auto _p =
           noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
       container_[i][j].insert(value);
+      noelle_pragma_end(_p);
+    }
+    if constexpr (C == CSetT) {
+      auto _p =
+          noelle_pragma_begin("ldtc", &j, 0, clause_set_insert<T, C>, this);
+      container_[i][j / M_].insert(value);
       noelle_pragma_end(_p);
     }
     if constexpr (C == VectorT) {
@@ -311,6 +330,9 @@ public:
     if constexpr (C == SetT) {
       container_[i][j].insert(value);
     }
+    if constexpr (C == CSetT) {
+      container_[i][j / M_].insert(value);
+    }
     if constexpr (C == VectorT) {
       container_[i][j].push_back(value);
     }
@@ -320,6 +342,7 @@ public:
   std::vector<std::vector<cell_container_t>> container_;
   size_t n_rows_;
   size_t n_cols_;
+  int M_;
 };
 
 template <class T, SetCellContainerT C>

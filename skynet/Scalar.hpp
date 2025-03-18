@@ -12,13 +12,13 @@ namespace skynet {
 const uint32_t L1D_CACHE_LINE_SIZE = 64;
 
 template <class T,
-          uint32_t _PAD =
+          uint32_t PAD =
               std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
 class Scalar;
 
-template <class T, uint32_t _PAD>
-void clause_scalar_add(int N, Scalar<T, _PAD> *s) {
-  N *= _PAD;
+template <class T, uint32_t PAD>
+void clause_scalar_add(int N, Scalar<T, PAD> *s) {
+  N *= PAD;
 #ifdef DEBUG
   std::printf("%s(%i, %p, %i)\n", __func__, N, s);
 #endif
@@ -29,10 +29,10 @@ void clause_scalar_add(int N, Scalar<T, _PAD> *s) {
   s->container_.resize(N);
 }
 
-template <class T, uint32_t _PAD>
+template <class T, uint32_t PAD>
 class Scalar {
 public:
-  friend void clause_scalar_add<T, _PAD>(int N, Scalar<T, _PAD> *s);
+  friend void clause_scalar_add<T, PAD>(int N, Scalar<T, PAD> *s);
 
   Scalar(T x) : container_{ x } {}
 
@@ -43,9 +43,9 @@ public:
     auto _p = noelle_pragma_begin("ldtc",
                                   &k,
                                   (size_t)0,
-                                  clause_scalar_add<T, _PAD>,
+                                  clause_scalar_add<T, PAD>,
                                   this);
-    container_[k * _PAD] += x;
+    container_[k * PAD] += x;
     noelle_pragma_end(_p);
   }
 
@@ -65,7 +65,7 @@ public:
   }
 
   void __add(size_t k, T x) {
-    container_[k * _PAD] += x;
+    container_[k * PAD] += x;
   }
 
   void printInternals() const {
