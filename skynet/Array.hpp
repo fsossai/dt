@@ -5,8 +5,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "HSequence.hpp"
 #include "Interface.hpp"
+#include "IV.hpp"
+
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
@@ -48,8 +49,15 @@ public:
     delete container_;
   }
 
-  __attribute__((always_inline)) void set(size_t idx, T value) {
+  void set(size_t idx, T value) {
     container_[idx] = value;
+  }
+
+  template<typename U>
+  __attribute__((always_inline)) void set(IV<U> idx, T value) {
+    auto p = noelle_pragma_begin("ldtc");
+    container_[idx] = value;
+    noelle_pragma_end(p);
   }
 
   bool update_if(size_t idx, T old_value, T new_value) {
@@ -77,8 +85,31 @@ public:
     noelle_pragma_end(p);
   }
 
+  template <typename U>
+  __attribute__((always_inline)) void add(IV<U> idx, T value) {
+    auto p = noelle_pragma_begin("ldtc");
+    container_[idx] += value;
+    noelle_pragma_end(p);
+  }
+
   T operator[](size_t idx) {
     return container_[idx];
+  }
+
+  template <typename U>
+  T operator[](IV<U> idx) {
+    auto p = noelle_pragma_begin("ldtc");
+    auto x = container_[idx];
+    noelle_pragma_end(p);
+    return x;
+  }
+
+  template <typename U>
+  const T &operator[](IV<U> idx) const {
+    auto p = noelle_pragma_begin("ldtc");
+    auto x = container_[idx];
+    noelle_pragma_end(p);
+    return x;
   }
 
   const T &operator[](size_t idx) const {
