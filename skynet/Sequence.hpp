@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "Range.hpp"
+
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
@@ -66,6 +68,10 @@ public:
         x = value;
       }
     }
+  }
+
+  Range<size_t> getRange() {
+    return { 0, size() };
   }
 
   void rebalance() {
