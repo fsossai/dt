@@ -69,7 +69,7 @@ public:
     }
   }
 
-  Range<size_t> getRange() {
+  Range<size_t, Order> getRange() {
     return { 0, size() };
   }
 
@@ -110,13 +110,13 @@ public:
     }
   }
 
-  template <typename = typename std::enable_if_t<Order>>
-  INLINE void __append(int t, T value) {
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> __append(int t, T value) {
     container_[t].push_back(value);
   }
 
-  template <typename = typename std::enable_if_t<Order>>
-  INLINE void append(T value) {
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> INLINE append(T value) {
     int k = container_.size() - 1;
     auto _p = noelle_pragma_begin("ldtc",
                                   &k,
@@ -128,15 +128,8 @@ public:
   }
 
   template <typename R = void>
-  typename std::enable_if_t<!Order, R> INLINE __insert(T value) {
-    int k = container_.size() - 1;
-    auto _p = noelle_pragma_begin("ldtc",
-                                  &k,
-                                  0,
-                                  clause_sequence_append<T, Order>,
-                                  this);
-    container_[k].push_back(value);
-    noelle_pragma_end(_p);
+  typename std::enable_if_t<!Order, R> __insert(int t, T value) {
+    container_[t].push_back(value);
   }
 
   template <typename R = void>
@@ -159,6 +152,20 @@ public:
 
   template <typename R = T &>
   typename std::enable_if_t<Order, R> operator[](size_t idx) {
+    auto c = getCoordinates(idx);
+    return container_[c.first][c.second];
+  }
+
+  template <typename R = const T &, typename U>
+  typename std::enable_if_t<!Order, R> operator[](
+      const IV<U, /*Order=*/false> idx) const {
+    auto c = getCoordinates(idx);
+    return container_[c.first][c.second];
+  }
+
+  template <typename R = T &, typename U>
+  typename std::enable_if_t<!Order, R> operator[](
+      const IV<U, /*Order=*/false> idx) {
     auto c = getCoordinates(idx);
     return container_[c.first][c.second];
   }
