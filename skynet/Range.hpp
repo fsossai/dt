@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+
+#include "Common.hpp"
 #include "IV.hpp"
 
 namespace skynet {

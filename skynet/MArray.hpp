@@ -7,6 +7,8 @@
 
 #include "HSequence.hpp"
 #include "Interface.hpp"
+#include "Common.hpp"
+
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
@@ -104,7 +106,7 @@ public:
     container_[t][idx] = value;
   }
 
-  __attribute__((always_inline)) void set(size_t idx, T value) {
+  INLINE void set(size_t idx, T value) {
     int t = 0;
     __set(t, idx, value);
   }
@@ -128,12 +130,12 @@ public:
     noelle_pragma_end(p);
   }
 
-  // __attribute__((always_inline))
+  // INLINE
   void __add(int t, size_t idx, T value) {
     __atomic_fetch_add(&container_[t / M_][idx], value, __ATOMIC_RELAXED);
   }
 
-  __attribute__((always_inline)) void add(size_t idx, T value) {
+  INLINE void add(size_t idx, T value) {
     int t = 0;
     auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array_add<T>, this);
     __add(t, idx, value);
@@ -142,7 +144,7 @@ public:
 
   // This function should be a method of `ApatheticArray` that, at the moment is
   // not implemented
-  __attribute__((always_inline)) bool replace_if_negative(size_t idx,
+  INLINE bool replace_if_negative(size_t idx,
                                                           T new_val) {
     auto _p = noelle_pragma_begin("ldtc");
     auto *addr = &container_[0][idx];

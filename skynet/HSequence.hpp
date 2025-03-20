@@ -9,7 +9,9 @@
 #include <vector>
 
 #include "arcana/noelle/core/Pragma.h"
+
 #include "Interface.hpp"
+#include "Common.hpp"
 
 namespace skynet {
 
@@ -17,7 +19,7 @@ template <typename T>
 class HSequence;
 
 template <typename T>
-__attribute__((always_inline)) HSequence<T> *clause_split(int N, HSequence<T> *hs) {
+INLINE HSequence<T> *clause_split(int N, HSequence<T> *hs) {
   auto p = noelle_pragma_begin("ldtc", &hs, clause_split<T>, hs);
   if (hs->leaf) {
     hs->bloom(N);
@@ -94,7 +96,7 @@ public:
     return false;
   }
 
-  __attribute__((always_inline)) void append(T value, HSequence<T> *hs = nullptr) {
+  INLINE void append(T value, HSequence<T> *hs = nullptr) {
     if (hs == nullptr) {
       hs = this;
     }

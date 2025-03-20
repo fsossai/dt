@@ -7,6 +7,8 @@
 
 #include "arcana/noelle/core/Pragma.h"
 
+#include "Common.hpp"
+
 namespace skynet {
 
 const uint32_t L1D_CACHE_LINE_SIZE = 64;
@@ -38,7 +40,7 @@ public:
 
   Scalar() : Scalar(T{}) {}
 
-  __attribute__((always_inline)) void add(T x) {
+  INLINE void add(T x) {
     size_t k = 0;
     auto _p = noelle_pragma_begin("ldtc",
                                   &k,

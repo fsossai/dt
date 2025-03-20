@@ -9,6 +9,8 @@
 
 #include "arcana/noelle/core/Pragma.h"
 
+#include "Common.hpp"
+
 namespace skynet {
 
 template <class T>
@@ -58,7 +60,7 @@ public:
     noelle_pragma_end(p);
   }
 
-  __attribute__((always_inline)) void push_back(T value) {
+  INLINE void push_back(T value) {
     append(value);
   }
 

@@ -54,7 +54,7 @@ public:
   }
 
   template<typename U>
-  __attribute__((always_inline)) void set(IV<U> idx, T value) {
+  INLINE void set(IV<U> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     container_[idx] = value;
     noelle_pragma_end(p);
@@ -79,14 +79,14 @@ public:
     }
   }
 
-  __attribute__((always_inline)) void add(size_t idx, T value) {
+  INLINE void add(size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     __atomic_fetch_add(&container_[idx], value, __ATOMIC_RELAXED);
     noelle_pragma_end(p);
   }
 
   template <typename U>
-  __attribute__((always_inline)) void add(IV<U> idx, T value) {
+  INLINE void add(IV<U> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     container_[idx] += value;
     noelle_pragma_end(p);

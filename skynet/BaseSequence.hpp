@@ -4,60 +4,59 @@
 #include <iostream>
 #include <vector>
 
+#include "Common.hpp"
 #include "Range.hpp"
 
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
 
-template <typename T>
-class Sequence;
+template <typename T, bool Order>
+class BaseSequence;
 
-template <typename T>
-void clause_sequence_append(int N, Sequence<T> *seq) {
+template <typename T, bool Order>
+void clause_sequence_append(int N, BaseSequence<T, Order> *seq) {
   seq->container_.resize(N);
 }
 
-template <class T>
-class Sequence {
+template <typename T, bool Order>
+class BaseSequence {
 public:
-  template <typename U>
-  using ContainerType = std::vector<U>;
+  friend void clause_sequence_append<T>(int N, BaseSequence<T, Order> *base);
 
-  friend void clause_sequence_append<T>(int N, Sequence<T> *base);
-
+  template <bool IOrder>
   class Iterator {
   public:
-    Iterator(Sequence<T> *base, int idx) : idx(idx), base(base) {}
+    Iterator(BaseSequence<T, Order> *base, int idx) : idx(idx), base(base) {}
 
     T operator*() {
-      auto coord = base->getCoordinate(idx);
-      return base->container_[coord.first][coord.second];
+      auto c = base->getCoordinates(idx);
+      return base->container_[c.first][c.second];
     }
 
-    Iterator &operator++() {
+    Iterator<IOrder> &operator++() {
       idx++;
       return *this;
     }
 
-    bool operator!=(const Iterator &other) const {
+    bool operator!=(const Iterator<IOrder> &other) const {
       return idx != other.idx;
     }
 
   private:
     int idx;
-    Sequence<T> *base;
+    BaseSequence<T, Order> *base;
   };
 
-  Sequence() : k_(0) {
+  BaseSequence() {
     container_.emplace_back();
   }
 
-  Sequence(size_t size) : k_(0) {
+  BaseSequence(size_t size) {
     container_.emplace_back(size);
   }
 
-  Sequence(size_t size, T init) : k_(0) {
+  BaseSequence(size_t size, T init) {
     container_.emplace_back(size, init);
   }
 
@@ -111,42 +110,65 @@ public:
     }
   }
 
-  __attribute__((always_inline)) void append(T value) {
+  template <typename = typename std::enable_if_t<Order>>
+  INLINE void __append(int t, T value) {
+    container_[t].push_back(value);
+  }
+
+  template <typename = typename std::enable_if_t<Order>>
+  INLINE void append(T value) {
     int k = container_.size() - 1;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, 0, clause_sequence_append<T>, this);
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order>,
+                                  this);
+    __append(k, value);
+    noelle_pragma_end(_p);
+  }
+
+  template <typename R = void>
+  typename std::enable_if_t<!Order, R> INLINE __insert(T value) {
+    int k = container_.size() - 1;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order>,
+                                  this);
     container_[k].push_back(value);
     noelle_pragma_end(_p);
   }
 
-  void __append(int t, T value) {
-    container_[t].push_back(value);
+  template <typename R = void>
+  typename std::enable_if_t<!Order, R> INLINE insert(T value) {
+    int k = container_.size() - 1;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order>,
+                                  this);
+    __insert(k, value);
+    noelle_pragma_end(_p);
   }
 
-  T operator[](size_t idx) const {
-    int i = -1;
-    int64_t j = idx;
-    do {
-      j -= container_[++i].size();
-    } while (j >= 0);
-    return container_[i][container_[i].size() + j];
+  template <typename R = const T &>
+  typename std::enable_if_t<Order, R> operator[](size_t idx) const {
+    auto c = getCoordinates(idx);
+    return container_[c.first][c.second];
   }
 
-  T &operator[](size_t idx) {
-    int i = -1;
-    int64_t j = idx;
-    do {
-      j -= container_[++i].size();
-    } while (j >= 0);
-    return container_[i][container_[i].size() + j];
+  template <typename R = T &>
+  typename std::enable_if_t<Order, R> operator[](size_t idx) {
+    auto c = getCoordinates(idx);
+    return container_[c.first][c.second];
   }
 
-  Iterator begin() {
-    return Iterator(this, 0);
+  Iterator<Order> begin() {
+    return { this, 0 };
   }
 
-  Iterator end() {
-    return Iterator(this, size());
+  Iterator<Order> end() {
+    return { this, size() };
   }
 
   bool empty() const {
@@ -191,7 +213,7 @@ public:
   // private:
   std::vector<std::vector<T>> container_;
 
-  std::pair<size_t, size_t> getCoordinate(size_t idx) const {
+  INLINE std::pair<size_t, size_t> getCoordinates(size_t idx) const {
     int i = -1;
     int64_t j = idx;
     do {
@@ -202,8 +224,6 @@ public:
     coord.second = container_[i].size() + j;
     return coord;
   }
-
-  int k_;
 };
 
 } // namespace skynet

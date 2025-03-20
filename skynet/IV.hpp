@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common.hpp"
+
 namespace skynet {
 
 template <typename T>

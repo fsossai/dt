@@ -7,6 +7,8 @@
 
 #include "arcana/noelle/core/Pragma.h"
 
+#include "Common.hpp"
+
 namespace skynet {
 
 template <class T, size_t Padding = 1, bool Resizable = false>
@@ -54,7 +56,7 @@ public:
     M_ = M;
   }
 
-  __attribute__((always_inline)) void insert(size_t value) {
+  INLINE void insert(size_t value) {
     int t = 0;
     auto p = noelle_pragma_begin("ldtc",
                                  &t,

@@ -5,6 +5,8 @@
 #include <vector>
 #include <cassert>
 
+#include "Common.hpp"
+
 #include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
@@ -21,7 +23,7 @@ public:
     delete buf_;
   }
 
-  __attribute__((always_inline)) void insert(size_t value) {
+  INLINE void insert(size_t value) {
     auto p = noelle_pragma_begin("ldtc");
     __atomic_fetch_or(&buf_[(value * Padding) / 8],
                       1ULL << ((value * Padding) % 8),

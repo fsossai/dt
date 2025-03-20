@@ -5,9 +5,11 @@
 #include <oneapi/tbb/concurrent_vector.h>
 #include <vector>
 #include <oneapi/tbb.h>
-#include "PSequence.hpp"
 
 #include "arcana/noelle/core/Pragma.h"
+
+#include "Common.hpp"
+#include "PSequence.hpp"
 
 namespace skynet {
 
@@ -115,7 +117,7 @@ public:
     }
   }
 
-  __attribute__((always_inline)) void append(T value) {
+  INLINE void append(T value) {
     int k = container_.size() - 1;
     auto _p =
         noelle_pragma_begin("ldtc", &k, 0, clause_msequence_append<T>, this);

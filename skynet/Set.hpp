@@ -13,9 +13,10 @@
 #include <oneapi/tbb.h>
 #include <vector>
 
-#include "arcana/noelle/core/Pragma.h"
-
+#include "Common.hpp"
 #include "Hasher.hpp"
+
+#include "arcana/noelle/core/Pragma.h"
 
 #ifdef PADDING
 constexpr int PAD = 32;
@@ -126,7 +127,7 @@ public:
     M_ = M;
   }
 
-  __attribute__((always_inline)) void insert(T value) {
+  INLINE void insert(T value) {
     int i = hasher(value) % n_rows_;
     int j = 0;
 
@@ -419,7 +420,7 @@ public:
     return;
   }
 
-  __attribute__((always_inline)) bool operator!=(
+  INLINE bool operator!=(
       const SetIterator & /*other*/) const {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
@@ -429,7 +430,7 @@ public:
     return result;
   }
 
-  __attribute__((always_inline)) T operator*() {
+  INLINE T operator*() {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
     auto result = *(cell_its_[k]);
@@ -437,7 +438,7 @@ public:
     return result;
   }
 
-  __attribute__((always_inline)) void operator++() {
+  INLINE void operator++() {
     int k = 0;
     auto _p =
         noelle_pragma_begin("ldtc", &k, 0, clause_set_op_plusplus<T, C>, this);
