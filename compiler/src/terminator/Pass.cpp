@@ -86,6 +86,8 @@ bool TerminatorPass::runOnModule(Module &M) {
   PragmaAnalysis PA;
   noelle.addAnalysis(&PA);
 
+  log.debug() << "Hello\n";
+
   if (TargetFunc != "") {
     log.info() << "Running pass only on " << TargetFunc << "\n";
     auto &F = *M.getFunction(TargetFunc);
