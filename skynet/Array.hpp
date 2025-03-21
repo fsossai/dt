@@ -53,7 +53,7 @@ public:
     container_[idx] = value;
   }
 
-  template<typename U>
+  template <typename U>
   INLINE void set(IV<U> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     container_[idx] = value;
@@ -118,8 +118,9 @@ public:
 
   T stale_read(size_t idx) {
     auto p = noelle_pragma_begin("ldtc");
-    return container_[idx];
+    auto x = container_[idx];
     noelle_pragma_end(p);
+    return x;
   }
 
   void stale_write(size_t idx, T value) {
@@ -145,7 +146,6 @@ public:
   }
 
   // private:
-  // std::vector<T> container_;
   T *container_;
   size_t size_;
 };
