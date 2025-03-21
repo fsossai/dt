@@ -212,7 +212,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         << "Loop" << LD << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
 
     if (isDOALL) {
+      // Marking the new loop as DOALL
+      auto isUnordered = TA.isUnordered(LS);
       MM->addMetadata(LS, "gino.doall", "yes");
+      MM->addMetadata(LS, "tc.order", isUnordered ? "no" : "yes");
     } else {
       retryLSs.insert(LS);
     }
