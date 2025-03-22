@@ -140,7 +140,7 @@ gino-load  \
   --terminator-details \
   --terminator-craft-plan=${winchester_craftPlan} \
   --terminator-breaks=-1 \
-  --noelle-verbose=2 \
+  --noelle-verbose=0 \
   -o $outDir/${winchester_outBin}_s${stage}_terminated.bc \
   $outDir/${winchester_outBin}_s$((stage-1))_inlined.bc
 
