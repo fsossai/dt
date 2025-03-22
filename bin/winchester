@@ -63,17 +63,32 @@ gclang++ \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
   -I /nfs-scratch/fsv1684/repo/dt/skynet \
-  -o $outDir/${winchester_outBin}_s$((stage))_input.o \
+  -o $outDir/${winchester_outBin}_s${stage}_input.o \
   $@
-get-bc -o $outDir/${winchester_outBin}_s$((stage))_input.bc $outDir/${winchester_outBin}_s$((stage))_input.o
-noelle-norm $outDir/${winchester_outBin}_s$((stage))_input.bc -o $outDir/${winchester_outBin}_s$((stage))_input.bc
+get-bc -o $outDir/${winchester_outBin}_s${stage}_input.bc $outDir/${winchester_outBin}_s${stage}_input.o
+noelle-norm $outDir/${winchester_outBin}_s${stage}_input.bc -o $outDir/${winchester_outBin}_s${stage}_input.bc
 lap_timer
+
+if [[ $winchester_craftPlan != "0" ]]; then
+  echo $winchester_craftPlan | sed 's/,/\n/g' | while read tag; do
+    gino-load  \
+      -disable-output \
+      -noelle-disable-dswp \
+      -noelle-disable-helix \
+      -load $installDir/lib/Terminator.so \
+      -load $installDir/lib/Dot.so \
+      -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
+      -dot-tag=$tag \
+      -Dot \
+      $outDir/${winchester_outBin}_s${stage}_input.bc
+  done
+fi
 
 ################################################################################
 stage=1
 echo "Winchester: Stage $stage: Inlining & Global DCE"
-opt --inline --internalize-public-api-list=main --internalize --globaldce $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
-noelle-norm $outDir/${winchester_outBin}_s$((stage))_inlined.bc -o $outDir/${winchester_outBin}_s$((stage))_inlined.bc
+opt --inline --internalize-public-api-list=main --internalize --globaldce $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
+noelle-norm $outDir/${winchester_outBin}_s${stage}_inlined.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
 clang++ \
   -fopenmp \
   -std=c++17 \
@@ -96,6 +111,21 @@ clang \
   2>&1
 lap_timer
 
+if [[ $winchester_craftPlan != "0" ]]; then
+  echo $winchester_craftPlan | sed 's/,/\n/g' | while read tag; do
+    gino-load  \
+      -disable-output \
+      -noelle-disable-dswp \
+      -noelle-disable-helix \
+      -load $installDir/lib/Terminator.so \
+      -load $installDir/lib/Dot.so \
+      -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
+      -dot-tag=$tag \
+      -Dot \
+      $outDir/${winchester_outBin}_s${stage}_inlined.bc
+  done
+fi
+
 ################################################################################
 stage=2
 echo "Winchester: Stage $stage: Termination"
@@ -111,10 +141,10 @@ gino-load  \
   --terminator-craft-plan=${winchester_craftPlan} \
   --terminator-breaks=-1 \
   --noelle-verbose=2 \
-  -o $outDir/${winchester_outBin}_s$((stage))_terminated.bc \
+  -o $outDir/${winchester_outBin}_s${stage}_terminated.bc \
   $outDir/${winchester_outBin}_s$((stage-1))_inlined.bc
 
-noelle-norm $outDir/${winchester_outBin}_s$((stage))_terminated.bc -o $outDir/${winchester_outBin}_s$((stage))_terminated.bc
+noelle-norm $outDir/${winchester_outBin}_s${stage}_terminated.bc -o $outDir/${winchester_outBin}_s${stage}_terminated.bc
 lap_timer
 
 ################################################################################
@@ -124,25 +154,25 @@ llvm-link \
   $outDir/${winchester_outBin}_s$((stage-1))_terminated.bc \
   $outDir/Parallelizer_utils.bc \
   $outDir/NOELLE_APIs.bc \
-  -o $outDir/${winchester_outBin}_s$((stage))_linked.bc
+  -o $outDir/${winchester_outBin}_s${stage}_linked.bc
 lap_timer
 
 ################################################################################
 stage=4
 echo "Winchester: Stage $stage: Renormalization"
-noelle-norm $outDir/${winchester_outBin}_s$((stage-1))_linked.bc -o $outDir/${winchester_outBin}_s$((stage))_renormalized.bc
+noelle-norm $outDir/${winchester_outBin}_s$((stage-1))_linked.bc -o $outDir/${winchester_outBin}_s${stage}_renormalized.bc
 lap_timer
 
 ################################################################################
 stage=5
 echo "Winchester: Stage $stage: Parallelization"
-gino-loops $outDir/${winchester_outBin}_s$((stage-1))_renormalized.bc -o $outDir/${winchester_outBin}_s$((stage))_parallelized.bc
+gino-loops $outDir/${winchester_outBin}_s$((stage-1))_renormalized.bc -o $outDir/${winchester_outBin}_s${stage}_parallelized.bc
 lap_timer
 
 ################################################################################
 stage=6
 echo "Winchester: Stage $stage: Pragma erasure"
-noelle-load -PragmaEraser $outDir/${winchester_outBin}_s$((stage-1))_parallelized.bc -o $outDir/${winchester_outBin}_s$((stage))_nopragma.bc
+noelle-load -PragmaEraser $outDir/${winchester_outBin}_s$((stage-1))_parallelized.bc -o $outDir/${winchester_outBin}_s${stage}_nopragma.bc
 lap_timer
 
 ################################################################################
@@ -154,12 +184,12 @@ clang++ \
   -pthreads \
   -fopenmp \
   $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
-  -o $outDir/${winchester_outBin}_s$((stage))_exe.out
+  -o $outDir/${winchester_outBin}_s${stage}_exe.out
 
 sleep 0.5
 
 if [[ -n $winchester_outBin ]]; then
-  cp $outDir/${winchester_outBin}_s$((stage))_exe.out $outDir/$winchester_outBin
+  cp $outDir/${winchester_outBin}_s${stage}_exe.out $outDir/$winchester_outBin
 fi
 lap_timer
 
