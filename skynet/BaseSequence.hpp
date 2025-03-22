@@ -24,28 +24,37 @@ class BaseSequence {
 public:
   friend void clause_sequence_append<T>(int N, BaseSequence<T, Order> *base);
 
-  template <bool IOrder>
   class Iterator {
   public:
-    Iterator(BaseSequence<T, Order> *base, int idx) : idx(idx), base(base) {}
+    Iterator(BaseSequence<T, Order> *base, size_t idx)
+      : idx_(idx),
+        base_(base) {}
 
     T operator*() {
-      auto c = base->getCoordinates(idx);
-      return base->container_[c.first][c.second];
+      auto c = base_->getCoordinates(idx_);
+      return base_->container_[c.first][c.second];
     }
 
-    Iterator<IOrder> &operator++() {
-      idx++;
+    Iterator &operator++() {
+      idx_++;
       return *this;
     }
 
-    bool operator!=(const Iterator<IOrder> &other) const {
-      return idx != other.idx;
+    bool operator!=(const Iterator &other) const {
+      return idx_ != other.idx_;
+    }
+
+    int64_t operator-(const Iterator &other) const {
+      return (int64_t)idx_ - (int64_t)other.idx_;
+    }
+
+    Iterator operator+(int64_t a) const {
+      return { base_, idx_ + a };
     }
 
   private:
-    int idx;
-    BaseSequence<T, Order> *base;
+    size_t idx_;
+    BaseSequence<T, Order> *base_;
   };
 
   BaseSequence() {
@@ -170,11 +179,11 @@ public:
     return container_[c.first][c.second];
   }
 
-  Iterator<Order> begin() {
+  Iterator begin() {
     return { this, 0 };
   }
 
-  Iterator<Order> end() {
+  Iterator end() {
     return { this, size() };
   }
 
