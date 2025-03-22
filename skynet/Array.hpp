@@ -53,8 +53,8 @@ public:
     container_[idx] = value;
   }
 
-  template <typename U>
-  INLINE void set(IV<U> idx, T value) {
+  template <typename U, bool Order>
+  INLINE void set(IV<U, Order> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     container_[idx] = value;
     noelle_pragma_end(p);
@@ -85,8 +85,8 @@ public:
     noelle_pragma_end(p);
   }
 
-  template <typename U>
-  INLINE void add(IV<U> idx, T value) {
+  template <typename U, bool IOrder>
+  INLINE void add(IV<U, IOrder> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     container_[idx] += value;
     noelle_pragma_end(p);
