@@ -20,7 +20,7 @@ public:
     Iterator(Array<T> *base, int idx) : idx_(idx), base_(base) {}
 
     T operator*() {
-      return base_[idx_];
+      return (*base_)[idx_];
     }
 
     Iterator &operator++() {
@@ -35,6 +35,28 @@ public:
   private:
     int idx_;
     Array<T> *base_;
+  };
+
+  class ConstIterator {
+  public:
+    ConstIterator(const Array<T> *base, int idx) : idx_(idx), base_(base) {}
+
+    T operator*() const {
+      return (*base_)[idx_];
+    }
+
+    const ConstIterator &operator++() {
+      idx_++;
+      return *this;
+    }
+
+    bool operator!=(const ConstIterator &other) const {
+      return idx_ != other.idx_;
+    }
+
+  private:
+    int idx_;
+    const Array<T> *base_;
   };
 
   Array(size_t size) : size_(size) {
@@ -135,6 +157,14 @@ public:
 
   Iterator end() {
     return Iterator(this, size());
+  }
+
+  ConstIterator begin() const {
+    return ConstIterator(this, 0);
+  }
+
+  ConstIterator end() const {
+    return ConstIterator(this, size());
   }
 
   bool empty() const {
