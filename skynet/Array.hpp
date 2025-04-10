@@ -7,6 +7,7 @@
 
 #include "Interface.hpp"
 #include "IV.hpp"
+#include "Range.hpp"
 
 #include "arcana/noelle/core/Pragma.h"
 
@@ -149,6 +150,14 @@ public:
     auto p = noelle_pragma_begin("ldtc");
     return container_[idx] = value;
     noelle_pragma_end(p);
+  }
+
+  Range<size_t> getRange() {
+    return { 0, size() };
+  }
+
+  URange<size_t> getURange() {
+    return { 0, size() };
   }
 
   Iterator begin() {
