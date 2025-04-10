@@ -119,9 +119,44 @@ TerminatorAnalysis::~TerminatorAnalysis() {
   }
 }
 
+bool calleeHasClause(CallInst &CI) {
+  auto &F = *CI.getCalledFunction();
+  PragmaForest PF(F, "ldtc");
+  return !PF.isEmpty();
+}
+
+CoverageType interProceduralTest(Instruction *src, Instruction *dst) {
+  bool srcHasClauses =
+      isa<CallInst>(src) && calleeHasClause(*cast<CallInst>(src));
+  bool dstHasClauses =
+      isa<CallInst>(dst) && calleeHasClause(*cast<CallInst>(dst));
+
+  if (srcHasClauses && !dstHasClauses) {
+    return SRC_ONLY;
+  }
+  if (!srcHasClauses && dstHasClauses) {
+    return DST_ONLY;
+  }
+  if (srcHasClauses && dstHasClauses) {
+    return CROSS;
+  }
+
+  return UNCOVERED;
+}
+
+CoverageType interProceduralTest(DGEdge<Value, Value> *LCD) {
+  auto src = cast<Instruction>(LCD->getSrc());
+  auto dst = cast<Instruction>(LCD->getDst());
+  return interProceduralTest(src, dst);
+}
+
 bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
                                                         LoopStructure &LS) {
   auto coverageType = this->getCoverageType(LCD);
+  if (coverageType & this->admissibleCoverage) {
+    return false;
+  }
+  coverageType = interProceduralTest(LCD);
   if (coverageType & this->admissibleCoverage) {
     return false;
   }
@@ -132,6 +167,10 @@ bool TerminatorAnalysis::canThereBeAMemoryDataDependence(Instruction *src,
                                                          Instruction *dst,
                                                          LoopStructure &LS) {
   auto coverageType = getCoverageTypeFromPragmaTree(src, dst);
+  if (coverageType & this->admissibleCoverage) {
+    return false;
+  }
+  coverageType = interProceduralTest(src, dst);
   if (coverageType & this->admissibleCoverage) {
     return false;
   }
