@@ -18,6 +18,9 @@ public:
   bool searchForTag(llvm::Function &F,
                     noelle::Noelle &noelle,
                     noelle::LoopForest &LF);
+  noelle::LoopStructure *getLoopStructureFromTag(noelle::Noelle &noelle);
+  noelle::LoopStructure *getLoopStructureFromID(noelle::Noelle &noelle);
+
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
   void process(noelle::Noelle &noelle, noelle::LoopStructure *LS);
 

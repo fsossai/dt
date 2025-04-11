@@ -47,35 +47,68 @@ void DotPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<HeuristicsPass>();
 }
 
+LoopStructure *DotPass::getLoopStructureFromTag(Noelle &noelle) {
+  LoopStructure *TargetLS = nullptr;
+  auto &M = *noelle.getProgram();
+  for (auto &F : M) {
+    if (F.empty()) {
+      continue;
+    }
+    PragmaForest LoopPF(F, "loop.tag");
+
+    auto &LSs = *noelle.getLoopStructures(&F);
+    auto LF = noelle.organizeLoopsInTheirNestingForest(LSs);
+
+    for (auto LT : LF->getTrees()) {
+      LT->visitPreOrder([&](LoopTree *T, auto) {
+        auto LS = T->getLoop();
+        auto pragma = LoopPF.findInnermostPragmaFor(LS);
+        if (pragma != nullptr) {
+          auto args = pragma->getArguments();
+          assert(args.size() >= 1);
+          auto tag = cast<ConstantInt>(args[0])->getZExtValue();
+          if (tag == DotLoopTag) {
+            TargetLS = LS;
+          }
+          return true; // stop visit
+        }
+        return false;
+      });
+    }
+    if (TargetLS != nullptr) {
+      return TargetLS;
+    }
+  }
+  return TargetLS;
+}
+
+LoopStructure *DotPass::getLoopStructureFromID(Noelle &noelle) {
+  auto &LSs = *noelle.getLoopStructures();
+  for (auto LS : LSs) {
+    if (LS->getID().value() == DotLoopId) {
+      return LS;
+    }
+  }
+  return nullptr;
+}
+
 bool DotPass::runOnModule(Module &M) {
   auto &noelle = getAnalysis<NoellePass>().getNoelle();
-  auto &LF = *noelle.getLoopNestingForest();
 
   PragmaAnalysis PA;
   noelle.addAnalysis(&PA);
 
-  bool found = false;
-
+  LoopStructure *LS = nullptr;
   if (DotLoopId.getNumOccurrences() > 0) {
-    auto &LSs = *noelle.getLoopStructures();
-    for (auto LS : LSs) {
-      if (LS->getID().value() == DotLoopId) {
-        process(noelle, LS);
-        found = true;
-        break;
-      }
-    }
+    LS = getLoopStructureFromID(noelle);
   } else {
-    for (auto &F : M) {
-      if (searchForTag(F, noelle, LF)) {
-        found = true;
-        break;
-      }
-    }
+    LS = getLoopStructureFromTag(noelle);
   }
 
-  if (!found) {
+  if (LS == nullptr) {
     log.info() << "ERROR: target loop not found\n";
+  } else {
+    process(noelle, LS);
   }
 
   return false;
@@ -138,7 +171,7 @@ bool DotPass::searchForTag(Function &F, Noelle &noelle, LoopForest &LF) {
   });
 
   if (targetPragma == nullptr) {
-    // Requested loo tag is not in this function
+    // Requested loop tag is not in this function
     return false;
   }
 
