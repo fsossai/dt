@@ -297,6 +297,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     if (isUnordered) {
       log.info() << "Loop" << LD << ": Unordered\n";
     } else {
+      log.info() << "Loop" << LD << ": Ordered\n";
       if (NumBreaks < 0) {
         log.info() << "Loop" << LD << ": Blocks: auto\n";
       } else {
