@@ -81,6 +81,17 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -dot-tag=$tag \
       -Dot \
       $outDir/${winchester_outBin}_s${stage}_input.bc
+    gino-load  \
+      -disable-output \
+      -noelle-disable-dswp \
+      -noelle-disable-helix \
+      -load $installDir/lib/Terminator.so \
+      -load $installDir/lib/Dot.so \
+      -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}_term.dot" \
+      -dot-tag=$tag \
+      -dot-term \
+      -Dot \
+      $outDir/${winchester_outBin}_s${stage}_input.bc
   done
 fi
 
