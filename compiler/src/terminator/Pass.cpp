@@ -211,9 +211,12 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     log.info()
         << "Loop" << LD << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
 
+    auto isUnordered = TA.isUnordered(LS);
+    log.info() << "Loop" << LD
+               << ": Unordered: " << (isUnordered ? "yes" : "no") << "\n";
+
     if (isDOALL) {
       // Marking the new loop as DOALL
-      auto isUnordered = TA.isUnordered(LS);
       MM->addMetadata(LS, "gino.doall", "yes");
       MM->addMetadata(LS, "tc.order", isUnordered ? "no" : "yes");
     } else {
@@ -294,10 +297,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto isUnordered = TA.isUnordered(LS);
     PHINode *NewIVPHI = nullptr;
     BasicBlock *NewHeader;
-    if (isUnordered) {
-      log.info() << "Loop" << LD << ": Unordered\n";
-    } else {
-      log.info() << "Loop" << LD << ": Ordered\n";
+    if (!isUnordered) {
       if (NumBreaks < 0) {
         log.info() << "Loop" << LD << ": Blocks: auto\n";
       } else {
