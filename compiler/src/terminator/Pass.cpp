@@ -196,7 +196,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // Identifying non-DOALL loops from the loop with clauses
 
   set<LoopStructure *> retryLSs;
-  const gino::DOALL doall(noelle);
+  gino::DOALL doall(noelle);
   auto heuristics = getAnalysis<HeuristicsPass>().getHeuristics(noelle);
 
   for (auto *LS : plannedLSs) {
