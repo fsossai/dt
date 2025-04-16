@@ -45,6 +45,7 @@ TerminatorAnalysis::TerminatorAnalysis(
     CoverageType admissibleCoverage)
   : DependenceAnalysis("Terminator"),
     details(false),
+    interprocedural(false),
     log(NoelleLumberjack, "Terminator.Analysis"),
     noelle(noelle),
     LF(LF),
@@ -156,9 +157,11 @@ bool TerminatorAnalysis::canThisDependenceBeLoopCarried(Dependence *LCD,
   if (coverageType & this->admissibleCoverage) {
     return false;
   }
-  coverageType = interProceduralTest(LCD);
-  if (coverageType & this->admissibleCoverage) {
-    return false;
+  if (this->interprocedural) {
+    coverageType = interProceduralTest(LCD);
+    if (coverageType & this->admissibleCoverage) {
+      return false;
+    }
   }
   return true;
 }
@@ -170,9 +173,11 @@ bool TerminatorAnalysis::canThereBeAMemoryDataDependence(Instruction *src,
   if (coverageType & this->admissibleCoverage) {
     return false;
   }
-  coverageType = interProceduralTest(src, dst);
-  if (coverageType & this->admissibleCoverage) {
-    return false;
+  if (this->interprocedural) {
+    coverageType = interProceduralTest(src, dst);
+    if (coverageType & this->admissibleCoverage) {
+      return false;
+    }
   }
   return true;
 }

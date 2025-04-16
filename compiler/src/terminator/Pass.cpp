@@ -62,6 +62,13 @@ static cl::list<int> CraftPlan("terminator-craft-plan",
                                cl::Hidden,
                                cl::desc("A new parallel plan is generated"));
 
+static cl::opt<bool> Interprocedural(
+    "terminator-interprocedural",
+    cl::ZeroOrMore,
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("Inspect function calls that are not inlined"));
+
 TerminatorPass::TerminatorPass()
   : ModulePass{ ID },
     log(NoelleLumberjack, "Terminator.Pass") {}
@@ -191,6 +198,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   TerminatorAnalysis TA(noelle, &LF, F, plannedIDs, optimizations);
   TA.details = Details;
+  TA.interprocedural = Interprocedural;
 
   // Phase 2
   // Identifying non-DOALL loops from the loop with clauses

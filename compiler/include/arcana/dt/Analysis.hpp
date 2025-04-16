@@ -103,6 +103,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
 
   bool details;
 
+  bool interprocedural;
+
 private:
   noelle::Logger log;
   LeptoInstVisitor lepto;
