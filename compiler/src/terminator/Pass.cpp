@@ -144,23 +144,27 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
            && "A crafted plan is requested but there is one already");
   }
 
+  auto PlanToCraftAllows = [&](int i) {
+    return (CraftPlan.size() == 0)
+           || (std::find(CraftPlan.begin(), CraftPlan.end(), 0)
+               != CraftPlan.end())
+           || (std::find(CraftPlan.begin(), CraftPlan.end(), i)
+               != CraftPlan.end());
+  };
+
   unordered_set<LoopStructure *> plannedLSs;
   // A new plan may or may not be crafted
   for (auto LS : functionLSs) {
     bool addToPlan = false;
-    if (CraftPlan.getNumOccurrences() > 0) {
-      auto Tag = getLoopTag(LS);
-      if (Tag != 0
-          && std::find(CraftPlan.begin(), CraftPlan.end(), Tag)
-                 != std::end(CraftPlan)) {
+    auto Tag = getLoopTag(LS);
+    if (Tag == 0) {
+      // untagged
+      if (!TaggedOnly && PlanToCraftAllows(0)) {
         addToPlan = true;
       }
     } else {
-      if (TaggedOnly) {
-        if (getLoopTag(LS) != 0) {
-          addToPlan = true;
-        }
-      } else {
+      // tagged
+      if (PlanToCraftAllows(Tag)) {
         addToPlan = true;
       }
     }
