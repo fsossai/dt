@@ -69,6 +69,8 @@ static cl::opt<bool> Interprocedural(
     cl::Hidden,
     cl::desc("Inspect function calls that are not inlined"));
 
+DependenceAnalysis *lastAnalysisAdded = nullptr;
+
 TerminatorPass::TerminatorPass()
   : ModulePass{ ID },
     log(NoelleLumberjack, "Terminator.Pass") {}
@@ -117,6 +119,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
                                    Function &F,
                                    int &lastLoopOrder) {
   this->MM = noelle.getMetadataManager();
+  noelle.removeAnalysis(lastAnalysisAdded);
 
   if (EraseClauses) {
     assert(false && "Unimplemented");
@@ -240,6 +243,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   set<LoopContent *> terminationTargetLCs;
 
   noelle.addAnalysis(&TA);
+  lastAnalysisAdded = &TA;
   log.info() << "Added Termination engine to Noelle\n";
 
   for (auto *LS : retryLSs) {
