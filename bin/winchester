@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-timer_file=/tmp/timer_stamp
+timer_file=$(mktemp)
 
 lap_timer_init() {
   date +%s > "$timer_file"
