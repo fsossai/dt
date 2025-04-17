@@ -32,6 +32,11 @@ using CoverageType = unsigned int;
 
 enum DoallTag { YES, NO, MAYBE };
 
+struct Scheduling {
+  std::string kind = "runtime";
+  int chunksize = 0;
+};
+
 struct TerminatorAnalysis : public noelle::DependenceAnalysis {
   static char ID;
 
@@ -100,6 +105,8 @@ struct TerminatorAnalysis : public noelle::DependenceAnalysis {
   std::string getLoopDescription(noelle::LoopStructure *LS);
 
   bool isUnordered(noelle::LoopStructure *LS);
+
+  Scheduling getScheduling(noelle::LoopStructure *LS);
 
   bool details;
 

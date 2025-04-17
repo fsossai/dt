@@ -222,13 +222,13 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       LC = noelle.getLoopContent(LS);
     }
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
-
-    log.info()
-        << "Loop" << LD << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
-
     auto isUnordered = TA.isUnordered(LS);
-    log.info() << "Loop" << LD
-               << ": Unordered: " << (isUnordered ? "yes" : "no") << "\n";
+    auto scheduling = TA.getScheduling(LS);
+
+    MM->addMetadata(LS, "gino.scheduling.kind", scheduling.kind);
+    MM->addMetadata(LS,
+                    "gino.scheduling.chunksize",
+                    to_string(scheduling.chunksize));
 
     if (isDOALL) {
       // Marking the new loop as DOALL
@@ -237,6 +237,13 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     } else {
       retryLSs.insert(LS);
     }
+
+    log.info()
+        << "Loop" << LD << ": DOALL: " << (isDOALL ? "yes" : "no") << "\n";
+    log.info() << "Loop" << LD << ": Scheduling: " << scheduling.kind << ", "
+               << scheduling.chunksize << "\n";
+    log.info() << "Loop" << LD
+               << ": Unordered: " << (isUnordered ? "yes" : "no") << "\n";
   }
 
   // Phase 3
