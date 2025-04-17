@@ -72,7 +72,7 @@ public:
     delete container_;
   }
 
-  void set(size_t idx, T value) {
+  INLINE void set(size_t idx, T value) {
     container_[idx] = value;
   }
 
@@ -115,12 +115,12 @@ public:
     noelle_pragma_end(p);
   }
 
-  T operator[](size_t idx) {
+  INLINE T operator[](size_t idx) {
     return container_[idx];
   }
 
   template <typename U>
-  T operator[](IV<U> idx) {
+  INLINE T operator[](IV<U> idx) {
     auto p = noelle_pragma_begin("ldtc");
     auto x = container_[idx];
     noelle_pragma_end(p);
@@ -128,25 +128,25 @@ public:
   }
 
   template <typename U>
-  const T &operator[](IV<U> idx) const {
+  INLINE const T &operator[](IV<U> idx) const {
     auto p = noelle_pragma_begin("ldtc");
     auto x = container_[idx];
     noelle_pragma_end(p);
     return x;
   }
 
-  const T &operator[](size_t idx) const {
+  INLINE const T &operator[](size_t idx) const {
     return container_[idx];
   }
 
-  T stale_read(size_t idx) {
+  INLINE T stale_read(size_t idx) {
     auto p = noelle_pragma_begin("ldtc");
     auto x = container_[idx];
     noelle_pragma_end(p);
     return x;
   }
 
-  void stale_write(size_t idx, T value) {
+  INLINE void stale_write(size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
     return container_[idx] = value;
     noelle_pragma_end(p);
