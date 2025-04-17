@@ -446,43 +446,24 @@ void TerminatorAnalysis::printUnknownLCDs(LoopContent *LC) {
 }
 
 bool TerminatorAnalysis::isUnordered(LoopStructure *LS) {
-  PragmaForest OrderPF(F, "unordered");
-  bool unordered = false;
-  for (auto LT : this->LF->getTrees()) {
-    LT->visitPreOrder([&](LoopTree *T, auto) {
-      auto LS = T->getLoop();
-      auto p = OrderPF.findInnermostPragmaFor(LS);
-      if (p != nullptr) {
-        unordered = true;
-        return true; // stop visit
-      }
-      return false;
-    });
-  }
-  return unordered;
+  PragmaForest PF(F, "unordered");
+  return PF.findInnermostPragmaFor(LS) != nullptr;
 }
 
 Scheduling TerminatorAnalysis::getScheduling(LoopStructure *LS) {
-  PragmaForest OrderPF(F, "loop.scheduling");
-  Scheduling s;
-  for (auto LT : this->LF->getTrees()) {
-    LT->visitPreOrder([&](LoopTree *T, auto) {
-      auto LS = T->getLoop();
-      auto p = OrderPF.findInnermostPragmaFor(LS);
-      if (p != nullptr) {
-        auto args = p->getArguments();
-        assert(args.size() == 2);
-        StringRef kind;
-        int chunksize;
-        PragmaTree::getStringFromArg(args[0], kind);
-        PragmaTree::getIntFromArg(args[1], chunksize);
-        s = { .kind = kind.str(), .chunksize = chunksize };
-        return true; // stop visit
-      }
-      return false;
-    });
+  PragmaForest PF(F, "loop.scheduling");
+  auto p = PF.findInnermostPragmaFor(LS);
+  if (p == nullptr) {
+    return {};
   }
-  return s;
+  auto args = p->getArguments();
+  assert(args.size() == 2);
+  StringRef kind;
+  int chunksize;
+  PragmaTree::getStringFromArg(args[0], kind);
+  PragmaTree::getIntFromArg(args[1], chunksize);
+
+  return { .kind = kind.str(), .chunksize = chunksize };
 }
 
 void TerminatorAnalysis::setAdmissibleCoverage(CoverageType coverage) {
