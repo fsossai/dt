@@ -63,7 +63,7 @@ static cl::list<int> CraftPlan("terminator-craft-plan",
                                cl::desc("A new parallel plan is generated"));
 
 static cl::opt<bool> Interprocedural(
-    "terminator-interprocedural",
+    "terminator-interproc",
     cl::ZeroOrMore,
     cl::init(false),
     cl::Hidden,

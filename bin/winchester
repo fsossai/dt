@@ -21,12 +21,20 @@ else
   outDir=$winchester_outDir
 fi
 
-if [[ -z $winchester_flags ]]; then
-  winchester_flags="-std=c++17"
+if [[ -z $winchester_frontend ]]; then
+  winchester_frontend="-std=c++17"
+fi
+
+if [[ -z $winchester_inline ]]; then
+  winchester_inline="yes"
 fi
 
 if [[ -z $winchester_craftPlan ]]; then
   winchester_craftPlan="0"
+fi
+
+if [[ -z $winchester_interproc ]]; then
+  winchester_interproc="false"
 fi
 
 if [[ -z $winchester_taggedOnly ]]; then
@@ -53,7 +61,7 @@ echo "Winchester: Stage $stage: Bitcode extraction"
 source /project/gllvm/enable
 gclang++ \
   -DNOELLE_PRAGMA_BODY_DISABLE \
-  $winchester_flags \
+  $winchester_frontend \
   -fopenmp \
   -fno-exceptions \
   -fno-vectorize \
@@ -98,7 +106,14 @@ fi
 ################################################################################
 stage=1
 echo "Winchester: Stage $stage: Inlining & Global DCE"
-opt --inline --internalize-public-api-list=main --internalize --globaldce $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
+echo "Winchester: Inline: $winchester_inline"
+if [[ $winchester_inline == "yes" ]]; then
+  inline="--inline"
+else
+  inline=""
+fi
+opt $inline --internalize-public-api-list=main --internalize --globaldce $outDir/${winchester_outBin}_s$((stage-1))_input.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
+
 noelle-norm $outDir/${winchester_outBin}_s${stage}_inlined.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
 clang++ \
   -fopenmp \
@@ -150,6 +165,7 @@ gino-load  \
   --terminator-func=${winchester_func} \
   --terminator-details \
   --terminator-craft-plan=${winchester_craftPlan} \
+  --terminator-interproc=${winchester_interproc} \
   --terminator-breaks=-1 \
   --noelle-verbose=0 \
   -o $outDir/${winchester_outBin}_s${stage}_terminated.bc \
@@ -189,12 +205,17 @@ lap_timer
 ################################################################################
 stage=7
 echo "Winchester: Stage $stage: Binary generation"
+opt \
+  $winchester_opt \
+  $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
+  -o $outDir/${winchester_outBin}_s${stage}_exe.bc
+
 clang++ \
-  $winchester_flags \
   $winchester_linker \
+  $winchester_opt \
   -pthreads \
   -fopenmp \
-  $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
+  $outDir/${winchester_outBin}_s${stage}_exe.bc \
   -o $outDir/${winchester_outBin}_s${stage}_exe.out
 
 sleep 0.5
