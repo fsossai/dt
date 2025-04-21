@@ -83,7 +83,7 @@ public:
     noelle_pragma_end(p);
   }
 
-  bool update_if(size_t idx, T old_value, T new_value) {
+  bool update_if_eq(size_t idx, T old_value, T new_value) {
     auto p = noelle_pragma_begin("ldtc");
     auto *addr = &container_[idx];
     if (*addr == old_value) {
