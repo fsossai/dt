@@ -14,8 +14,7 @@ namespace skynet {
 const uint32_t L1D_CACHE_LINE_SIZE = 64;
 
 template <class T,
-          uint32_t PAD =
-              std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
+          uint32_t PAD = std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
 class Scalar;
 
 template <class T, uint32_t PAD>
@@ -32,9 +31,17 @@ void clause_scalar_add(int N, Scalar<T, PAD> *s) {
 }
 
 template <class T, uint32_t PAD>
+void clause_scalar_keep_min(int N, Scalar<T, PAD> *s) {
+  auto value = s->get();
+  s->container_.resize(1);
+  s->container_[0] = value;
+}
+
+template <class T, uint32_t PAD>
 class Scalar {
 public:
   friend void clause_scalar_add<T, PAD>(int N, Scalar<T, PAD> *s);
+  friend void clause_scalar_keep_min<T, PAD>(int N, Scalar<T, PAD> *s);
 
   Scalar(T x) : container_{ x } {}
 
@@ -59,7 +66,12 @@ public:
   }
 
   bool keep_min(T new_value) {
-    auto p = noelle_pragma_begin("ldtc");
+    int k;
+    auto p = noelle_pragma_begin("ldtc",
+                                 &k,
+                                 (int)0,
+                                 clause_scalar_keep_min<T, PAD>,
+                                 this);
     auto *addr = &container_[0];
     auto current_value = *addr;
     while (current_value > new_value) {
