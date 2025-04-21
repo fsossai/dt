@@ -58,6 +58,24 @@ public:
     container_[0] = x;
   }
 
+  bool keep_min(T new_value) {
+    auto p = noelle_pragma_begin("ldtc");
+    auto *addr = &container_[0];
+    auto current_value = *addr;
+    while (current_value > new_value) {
+      if (__sync_bool_compare_and_swap(addr, current_value, new_value)) {
+        return true;
+      }
+      current_value = *addr;
+    }
+    noelle_pragma_end(p);
+    return false;
+  }
+
+  INLINE operator T() {
+    return get();
+  }
+
   T get() const {
     T acc = container_[0];
     for (size_t i = 1; i < container_.size(); i++) {
@@ -66,7 +84,7 @@ public:
     return acc;
   }
 
-  void __add(size_t k, T x) {
+  INLINE void __add(size_t k, T x) {
     container_[k * PAD] += x;
   }
 
