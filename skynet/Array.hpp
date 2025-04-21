@@ -95,6 +95,20 @@ public:
     return false;
   }
 
+  bool keep_min(size_t idx, T new_value) {
+    auto p = noelle_pragma_begin("ldtc");
+    auto *addr = &container_[idx];
+    auto current_value = *addr;
+    while (current_value > new_value) {
+      if (__sync_bool_compare_and_swap(addr, current_value, new_value)) {
+        return true;
+      }
+      current_value = *addr;
+    }
+    noelle_pragma_end(p);
+    return false;
+  }
+
   void fill(T value) {
 #pragma omp parallel for
     for (size_t i = 0; i < size_; i++) {
