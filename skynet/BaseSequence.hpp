@@ -153,6 +153,11 @@ public:
     noelle_pragma_end(_p);
   }
 
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> resize(size_t idx) {
+    container_.resize(idx);
+  }
+
   template <typename R = const T &>
   typename std::enable_if_t<Order, R> operator[](size_t idx) const {
     auto c = getCoordinates(idx);
