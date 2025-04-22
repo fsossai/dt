@@ -154,8 +154,11 @@ public:
   }
 
   template <typename R = void>
-  typename std::enable_if_t<Order, R> resize(size_t idx) {
-    container_.resize(idx);
+  typename std::enable_if_t<Order, R> resize(size_t size) {
+    assert(container_.size() == 1); // TODO: this is here for simplicity
+    for (auto &row : container_) {
+      row.resize(size);
+    }
   }
 
   template <typename R = const T &>
@@ -226,8 +229,8 @@ public:
 
   void clear() {
 #pragma omp parallel for
-    for (auto &block : container_) {
-      block.clear();
+    for (auto &row : container_) {
+      row.clear();
     }
   }
 
