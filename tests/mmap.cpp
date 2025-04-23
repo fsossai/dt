@@ -21,7 +21,7 @@ int main() {
   for (int i = 0; i < N; i++) {
     int key = rand() % M;
     int val = rand() % M;
-    printf("insert {%2d, %2d}\n", key, val);
+    printf("insert { %d, %d }\n", key, val);
     mmap.insert(key, val);
   }
 
