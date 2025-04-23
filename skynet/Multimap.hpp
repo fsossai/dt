@@ -40,7 +40,7 @@ public:
 
   ~Multimap() {}
 
-  void insert(const Tk &key, const Tv &value) {
+  void insert(Tk key, const Tv &value) {
     int k = N_ - 1;
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
@@ -69,8 +69,17 @@ public:
     return container_.contains(key);
   }
 
-  BucketT &operator[](const Tk &key) {
+  BucketT &operator[](Tk key) {
     return container_[key];
+  }
+
+  size_t count(Tk key) {
+    auto it = container_.find(key);
+    if (it != container_.end()) {
+      BucketT &bucket = it->second;
+      return bucket.size();
+    }
+    return 0;
   }
 
   bool empty() const {
