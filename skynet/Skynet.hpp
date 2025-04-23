@@ -14,6 +14,7 @@
 #include "MArray.hpp"
 #include "MEnumSet.hpp"
 #include "MSequence.hpp"
+#include "Multimap.hpp"
 #include "PSequence.hpp"
 #include "Range.hpp"
 #include "Scalar.hpp"
