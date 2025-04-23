@@ -95,7 +95,7 @@ public:
     return false;
   }
 
-  bool keep_min(size_t idx, T new_value) {
+  bool keepMin(size_t idx, T new_value) {
     auto p = noelle_pragma_begin("ldtc");
     auto *addr = &container_[idx];
     auto current_value = *addr;

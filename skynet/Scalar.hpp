@@ -31,7 +31,7 @@ void clause_scalar_add(int N, Scalar<T, PAD> *s) {
 }
 
 template <class T, uint32_t PAD>
-void clause_scalar_keep_min(int N, Scalar<T, PAD> *s) {
+void clause_scalar_keepMin(int N, Scalar<T, PAD> *s) {
   auto value = s->get();
   s->container_.resize(1);
   s->container_[0] = value;
@@ -41,7 +41,7 @@ template <class T, uint32_t PAD>
 class Scalar {
 public:
   friend void clause_scalar_add<T, PAD>(int N, Scalar<T, PAD> *s);
-  friend void clause_scalar_keep_min<T, PAD>(int N, Scalar<T, PAD> *s);
+  friend void clause_scalar_keepMin<T, PAD>(int N, Scalar<T, PAD> *s);
 
   Scalar(T x) : container_{ x } {}
 
@@ -65,12 +65,12 @@ public:
     container_[0] = x;
   }
 
-  bool keep_min(T new_value) {
+  bool keepMin(T new_value) {
     int k;
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
                                  (int)0,
-                                 clause_scalar_keep_min<T, PAD>,
+                                 clause_scalar_keepMin<T, PAD>,
                                  this);
     auto *addr = &container_[0];
     auto current_value = *addr;
