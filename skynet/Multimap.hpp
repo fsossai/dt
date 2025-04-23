@@ -15,11 +15,11 @@
 
 namespace skynet {
 
-template <class Tk, class Tv>
+template <typename Tk, typename Tv, bool Order>
 class Multimap;
 
-template <class Tk, class Tv>
-void clause_multiset_insert(int N, Multimap<Tk, Tv> *mmap) {
+template <typename Tk, typename Tv, bool Order>
+void clause_multiset_insert(int N, Multimap<Tk, Tv, Order> *mmap) {
   // TODO
   mmap->N_ = N;
 
@@ -28,12 +28,63 @@ void clause_multiset_insert(int N, Multimap<Tk, Tv> *mmap) {
   }
 }
 
-template <class Tk, class Tv>
+template <typename Tk, typename Tv, bool Order>
 class Multimap {
 public:
   using BucketT = BaseSequence<Tv, /*Order*/ false>;
+  using MapT = typename std::conditional_t<
+      Order,
+      oneapi::tbb::concurrent_map<Tk, BucketT>,
+      oneapi::tbb::concurrent_unordered_map<Tk, BucketT>>;
+  using MapIteratorT = typename MapT::iterator;
 
-  friend void clause_multiset_insert<Tk, Tv>(int N, Multimap<Tk, Tv> *mmap);
+  friend void clause_multiset_insert<Tk, Tv>(int N,
+                                             Multimap<Tk, Tv, Order> *mmap);
+
+  class KeysIterator {
+  public:
+    KeysIterator(MapIteratorT it) : it_(move(it)) {}
+
+    Tk operator*() {
+      return it_->first;
+    }
+
+    KeysIterator &operator++() {
+      ++it_;
+      return *this;
+    }
+
+    bool operator!=(const KeysIterator &other) const {
+      return it_ != other.it_;
+    }
+
+    typename MapT::difference_type operator-(const KeysIterator &other) const {
+      return it_ - other.it_;
+    }
+
+    KeysIterator operator+(int64_t a) const {
+      return { it_ + a };
+    }
+
+  private:
+    MapIteratorT it_;
+  };
+
+  class KeysView {
+  public:
+    KeysView(Multimap<Tk, Tv, Order> &mmap) : mmap_(mmap) {}
+
+    KeysIterator begin() {
+      return { mmap_.container_.begin() };
+    }
+
+    KeysIterator end() {
+      return { mmap_.container_.end() };
+    }
+
+  private:
+    Multimap<Tk, Tv, Order> &mmap_;
+  };
 
   // TODO
   Multimap() = default;
@@ -45,7 +96,7 @@ public:
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
                                  0,
-                                 clause_multiset_insert<Tk, Tv>,
+                                 clause_multiset_insert<Tk, Tv, Order>,
                                  this);
     auto it = container_.find(key);
     if (it != container_.end()) {
@@ -63,6 +114,23 @@ public:
 
   size_t numKeys() const {
     return container_.size();
+  }
+
+  KeysView keys() {
+    return { *this };
+  }
+
+  template <typename R = KeysView>
+  typename std::enable_if_t<Order, R> sortedKeys() {
+    return { *this };
+  }
+
+  void printKeys() {
+    std::cout << "{ ";
+    for (auto k : keys()) {
+      std::cout << k << " ";
+    }
+    std::cout << "}\n";
   }
 
   bool hasKey(Tk key) const {
@@ -94,8 +162,14 @@ public:
   }
 
   // private:
-  oneapi::tbb::concurrent_unordered_map<Tk, BucketT> container_;
+  MapT container_;
   int N_ = 1;
 };
+
+template <typename Tk, typename Tv>
+using OrderedMultimap = Multimap<Tk, Tv, /*Order=*/true>;
+
+template <typename Tk, typename Tv>
+using UnorderedMultimap = Multimap<Tk, Tv, /*Order=*/false>;
 
 } // namespace skynet
