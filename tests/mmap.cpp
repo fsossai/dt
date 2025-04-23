@@ -28,5 +28,8 @@ int main() {
   mmap.print();
 
   cout << "numKeys() = " << mmap.numKeys() << "\n";
+  cout << "count(3) = " << mmap.count(3) << "\n";
+  cout << "count(9) = " << mmap.count(9) << "\n";
+  cout << "count(100) = " << mmap.count(100) << "\n";
 
 }
