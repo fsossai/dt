@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <iostream>
 #include <cassert>
+#include <iostream>
+#include <vector>
 
 // #define DEBUG
 
@@ -20,12 +20,3 @@
 #include "Scalar.hpp"
 #include "Set.hpp"
 
-namespace skynet {
-
-template <typename T>
-using Sequence = BaseSequence<T, /*Order=*/true>;
-
-template <typename T>
-using Bag = BaseSequence<T, /*Order=*/false>;
-
-} // namespace skynet
