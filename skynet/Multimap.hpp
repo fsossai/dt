@@ -112,7 +112,7 @@ public:
     noelle_pragma_end(p);
   }
 
-  size_t numKeys() const {
+  INLINE size_t numKeys() const {
     return container_.size();
   }
 
@@ -121,8 +121,41 @@ public:
   }
 
   template <typename R = KeysView>
-  typename std::enable_if_t<Order, R> sortedKeys() {
+  typename std::enable_if_t<Order, R> INLINE sortedKeys() {
     return { *this };
+  }
+
+  template <typename R = Tk>
+  typename std::enable_if_t<Order, R> INLINE minKey() {
+    return container_.begin()->first;
+  }
+
+  template <typename R = Tk>
+  typename std::enable_if_t<Order, R> maxKey() {
+    auto it = container_.begin();
+    auto end = container_.end();
+    Tk current_max = it->first;
+    for (; it != end; ++it) {
+      current_max = std::max<Tk>(current_max, it->first);
+    }
+    return current_max;
+  }
+
+  void compact() {
+    std::vector<Tk> toErase;
+    toErase.reserve(numKeys());
+    for (auto &[key, bucket] : container_) {
+      if (bucket.size() == 0) {
+        toErase.push_back(key);
+      }
+    }
+    for (auto key : toErase) {
+      container_.unsafe_erase(key);
+    }
+  }
+
+  INLINE void erase(Tk key) {
+    container_.unsafe_erase(key);
   }
 
   void printKeys() {
@@ -133,11 +166,11 @@ public:
     std::cout << "}\n";
   }
 
-  bool hasKey(Tk key) const {
+  INLINE bool hasKey(Tk key) const {
     return container_.contains(key);
   }
 
-  BucketT &operator[](Tk key) {
+  INLINE BucketT &operator[](Tk key) {
     return container_[key];
   }
 
@@ -150,7 +183,7 @@ public:
     return 0;
   }
 
-  bool empty() const {
+  INLINE bool empty() const {
     return container_.empty();
   }
 
