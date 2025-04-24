@@ -1,11 +1,13 @@
 #pragma once
 
+#include <absl/container/btree_map.h>
 #include <atomic>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <type_traits>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "Interface.hpp"
 #include "IV.hpp"
@@ -20,7 +22,7 @@ template <typename Tk, typename Tv, bool Order>
 class Multimap;
 
 template <typename Tk, typename Tv, bool Order>
-void clause_multiset_insert(int N, Multimap<Tk, Tv, Order> *mmap) {
+void clause_multimap_insert(int N, Multimap<Tk, Tv, Order> *mmap) {
   if (mmap->N_ == N) {
     return;
   }
@@ -35,11 +37,12 @@ class Multimap {
 public:
   using BucketT = BaseSequence<Tv, /*Order*/ false>;
   using MapT = typename std::conditional_t<Order,
+                                           // absl::btree_map<Tk, BucketT>,
                                            std::map<Tk, BucketT>,
                                            std::unordered_map<Tk, BucketT>>;
   using MapIteratorT = typename MapT::iterator;
 
-  friend void clause_multiset_insert<Tk, Tv>(int N,
+  friend void clause_multimap_insert<Tk, Tv>(int N,
                                              Multimap<Tk, Tv, Order> *mmap);
 
   class KeysIterator {
@@ -97,7 +100,7 @@ public:
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
                                  0,
-                                 clause_multiset_insert<Tk, Tv, Order>,
+                                 clause_multimap_insert<Tk, Tv, Order>,
                                  this);
     __insert(k, key, value);
     noelle_pragma_end(p);
