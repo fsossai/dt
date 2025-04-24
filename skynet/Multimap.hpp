@@ -20,7 +20,6 @@ class Multimap;
 
 template <typename Tk, typename Tv, bool Order>
 void clause_multiset_insert(int N, Multimap<Tk, Tv, Order> *mmap) {
-  // TODO
   mmap->N_ = N;
 
   for (auto &[key, bucket] : mmap->container_) {
@@ -92,24 +91,37 @@ public:
   ~Multimap() {}
 
   void insert(Tk key, const Tv &value) {
-    int k = N_ - 1;
+    int k = 0;
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
                                  0,
                                  clause_multiset_insert<Tk, Tv, Order>,
                                  this);
+    __insert(k, key, value);
+    noelle_pragma_end(p);
+  }
+
+  void __insert(int t, Tk key, const Tv &value) {
     auto it = container_.find(key);
     if (it != container_.end()) {
       BucketT &bucket = it->second;
-      bucket.__insert(k, value);
+      bucket.__insert(t, value);
     } else {
       BucketT bucket;
       clause_sequence_append(N_, &bucket);
-      bucket.__insert(k, value);
-      container_.insert({ key, std::move(bucket) });
+      bucket.__insert(t, value);
+      {
+        // critical section
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it_retry = container_.find(key);
+        if (it_retry != container_.end()) {
+          BucketT &bucket = it_retry->second;
+          bucket.__insert(t, value);
+        } else {
+          container_.insert({ key, std::move(bucket) });
+        }
+      }
     }
-
-    noelle_pragma_end(p);
   }
 
   INLINE size_t numKeys() const {
@@ -196,6 +208,7 @@ public:
 
   // private:
   MapT container_;
+  std::mutex mutex_;
   int N_ = 1;
 };
 
