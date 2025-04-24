@@ -21,8 +21,10 @@ class Multimap;
 
 template <typename Tk, typename Tv, bool Order>
 void clause_multiset_insert(int N, Multimap<Tk, Tv, Order> *mmap) {
+  if (mmap->N_ == N) {
+    return;
+  }
   mmap->N_ = N;
-
   for (auto &[key, bucket] : mmap->container_) {
     clause_sequence_append(N, &bucket);
   }
