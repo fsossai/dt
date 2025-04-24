@@ -2,9 +2,10 @@
 
 #include <atomic>
 #include <iostream>
+#include <map>
 #include <type_traits>
 #include <vector>
-#include <oneapi/tbb.h>
+#include <unordered_map>
 
 #include "Interface.hpp"
 #include "IV.hpp"
@@ -31,10 +32,9 @@ template <typename Tk, typename Tv, bool Order>
 class Multimap {
 public:
   using BucketT = BaseSequence<Tv, /*Order*/ false>;
-  using MapT = typename std::conditional_t<
-      Order,
-      oneapi::tbb::concurrent_map<Tk, BucketT>,
-      oneapi::tbb::concurrent_unordered_map<Tk, BucketT>>;
+  using MapT = typename std::conditional_t<Order,
+                                           std::map<Tk, BucketT>,
+                                           std::unordered_map<Tk, BucketT>>;
   using MapIteratorT = typename MapT::iterator;
 
   friend void clause_multiset_insert<Tk, Tv>(int N,
@@ -162,12 +162,12 @@ public:
       }
     }
     for (auto key : toErase) {
-      container_.unsafe_erase(key);
+      container_.erase(key);
     }
   }
 
   INLINE void erase(Tk key) {
-    container_.unsafe_erase(key);
+    container_.erase(key);
   }
 
   void printKeys() {
