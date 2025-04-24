@@ -97,14 +97,29 @@ public:
 
   bool keepMin(size_t idx, T new_value) {
     auto p = noelle_pragma_begin("ldtc");
+
     auto *addr = &container_[idx];
     auto current_value = *addr;
     while (current_value > new_value) {
-      if (__sync_bool_compare_and_swap(addr, current_value, new_value)) {
+      if (__atomic_compare_exchange_n(addr,
+                                      &current_value,
+                                      new_value,
+                                      true,
+                                      __ATOMIC_RELAXED,
+                                      __ATOMIC_RELAXED)) {
         return true;
       }
-      current_value = *addr;
     }
+
+    // auto *addr = &container_[idx];
+    // auto current_value = *addr;
+    // while (current_value > new_value) {
+    //   if (__sync_bool_compare_and_swap(addr, current_value, new_value)) {
+    //     return true;
+    //   }
+    //   current_value = *addr;
+    // }
+
     noelle_pragma_end(p);
     return false;
   }
