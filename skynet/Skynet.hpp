@@ -7,6 +7,7 @@
 // #define DEBUG
 
 #include "Array.hpp"
+#include "Bag.hpp"
 #include "BaseSequence.hpp"
 #include "EnumSet.hpp"
 #include "HSequence.hpp"
@@ -18,5 +19,6 @@
 #include "PSequence.hpp"
 #include "Range.hpp"
 #include "Scalar.hpp"
+#include "Sequence.hpp"
 #include "Set.hpp"
 
