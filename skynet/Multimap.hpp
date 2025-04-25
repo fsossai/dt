@@ -42,7 +42,7 @@ public:
 
   ~Multimap() {}
 
-  void insert(Tk key, const Tv &value) {
+  void insert(Tk key, Tv value) {
     int k = 0;
     auto p = noelle_pragma_begin("ldtc",
                                  &k,
@@ -53,7 +53,7 @@ public:
     noelle_pragma_end(p);
   }
 
-  void __insert(int t, Tk key, const Tv &value) {
+  void __insert(int t, Tk key, Tv value) {
     auto it = container_[t].find(key);
     if (it != container_[t].end()) {
       it->second.push_back(value);
