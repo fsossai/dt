@@ -38,36 +38,6 @@ public:
 
   friend void clause_umultimap_insert<Tk, Tv>(int N, UMultimap<Tk, Tv> *mmap);
 
-  // class KeysIterator {
-  // public:
-  //   KeysIterator(MapIteratorT it) : it_(move(it)) {}
-  //
-  //   Tk operator*() {
-  //     return it_->first;
-  //   }
-  //
-  //   KeysIterator &operator++() {
-  //     ++it_;
-  //     return *this;
-  //   }
-  //
-  //   bool operator!=(const KeysIterator &other) const {
-  //     return it_ != other.it_;
-  //   }
-  //
-  //   typename MapT::difference_type operator-(const KeysIterator &other) const
-  //   {
-  //     return it_ - other.it_;
-  //   }
-  //
-  //   KeysIterator operator+(int64_t a) const {
-  //     return { it_ + a };
-  //   }
-  //
-  // private:
-  //   MapIteratorT it_;
-  // };
-
   UMultimap() : container_(1) {}
 
   ~UMultimap() {}
@@ -94,6 +64,7 @@ public:
 
   Tk minKey() {
     Tk current_min = std::numeric_limits<Tk>::min();
+#pragma omp parallel for reduction(min : current_min)
     for (auto &block : container_) {
       for (auto &[key, _] : block) {
         if (key < current_min) {
@@ -106,6 +77,7 @@ public:
 
   Tk maxKey() {
     Tk current_max = std::numeric_limits<Tk>::max();
+#pragma omp parallel for reduction(max : current_max)
     for (auto &block : container_) {
       for (auto &[key, _] : block) {
         if (key > current_max) {
@@ -116,16 +88,11 @@ public:
     return current_max;
   }
 
-  INLINE void erase(Tk key) {
+  void erase(Tk key) {
+#pragma omp parallel for
     for (auto &block : container_) {
       block.erase(key);
     }
-  }
-
-  void printKeys() {
-    std::cout << "{ ";
-    // TODO
-    std::cout << "}\n";
   }
 
   void printInternals() {
@@ -145,28 +112,34 @@ public:
   }
 
   BucketT operator[](Tk key) {
-    BucketT full_bucket;
+    BucketT full_bucket(count(key));
+    std::atomic<size_t> offset = 0;
+#pragma omp parallel for
     for (auto &block : container_) {
       auto it = block.find(key);
       if (it != block.end()) {
         auto &current_bucket = it->second;
-        full_bucket.insert(full_bucket.end(),
-                           current_bucket.begin(),
-                           current_bucket.end());
+        auto start =
+            offset.fetch_add(current_bucket.size(), std::memory_order_relaxed);
+
+        std::copy(current_bucket.begin(),
+                  current_bucket.end(),
+                  full_bucket.data() + start);
       }
     }
     return full_bucket;
   }
 
   size_t count(Tk key) {
-    size_t count = 0;
+    size_t counter = 0;
+#pragma omp parallel for reduction(+ : counter)
     for (auto &block : container_) {
       auto it = block.find(key);
       if (it != block.end()) {
-        count += it->second.size();
+        counter += it->second.size();
       }
     }
-    return count;
+    return counter;
   }
 
   bool empty() {
@@ -180,10 +153,6 @@ public:
       }
     }
     return true;
-  }
-
-  void print() const {
-    // TODO
   }
 
   // private:
