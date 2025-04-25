@@ -6,6 +6,8 @@
 
 // #define DEBUG
 
+#include "Common.hpp"
+
 #include "Array.hpp"
 #include "Bag.hpp"
 #include "BaseSequence.hpp"
