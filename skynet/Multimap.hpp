@@ -142,6 +142,22 @@ public:
     return counter;
   }
 
+  //   bool empty() {
+  //     bool result = true;
+  // #pragma omp parallel for reduction(&& : result)
+  //     for (auto &block : container_) {
+  //       if (block.size() != 0) {
+  //         for (auto &[_, bucket] : block) {
+  //           if (bucket.size() != 0) {
+  //             result &= false;
+  //             break;
+  //           }
+  //         }
+  //       }
+  //     }
+  //     return result;
+  //   }
+
   bool empty() {
     for (auto &block : container_) {
       if (block.size() != 0) {
