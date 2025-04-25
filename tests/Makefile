@@ -1,5 +1,5 @@
 CXX = clang++
-STD = -std=c++20
+STD = -std=c++17
 INCLUDE =-I ../skynet -I $(shell noelle-config --include)
 CXX_ARGS = $(INCLUDE)
 CXX_ARGS += -L/nfs-scratch/fsv1684/.local/lib64 -ltbb
