@@ -91,7 +91,7 @@ public:
   T get() const {
     T acc = container_[0];
     for (size_t i = 1; i < container_.size(); i++) {
-      acc = acc + container_.at(i);
+      acc += container_[i];
     }
     return acc;
   }
