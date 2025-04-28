@@ -5,6 +5,7 @@
 namespace skynet {
 
 template <typename T>
-using Sequence = BaseSequence<T, /*Order=*/true>;
+
+using Bag = BaseSequence<T, /*Order=*/false>;
 
 }
