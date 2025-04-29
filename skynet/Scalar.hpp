@@ -96,6 +96,10 @@ public:
     return acc;
   }
 
+  void operator++() {
+    container_[0]++;
+  }
+
   INLINE void __add(size_t k, T x) {
     container_[k * PAD] += x;
   }
