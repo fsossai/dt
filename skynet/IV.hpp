@@ -40,6 +40,11 @@ public:
     noelle_pragma_end(p);
   }
 
+  IV &operator+=(T delta) {
+    value_ += delta;
+    return *this;
+  }
+
   auto operator*() const {
     auto p = noelle_pragma_begin("ldtc");
     auto &v = *this;

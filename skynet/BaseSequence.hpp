@@ -40,6 +40,11 @@ public:
       return *this;
     }
 
+    Iterator &operator+=(size_t delta) {
+      idx_ += delta;
+      return *this;
+    }
+
     bool operator!=(const Iterator &other) const {
       return idx_ != other.idx_;
     }
