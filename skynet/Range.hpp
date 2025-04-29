@@ -10,15 +10,13 @@ namespace skynet {
 template <typename T, bool Order = true>
 class Range {
 public:
-  using RangeIV = IV<T, Order>;
-
   Range(T i_start, T i_end) : i_start_(i_start), i_end_(i_end) {}
 
-  RangeIV begin() {
+  IV<T, Order> begin() {
     return { i_start_ };
   }
 
-  RangeIV end() {
+  IV<T, Order> end() {
     return { i_end_ };
   }
 
@@ -27,7 +25,7 @@ private:
   T i_end_;
 };
 
-template<typename T>
+template <typename T>
 using URange = Range<T, /*Order=*/false>;
 
 } // namespace skynet
