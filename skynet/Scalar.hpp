@@ -90,14 +90,15 @@ public:
 
   T get() const {
     T acc = container_[0];
+#pragma omp parallel for reduction(+ : acc)
     for (size_t i = 1; i < container_.size(); i++) {
       acc += container_[i];
     }
     return acc;
   }
 
-  void operator++() {
-    container_[0]++;
+  INLINE void operator++() {
+    add(1);
   }
 
   INLINE void __add(size_t k, T x) {
@@ -112,7 +113,7 @@ public:
     std::cout << "}\n";
   }
 
-private:
+  // private:
   std::vector<T> container_;
 };
 
