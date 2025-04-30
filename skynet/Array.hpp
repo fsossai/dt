@@ -177,7 +177,7 @@ public:
 
   INLINE void stale_write(size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
-    return container_[idx] = value;
+    container_[idx] = value;
     noelle_pragma_end(p);
   }
 
