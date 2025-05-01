@@ -225,15 +225,14 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto isUnordered = TA.isUnordered(LS);
     auto scheduling = TA.getScheduling(LS);
 
-    MM->addMetadata(LS, "gino.scheduling.kind", scheduling.kind);
-    MM->addMetadata(LS,
-                    "gino.scheduling.chunksize",
-                    to_string(scheduling.chunksize));
-
     if (isDOALL) {
       // Marking the new loop as DOALL
       MM->addMetadata(LS, "gino.doall", "yes");
       MM->addMetadata(LS, "tc.order", isUnordered ? "no" : "yes");
+      MM->addMetadata(LS, "gino.scheduling.kind", scheduling.kind);
+      MM->addMetadata(LS,
+                      "gino.scheduling.chunksize",
+                      to_string(scheduling.chunksize));
     } else {
       retryLSs.insert(LS);
     }
@@ -439,10 +438,17 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
                     LO);
 
     // Marking the new loop as DOALL
+    auto scheduling = TA.getScheduling(LS);
     MM->addMetadata(NewHeader->getTerminator(), "gino.doall", "yes");
     MM->addMetadata(NewHeader->getTerminator(),
                     "tc.order",
                     isUnordered ? "no" : "yes");
+    MM->addMetadata(NewHeader->getTerminator(),
+                    "gino.scheduling.kind",
+                    scheduling.kind);
+    MM->addMetadata(NewHeader->getTerminator(),
+                    "gino.scheduling.chunksize",
+                    to_string(scheduling.chunksize));
   }
 
   return true;
