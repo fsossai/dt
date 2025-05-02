@@ -131,9 +131,29 @@ public:
     }
   }
 
-  INLINE void add(size_t idx, T value) {
+  void add(size_t idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
+#ifdef __clang__
     __atomic_fetch_add(&container_[idx], value, __ATOMIC_RELAXED);
+#else
+    using IntT =
+        std::conditional_t<sizeof(T) == 4,
+                           uint32_t,
+                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+    auto *addr = &container_[idx];
+    T current_value = *addr;
+    T new_value;
+    do {
+      new_value = current_value + value;
+    } while (
+        !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
+                                   reinterpret_cast<IntT *>(&current_value),
+                                   reinterpret_cast<IntT *>(&new_value),
+                                   true,
+                                   __ATOMIC_RELAXED,
+                                   __ATOMIC_RELAXED));
+#endif
     noelle_pragma_end(p);
   }
 
