@@ -20,7 +20,7 @@ public:
   }
 
   ~EnumSet() {
-    delete buf_;
+    delete[] buf_;
   }
 
   INLINE void insert(size_t value) {
