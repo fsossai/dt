@@ -16,13 +16,25 @@ class BaseSequence;
 
 template <typename T, bool Order>
 void clause_sequence_append(int N, BaseSequence<T, Order> *seq) {
-  seq->container_.resize(N);
+  if (seq->container_.size() >= N) {
+    return;
+  }
+
+  auto M = seq->container_[0].capacity();
+  int K = seq->container_.size();
+  for (int i = 0; i < (N - K); i++) {
+    typename BaseSequence<T,Order>::VectorT new_container;
+    new_container.reserve(M);
+    seq->container_.push_back(std::move(new_container));
+  }
 }
 
 template <typename T, bool Order>
 class BaseSequence {
 public:
   friend void clause_sequence_append<T>(int N, BaseSequence<T, Order> *base);
+
+  using VectorT = std::vector<T>;
 
   class Iterator {
   public:
@@ -62,12 +74,14 @@ public:
     BaseSequence<T, Order> *base_;
   };
 
-  BaseSequence() {
-    container_.emplace_back();
+  BaseSequence(size_t size) {
+    VectorT tmp;
+    tmp.reserve(size);
+    container_.push_back(std::move(tmp));
   }
 
-  BaseSequence(size_t size) {
-    container_.emplace_back(size);
+  BaseSequence() {
+    container_.emplace_back();
   }
 
   BaseSequence(size_t size, T init) {
@@ -240,7 +254,7 @@ public:
   }
 
   // private:
-  std::vector<std::vector<T>> container_;
+  std::vector<VectorT> container_;
 
   INLINE std::pair<size_t, size_t> getCoordinates(size_t idx) const {
     int i = -1;
