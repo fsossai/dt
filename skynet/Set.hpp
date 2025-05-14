@@ -270,13 +270,13 @@ public:
 
   size_t size() {
     size_t counter = 0;
-#pragma omp parallel for
+#pragma omp parallel for reduction(+ : counter)
     for (auto &row : this->container_) {
       std::unordered_set<T> seen;
       for (auto &cell : row) {
         for (auto &e : cell) {
           if (seen.insert(e).second) {
-            counter++;
+            ++counter;
           }
         }
       }
@@ -420,8 +420,14 @@ public:
     return;
   }
 
-  INLINE bool operator!=(
-      const SetIterator & /*other*/) const {
+  void printStats() {
+    for (auto &seen : seens_) {
+      std::cout << seen.size() << " ";
+    }
+    std::cout << "\n";
+  }
+
+  INLINE bool operator!=(const SetIterator & /*other*/) const {
     int k = 0;
     auto _p = noelle_pragma_begin("ldtc", &k, 0, clause_empty);
     bool result =
@@ -470,7 +476,8 @@ public:
     return *(cell_its_[k]);
   }
 
-  void __op_plusplus(int k) {
+  int __op_plusplus(int k) {
+    int skips = 0;
     k *= PAD;
     ++(cell_its_[k]);
     while (true) {
@@ -489,9 +496,13 @@ public:
           break;
         } else {
           ++(cell_its_[k]);
+#ifdef STATS
+          ++skips;
+#endif
         }
       }
     }
+    return skips;
   }
 
   bool __op_neq(int k, const SetIterator & /*other*/) const {
