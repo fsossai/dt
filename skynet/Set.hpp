@@ -490,9 +490,9 @@ public:
           cell_ends_[k] = row_its_[k]->end();
         }
       } else {
-        const auto &e = *(cell_its_[k]);
-        if (seens_[k].find(e) == seens_[k].end()) {
-          seens_[k].insert(e);
+        auto &candidate = cell_its_[k];
+        bool insertion_took_place = seens_[k].insert(*candidate).second;
+        if (insertion_took_place) {
           break;
         } else {
           ++(cell_its_[k]);
