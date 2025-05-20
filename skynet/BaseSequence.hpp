@@ -1,7 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <cassert>
 #include <iostream>
+#include <omp.h>
 #include <vector>
 
 #include "Common.hpp"
@@ -23,7 +25,7 @@ void clause_sequence_append(int N, BaseSequence<T, Order> *seq) {
   auto M = seq->container_[0].capacity();
   int K = seq->container_.size();
   for (int i = 0; i < (N - K); i++) {
-    typename BaseSequence<T,Order>::VectorT new_container;
+    typename BaseSequence<T, Order>::VectorT new_container;
     new_container.reserve(M);
     seq->container_.push_back(std::move(new_container));
   }
@@ -135,6 +137,26 @@ public:
             container_[bigger_i][bigger - delta + i]);
         container_[bigger_i].resize(bigger - delta);
       }
+    }
+  }
+
+  void reduce() {
+    auto &dst = container_[0];
+    std::atomic<size_t> offset = dst.size();
+    dst.resize(size());
+
+#pragma omp parallel for ordered
+    for (size_t i = 1; i < container_.size(); i++) {
+      auto &src = container_[i];
+      size_t i_start;
+      if constexpr (Order) {
+#pragma omp ordered
+        i_start = offset.fetch_add(src.size());
+      } else {
+        i_start = offset.fetch_add(src.size());
+      }
+      std::copy(src.begin(), src.end(), dst.begin() + i_start);
+      src.resize(0);
     }
   }
 
