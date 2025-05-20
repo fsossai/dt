@@ -165,6 +165,14 @@ public:
     return v;
   }
 
+  void reduce() {
+#pragma omp parallel for
+    for (size_t i = 0; i < size_; i++) {
+      container_[0][i] = operator[](i);
+    }
+    container_.resize(1);
+  }
+
   Iterator begin() {
     return Iterator(this, 0);
   }
