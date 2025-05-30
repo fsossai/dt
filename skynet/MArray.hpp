@@ -88,13 +88,9 @@ public:
     MArray<T> *base_;
   };
 
-  MArray(size_t size, bool init = true) : size_(size), M_(1) {
+  MArray(size_t size) : size_(size), M_(1) {
     container_.emplace_back();
-    if (init) {
-      container_[0].resize(size);
-    } else {
-      container_[0].reserve(size);
-    }
+    container_[0].resize(size);
   }
 
   void setSharing(int M) {
@@ -130,9 +126,9 @@ public:
     noelle_pragma_end(p);
   }
 
-  // INLINE
-  void __add(int t, size_t idx, T value) {
-    __atomic_fetch_add(&container_[t / M_][idx], value, __ATOMIC_RELAXED);
+  INLINE void __add(int t, size_t idx, T value) {
+#pragma omp atomic
+    container_[t / M_][idx] += value;
   }
 
   INLINE void add(size_t idx, T value) {
