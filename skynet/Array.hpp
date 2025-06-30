@@ -184,6 +184,19 @@ public:
     return x;
   }
 
+  void resize(size_t size) {
+    if (size <= size_) {
+      // no need to reallocate, just adjust the size
+      size_ = size;
+    } else {
+      T *new_container = new T[size];
+      std::copy(container_, container_ + size_, new_container);
+      delete[] container_;
+      container_ = new_container;
+      size_ = size;
+    }
+  }
+
   INLINE const T &operator[](size_t idx) const {
     return container_[idx];
   }
