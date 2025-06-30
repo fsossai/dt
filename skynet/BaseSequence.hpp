@@ -8,6 +8,7 @@
 
 #include "Common.hpp"
 #include "Range.hpp"
+#include "Array.hpp"
 
 #include "arcana/noelle/core/Pragma.h"
 
@@ -166,6 +167,16 @@ public:
   }
 
   template <typename R = void>
+  typename std::enable_if_t<Order, R> __append(int t,
+                                               skynet::Array<T> &values, size_t N) {
+    const int offset = container_[t].size();
+    container_[t].resize(offset + N);
+    std::copy(values.container_,
+              values.container_ + N,
+              container_[t].begin() + offset);
+  }
+
+  template <typename R = void>
   typename std::enable_if_t<Order, R> INLINE append(T value) {
     int k = container_.size() - 1;
     auto _p = noelle_pragma_begin("ldtc",
@@ -174,6 +185,30 @@ public:
                                   clause_sequence_append<T, Order>,
                                   this);
     __append(k, value);
+    noelle_pragma_end(_p);
+  }
+
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> INLINE append(skynet::Array<T> &values) {
+    int k = container_.size() - 1;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order>,
+                                  this);
+    append(values, values.size());
+    noelle_pragma_end(_p);
+  }
+
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> INLINE append(skynet::Array<T> &values, size_t N) {
+    int k = container_.size() - 1;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order>,
+                                  this);
+    __append(k, values, N);
     noelle_pragma_end(_p);
   }
 
