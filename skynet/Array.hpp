@@ -157,6 +157,10 @@ public:
     noelle_pragma_end(p);
   }
 
+  void add_unsafe(size_t idx, T value) {
+    container_[idx] += value;
+  }
+
   template <typename U, bool IOrder>
   INLINE void add(IV<U, IOrder> idx, T value) {
     auto p = noelle_pragma_begin("ldtc");
