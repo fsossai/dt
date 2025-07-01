@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <omp.h>
 #include <vector>
@@ -168,7 +169,8 @@ public:
 
   template <typename R = void>
   typename std::enable_if_t<Order, R> __append(int t,
-                                               skynet::Array<T> &values, size_t N) {
+                                               skynet::Array<T> &values,
+                                               size_t N) {
     const int offset = container_[t].size();
     container_[t].resize(offset + N);
     std::copy(values.container_,
@@ -201,7 +203,8 @@ public:
   }
 
   template <typename R = void>
-  typename std::enable_if_t<Order, R> INLINE append(skynet::Array<T> &values, size_t N) {
+  typename std::enable_if_t<Order, R> INLINE append(skynet::Array<T> &values,
+                                                    size_t N) {
     int k = container_.size() - 1;
     auto _p = noelle_pragma_begin("ldtc",
                                   &k,
@@ -261,6 +264,12 @@ public:
       const IV<U, /*Order=*/false> idx) {
     auto c = getCoordinates(idx);
     return container_[c.first][c.second];
+  }
+
+  void serialize(const std::function<void(T *, size_t)> &writer) {
+    for (auto &row : container_) {
+      writer(row.data(), row.size());
+    }
   }
 
   Iterator begin() {
