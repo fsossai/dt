@@ -9,25 +9,44 @@ find_package(LLVM 14 REQUIRED CONFIG)
 find_program(CLANG_PATH clang)
 find_program(CLANGXX_PATH clang++)
 
-execute_process(
-  COMMAND noelle-config --prefix
-  OUTPUT_VARIABLE NOELLE_INSTALL_DIR
-  RESULT_VARIABLE return_code
-  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
-)
-set(GINO_INSTALL_DIR "/nfs-scratch/fsv1684/gino-dt/install")
+set(NOELLE_INSTALL_DIR ${DT_CMAKE_ROOT}/noelle/install)
+set(GINO_INSTALL_DIR ${DT_CMAKE_ROOT}/gino/install)
 
-if(return_code AND (NOT return_code EQUAL 1))
-  message(FATAL_ERROR "Please source NOELLE. 'noelle-config' must be available")
-else()
-  message(STATUS "Found NOELLE at: " ${NOELLE_INSTALL_DIR})
-endif()
+include(ExternalProject)
+ExternalProject_Add(
+    noelle
+    GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
+    GIT_TAG         dt
+    BUILD_COMMAND   ${CMAKE_COMMAND} --build . -j16
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install .
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${NOELLE_INSTALL_DIR}
+        -DNOELLE_BUILD_TYPE=Release
+        -DNOELLE_SVF=ON
+        -DNOELLE_SCAF=ON
+)
+include_directories(${NOELLE_INSTALL_DIR}/include)
+
+ExternalProject_Add( 
+    gino
+    GIT_REPOSITORY      "git@github.com:arcana-lab/gino-dt.git"
+    GIT_TAG             dt
+    PREFIX              ${CMAKE_BINARY_DIR}/_deps/gino
+    CONFIGURE_COMMAND   ""
+    BUILD_COMMAND       NOELLE_INSTALL_DIR=${NOELLE_INSTALL_DIR} make
+    BUILD_IN_SOURCE     ON
+    INSTALL_COMMAND     ""
+)
+include_directories(${GINO_INSTALL_DIR}/include)
+
+add_dependencies(gino noelle)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(HandleLLVMOptions)
 include(AddLLVM)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
 
 include(FetchContent)
 FetchContent_Declare(

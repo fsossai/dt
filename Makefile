@@ -10,7 +10,7 @@ compile: $(BUILD_DIR)
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
 		-DCMAKE_INSTALL_PREFIX=install \
-		-DCMAKE_BUILD_TYPE=Debug
+		-DCMAKE_BUILD_TYPE=Release
 
 format:
 	find ./compiler ./skynet ./tests -regex '.*\.[c|h]pp' | xargs clang-format -i
@@ -20,6 +20,7 @@ install: compile
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -f compile_commands.json
 
 uninstall:
 	-cat $(BUILD_DIR)/install_manifest.txt | xargs rm -f

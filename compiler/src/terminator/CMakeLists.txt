@@ -5,5 +5,6 @@ add_llvm_library(
   Pass.cpp
   TClause.cpp
   ${leptoinst_SOURCE_DIR}/src/LeptoInstVisitor.cpp
-)
-
+  )
+  add_dependencies(Terminator noelle gino)
+  
