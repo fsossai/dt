@@ -20,8 +20,8 @@ public:
   public:
     Iterator(Array<T> *base, int idx) : idx_(idx), base_(base) {}
 
-    T operator*() {
-      return (*base_)[idx_];
+    T &operator*() {
+      return base_->container_[idx_];
     }
 
     Iterator &operator++() {
@@ -66,6 +66,11 @@ public:
 
   Array(size_t size, T default_value) : Array(size) {
     fill(default_value);
+  }
+
+  Array(const Array<T> &other) : size_(other.size_) {
+    container_ = new T[size_];
+    std::copy(other.container_, other.container_ + size_, container_);
   }
 
   ~Array() {
