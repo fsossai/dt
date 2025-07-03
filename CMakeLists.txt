@@ -3,20 +3,14 @@ cmake_minimum_required(VERSION 3.13)
 project(dependence-terminator)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(LLVM 14 REQUIRED CONFIG)
-find_program(CLANG_PATH clang)
-find_program(CLANGXX_PATH clang++)
 
 set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
-set(NOELLE_INSTALL_DIR ${DT_CMAKE_ROOT}/deps/noelle/install)
-set(NOELLE_SRC ${DT_CMAKE_ROOT}/deps/noelle)
-set(GINO_INSTALL_DIR ${DT_CMAKE_ROOT}/deps/gino/install)
-set(GINO_SRC ${DT_CMAKE_ROOT}/deps/gino)
-
-include_directories(${NOELLE_INSTALL_DIR}/include)
-include_directories(${GINO_INSTALL_DIR}/include)
+set(GINO_INSTALL_DIR ${DT_INSTALL_DIR})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -28,24 +22,40 @@ set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
 include(FetchContent)
 
 FetchContent_Declare(
-    noelle
-    GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
-    GIT_TAG         dt
+  gino
+  GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
+  GIT_TAG         dt-refactored
 )
-set(NOELLE_SVF OFF)
-set(NOELLE_SCAF OFF)
-FetchContent_MakeAvailable(noelle)
-FetchContent_GetProperties(noelle)
-
+FetchContent_Declare(
+  noelle
+  GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
+  GIT_TAG         dt
+)
 FetchContent_Declare(
   leptoinst
   GIT_REPOSITORY  "https://github.com/fsossai/lepto-inst.git"
 )
 
+set(GINO_TOOLS OFF)
+FetchContent_MakeAvailable(gino)
+FetchContent_GetProperties(gino)
+
+if(NOT noelle_POPULATED)
+  FetchContent_MakeAvailable(noelle)
+  FetchContent_GetProperties(noelle)
+endif()
+
 FetchContent_GetProperties(leptoinst)
 if(NOT leptoinst_POPULATED)
   FetchContent_MakeAvailable(leptoinst)
 endif()
+
+file(GLOB_RECURSE GINO_CORE_DIRS LIST_DIRECTORIES true "${gino_SOURCE_DIR}/src/core/*")
+foreach(dir ${GINO_CORE_DIRS})
+  if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
+    include_directories(${dir}/include)
+  endif()
+endforeach()
 
 file(GLOB_RECURSE NOELLE_CORE_DIRS LIST_DIRECTORIES true "${noelle_SOURCE_DIR}/src/core/*")
 foreach(dir ${NOELLE_CORE_DIRS})
@@ -53,14 +63,6 @@ foreach(dir ${NOELLE_CORE_DIRS})
     include_directories(${dir}/include)
   endif()
 endforeach()
-
-FetchContent_Declare(
-    gino
-    GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
-    GIT_TAG         dt-refactored
-)
-FetchContent_MakeAvailable(gino)
-FetchContent_GetProperties(gino)
 
 get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 set(DT_CONFIG_VERSION 0.1.0)

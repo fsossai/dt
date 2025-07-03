@@ -3,8 +3,8 @@
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
 DT_INSTALL_DIR=@DT_INSTALL_DIR@
-GINO_SRC=@GINO_SRC@
-NOELLE_SRC=@NOELLE_SRC@
+GINO_SRC=@gino_SOURCE_DIR@
+NOELLE_SRC=@noelle_SOURCE_DIR@
 
 timer_file=$(mktemp)
 
