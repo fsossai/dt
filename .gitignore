@@ -1,11 +1,12 @@
-*.bc
-build
 .cache
 .clangd
-compile_commands.json
-enable
-install
+*.bc
 *.ll
 *.o
 *.out
 *.tmp
+build
+compile_commands.json
+deps
+enable
+install

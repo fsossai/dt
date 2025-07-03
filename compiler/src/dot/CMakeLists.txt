@@ -5,4 +5,3 @@ add_llvm_library(
   Pass.cpp
   ${leptoinst_SOURCE_DIR}/src/LeptoInstVisitor.cpp
 )
-add_dependencies(Dot noelle gino)

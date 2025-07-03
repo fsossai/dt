@@ -9,37 +9,11 @@ find_package(LLVM 14 REQUIRED CONFIG)
 find_program(CLANG_PATH clang)
 find_program(CLANGXX_PATH clang++)
 
-set(NOELLE_INSTALL_DIR ${DT_CMAKE_ROOT}/noelle/install)
-set(GINO_INSTALL_DIR ${DT_CMAKE_ROOT}/gino/install)
+set(NOELLE_INSTALL_DIR ${DT_CMAKE_ROOT}/deps/noelle/install)
+set(GINO_INSTALL_DIR ${DT_CMAKE_ROOT}/deps/gino/install)
 
-include(ExternalProject)
-ExternalProject_Add(
-    noelle
-    GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
-    GIT_TAG         dt
-    BUILD_COMMAND   ${CMAKE_COMMAND} --build . -j16
-    INSTALL_COMMAND ${CMAKE_COMMAND} --install .
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${NOELLE_INSTALL_DIR}
-        -DNOELLE_BUILD_TYPE=Release
-        -DNOELLE_SVF=ON
-        -DNOELLE_SCAF=ON
-)
 include_directories(${NOELLE_INSTALL_DIR}/include)
-
-ExternalProject_Add( 
-    gino
-    GIT_REPOSITORY      "git@github.com:arcana-lab/gino-dt.git"
-    GIT_TAG             dt
-    PREFIX              ${CMAKE_BINARY_DIR}/_deps/gino
-    CONFIGURE_COMMAND   ""
-    BUILD_COMMAND       NOELLE_INSTALL_DIR=${NOELLE_INSTALL_DIR} make
-    BUILD_IN_SOURCE     ON
-    INSTALL_COMMAND     ""
-)
 include_directories(${GINO_INSTALL_DIR}/include)
-
-add_dependencies(gino noelle)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
