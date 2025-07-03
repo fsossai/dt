@@ -2,9 +2,9 @@
 
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
+source @ENABLE_FILE@
 DT_INSTALL_DIR=@DT_INSTALL_DIR@
-GINO_SRC=@gino_SOURCE_DIR@
-NOELLE_SRC=@noelle_SOURCE_DIR@
+GINO_SRC=@GINO_SRC_DIR@
 
 timer_file=$(mktemp)
 
@@ -51,8 +51,6 @@ if [[ $# < 1 || $# > 2 ]]; then
 fi
 
 mkdir -p $outDir
-source $GINO_SRC/enable
-source $NOELLE_SRC/enable
 
 lap_timer_init # timer initialization
 
@@ -125,7 +123,7 @@ clang++ \
   -O3 \
   -I $DT_INSTALL_DIR/include/skynet \
   -o $outDir/Parallelizer_utils.bc \
-  $GINO_SRC/src/core/runtime/Parallelizer_utils.cpp \
+  $GINO_SRC/src/runtime/Parallelizer_utils.cpp \
   2>&1
 clang \
   -c \
@@ -133,7 +131,7 @@ clang \
   -O3 \
   -I $DT_INSTALL_DIR/include/skynet \
   -o $outDir/GINO_APIs.bc \
-  $GINO_SRC/src/core/runtime/GINO_APIs.c \
+  $GINO_SRC/src/runtime/GINO_APIs.c \
   2>&1
 lap_timer
 

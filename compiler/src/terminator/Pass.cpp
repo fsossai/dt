@@ -132,7 +132,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   auto &functionLSs = *noelle.getLoopStructures(&F);
   set<LoopStructure *> loopsAlreadyInPlan;
   for (auto LS : functionLSs) {
-    if (MM->doesHaveMetadata(LS, "noelle.parallelizer.looporder")) {
+    if (MM->doesHaveMetadata(LS, "gino.looporder")) {
       loopsAlreadyInPlan.insert(LS);
     }
   }
@@ -179,7 +179,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
   // setting metadata to create the parallel plan
   for (auto LS : plannedLSs) {
-    auto MD = "noelle.parallelizer.looporder";
+    auto MD = "gino.looporder";
     if (this->MM->doesHaveMetadata(LS, MD)) {
       this->MM->setMetadata(LS, MD, to_string(lastLoopOrder++));
     } else {
@@ -430,11 +430,11 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     }
 
     // Moving the looporder metadata to the new outer loop
-    auto LO = MM->getMetadata(LS, "noelle.parallelizer.looporder");
+    auto LO = MM->getMetadata(LS, "gino.looporder");
     MM->deleteMetadata(LS->getHeader()->getTerminator(),
-                       "noelle.parallelizer.looporder");
+                       "gino.looporder");
     MM->addMetadata(NewHeader->getTerminator(),
-                    "noelle.parallelizer.looporder",
+                    "gino.looporder",
                     LO);
 
     // Marking the new loop as DOALL
@@ -481,7 +481,7 @@ void TerminatorPass::populateLoopTags(Noelle &noelle,
 
 string TerminatorPass::getLoopDescription(LoopStructure *LS) {
   auto ID = LS->getID().value();
-  auto order = this->MM->getMetadata(LS, "noelle.parallelizer.looporder");
+  auto order = this->MM->getMetadata(LS, "gino.looporder");
   auto tag =
       (this->loopIdToTag[ID] == 0) ? "" : to_string(this->loopIdToTag[ID]);
   return "(id=" + to_string(ID) + ", tag=" + tag + ", order=" + order + ")";

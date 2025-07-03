@@ -9,15 +9,18 @@ include(ExternalProject)
 
 set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
+set(ENABLE_FILE ${CMAKE_CURRENT_LIST_DIR}/enable)
 
 ExternalProject_Add(gino
   GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
   GIT_TAG         dt-refactored
-  PREFIX          ${GINO_SRC_DIR}
   CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   INSTALL_DIR     ${CMAKE_BINARY_DIR}
 )
+
+ExternalProject_Get_Property(gino SOURCE_DIR)
+set(GINO_SRC_DIR ${SOURCE_DIR})
 
 FetchContent_Declare(
   leptoinst
