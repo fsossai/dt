@@ -92,3 +92,4 @@ add_custom_target(
 
 add_subdirectory(compiler)
 add_subdirectory(bin)
+add_subdirectory(skynet)
