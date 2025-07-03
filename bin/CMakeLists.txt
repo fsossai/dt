@@ -1,4 +1,5 @@
+configure_file(winchester.in winchester @ONLY)
 install(
-  PROGRAMS winchester dt-opt
+  PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/winchester
   DESTINATION bin
 )

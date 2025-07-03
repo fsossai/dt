@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
+
+DT_INSTALL_DIR=@DT_INSTALL_DIR@
+GINO_SRC=@GINO_SRC@
+NOELLE_SRC=@NOELLE_SRC@
+
 timer_file=$(mktemp)
 
 lap_timer_init() {
@@ -12,8 +18,6 @@ lap_timer() {
   fi
   date +%s > "$timer_file"
 }
-
-trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
 if [[ -z $winchester_outDir ]]; then
   outDir=.
@@ -47,11 +51,9 @@ if [[ $# < 1 || $# > 2 ]]; then
 fi
 
 mkdir -p $outDir
-installDir=$(realpath $(dirname $(realpath $0))/..)
-ginoSrc=/nfs-scratch/fsv1684/gino-dt
-noelleSrc=/nfs-scratch/fsv1684/noelle-dt
-source $ginoSrc/enable
-source $noelleSrc/enable
+source $GINO_SRC/enable
+source $NOELLE_SRC/enable
+
 lap_timer_init # timer initialization
 
 ################################################################################
@@ -83,8 +85,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $installDir/lib/Terminator.so \
-      -load $installDir/lib/Dot.so \
+      -load $DT_INSTALL_DIR/lib/Terminator.so \
+      -load $DT_INSTALL_DIR/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
       -dot-tag=$tag \
       -Dot \
@@ -93,8 +95,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $installDir/lib/Terminator.so \
-      -load $installDir/lib/Dot.so \
+      -load $DT_INSTALL_DIR/lib/Terminator.so \
+      -load $DT_INSTALL_DIR/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}_term.dot" \
       -dot-tag=$tag \
       -dot-term \
@@ -121,19 +123,17 @@ clang++ \
   -c \
   -emit-llvm \
   -O3 \
-  -I $ginoSrc/tests/include/threadpool/include \
-  -I /nfs-scratch/fsv1684/repo/dt/skynet \
+  -I $DT_INSTALL_DIR/include/skynet \
   -o $outDir/Parallelizer_utils.bc \
-  $ginoSrc/src/core/runtime/Parallelizer_utils.cpp \
+  $GINO_SRC/src/core/runtime/Parallelizer_utils.cpp \
   2>&1
 clang \
   -c \
   -emit-llvm \
   -O3 \
-  -I $ginoSrc/tests/include/threadpool/include \
-  -I /nfs-scratch/fsv1684/repo/dt/skynet \
-  -o $outDir/NOELLE_APIs.bc \
-  $ginoSrc/src/core/runtime/NOELLE_APIs.c \
+  -I $DT_INSTALL_DIR/include/skynet \
+  -o $outDir/GINO_APIs.bc \
+  $GINO_SRC/src/core/runtime/GINO_APIs.c \
   2>&1
 lap_timer
 
@@ -143,8 +143,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $installDir/lib/Terminator.so \
-      -load $installDir/lib/Dot.so \
+      -load $DT_INSTALL_DIR/lib/Terminator.so \
+      -load $DT_INSTALL_DIR/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
       -dot-tag=$tag \
       -Dot \
@@ -158,8 +158,8 @@ echo "Winchester: Stage $stage: Termination"
 gino-load  \
   -noelle-disable-dswp \
   -noelle-disable-helix \
-  -load $installDir/lib/LoopBlocker.so \
-  -load $installDir/lib/Terminator.so \
+  -load $DT_INSTALL_DIR/lib/LoopBlocker.so \
+  -load $DT_INSTALL_DIR/lib/Terminator.so \
   -Terminator \
   --terminator-tagged-only=${winchester_taggedOnly} \
   --terminator-func=${winchester_func} \
@@ -180,7 +180,7 @@ echo "Winchester: Stage $stage: Linking runtime"
 llvm-link \
   $outDir/${winchester_outBin}_s$((stage-1))_terminated.bc \
   $outDir/Parallelizer_utils.bc \
-  $outDir/NOELLE_APIs.bc \
+  $outDir/GINO_APIs.bc \
   -o $outDir/${winchester_outBin}_s${stage}_linked.bc
 lap_timer
 
