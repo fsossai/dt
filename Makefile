@@ -10,7 +10,7 @@ compile: $(BUILD_DIR)
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
 		-DCMAKE_INSTALL_PREFIX=install \
-		-DCMAKE_BUILD_TYPE=Release
+		-DCMAKE_BUILD_TYPE=Debug
 
 format:
 	find ./compiler ./skynet ./tests -regex '.*\.[c|h]pp' | xargs clang-format -i
