@@ -10,8 +10,6 @@ compile: $(BUILD_DIR)
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
 		-DCMAKE_INSTALL_PREFIX=install \
-		-DNOELLE_SVF=OFF \
-		-DNOELLE_SCAF=OFF \
 		-DCMAKE_BUILD_TYPE=Release
 
 format:

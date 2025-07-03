@@ -2,16 +2,65 @@ cmake_minimum_required(VERSION 3.13)
 
 project(dependence-terminator)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+
+
+include(FetchContent)
+include(ExternalProject)
+
+set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
+set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
+
+ExternalProject_Add(gino
+  # GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
+  SOURCE_DIR      "/nfs-scratch/fsv1684/repo/gino-dt"
+  GIT_TAG         dt-refactored
+  PREFIX          ${GINO_SRC_DIR}
+  CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
+                  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+  INSTALL_DIR     ${CMAKE_BINARY_DIR}
+)
+
+# FetchContent_Declare(
+#   gino
+#   GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
+#   GIT_TAG         dt-refactored
+# )
+# FetchContent_Declare(
+#   noelle
+#   GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
+#   GIT_TAG         dt
+# )
+FetchContent_Declare(
+  leptoinst
+  GIT_REPOSITORY  "https://github.com/fsossai/lepto-inst.git"
+)
+
+# set(GINO_TOOLS OFF)
+# FetchContent_MakeAvailable(gino)
+# FetchContent_GetProperties(gino)
+
+# if(NOT noelle_POPULATED)
+#   FetchContent_MakeAvailable(noelle)
+#   FetchContent_GetProperties(noelle)
+# endif()
+
+FetchContent_GetProperties(leptoinst)
+if(NOT leptoinst_POPULATED)
+  FetchContent_MakeAvailable(leptoinst)
+endif()
+
+file(GLOB_RECURSE GINO_CORE_DIRS LIST_DIRECTORIES true "${GINO_SRC_DIR}/src/core/*")
+foreach(dir ${GINO_CORE_DIRS})
+  if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
+    include_directories(${dir}/include)
+  endif()
+endforeach()
 
 find_package(LLVM 14 REQUIRED CONFIG)
 
-set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
-set(GINO_INSTALL_DIR ${DT_INSTALL_DIR})
-
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
@@ -19,50 +68,12 @@ include(HandleLLVMOptions)
 include(AddLLVM)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
 
-include(FetchContent)
-
-FetchContent_Declare(
-  gino
-  GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
-  GIT_TAG         dt-refactored
-)
-FetchContent_Declare(
-  noelle
-  GIT_REPOSITORY  "git@github.com:arcana-lab/noelle-dt.git"
-  GIT_TAG         dt
-)
-FetchContent_Declare(
-  leptoinst
-  GIT_REPOSITORY  "https://github.com/fsossai/lepto-inst.git"
-)
-
-set(GINO_TOOLS OFF)
-FetchContent_MakeAvailable(gino)
-FetchContent_GetProperties(gino)
-
-if(NOT noelle_POPULATED)
-  FetchContent_MakeAvailable(noelle)
-  FetchContent_GetProperties(noelle)
-endif()
-
-FetchContent_GetProperties(leptoinst)
-if(NOT leptoinst_POPULATED)
-  FetchContent_MakeAvailable(leptoinst)
-endif()
-
-file(GLOB_RECURSE GINO_CORE_DIRS LIST_DIRECTORIES true "${gino_SOURCE_DIR}/src/core/*")
-foreach(dir ${GINO_CORE_DIRS})
-  if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
-    include_directories(${dir}/include)
-  endif()
-endforeach()
-
-file(GLOB_RECURSE NOELLE_CORE_DIRS LIST_DIRECTORIES true "${noelle_SOURCE_DIR}/src/core/*")
-foreach(dir ${NOELLE_CORE_DIRS})
-  if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
-    include_directories(${dir}/include)
-  endif()
-endforeach()
+# file(GLOB_RECURSE NOELLE_CORE_DIRS LIST_DIRECTORIES true "${noelle_SOURCE_DIR}/src/core/*")
+# foreach(dir ${NOELLE_CORE_DIRS})
+#   if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
+#     include_directories(${dir}/include)
+#   endif()
+# endforeach()
 
 get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 set(DT_CONFIG_VERSION 0.1.0)
