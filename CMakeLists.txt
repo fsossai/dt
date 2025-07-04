@@ -16,6 +16,8 @@ ExternalProject_Add(gino
   GIT_TAG         dt-refactored
   CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                  -DNOELLE_SVF=${NOELLE_SVF}
+                  -DNOELLE_SCAF=${NOELLE_SCAF}
   INSTALL_DIR     ${CMAKE_BINARY_DIR}
 )
 
