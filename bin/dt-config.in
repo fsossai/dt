@@ -1,0 +1,43 @@
+#!/bin/bash
+
+function show_help() {
+  echo "usage: $(basename $0) <OPTIONS>..."
+  echo
+  echo "Options"
+  echo "  --help                Print this help message"
+  echo "  --prefix              Print the installation directory"
+  echo "  --includedir          Print the include directory"
+  echo "  --libdir              Print the directory containing static/dynamic libraries"
+  echo "  --libs                Print the arguments to link against the libraries"
+}
+
+if [[ $# < 1 ]]; then
+  show_help
+  exit 0
+fi
+
+for arg in "$@"; do
+  case $arg in
+    -h | --help ) 
+      show_help
+      break
+      ;;
+    --prefix) 
+      echo "@CMAKE_INSTALL_PREFIX@"
+      ;;
+    --includedir)
+      echo "@CMAKE_INSTALL_PREFIX@/include"
+      ;;
+    --libdir)
+      echo "@CMAKE_INSTALL_PREFIX@/lib"
+      ;;
+    --libs)
+      echo ""
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      show_help
+      exit 1
+      ;;
+  esac
+done
