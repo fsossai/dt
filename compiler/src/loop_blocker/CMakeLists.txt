@@ -4,4 +4,7 @@ add_llvm_library(
   LoopBlocker.cpp
   Pass.cpp
 )
-add_dependencies(LoopBlocker gino)
+
+if(TARGET gino)
+  add_dependencies(LoopBlocker gino)
+endif()

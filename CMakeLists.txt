@@ -5,18 +5,19 @@ project(dependence-terminator)
 include(ExternalProject)
 include(FetchContent)
 
-set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
-
 include(config.default.cmake)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
   include(config.cmake)
 endif()
 
 if(DEFINED DT_INSTALL_DIR)
+  get_filename_component(DT_INSTALL_DIR ${DT_INSTALL_DIR} ABSOLUTE)
   set(CMAKE_INSTALL_PREFIX ${DT_INSTALL_DIR})
+else()
+  get_filename_component(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
+  set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 endif()
 
-set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
 set(ENABLE_FILE ${CMAKE_CURRENT_LIST_DIR}/enable)
 
@@ -47,7 +48,7 @@ if(NOT DEFINED GINO_INSTALL_DIR OR (GINO_INSTALL_DIR STREQUAL ""))
 
   ExternalProject_Add(gino
     GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
-    GIT_TAG         dt-refactored
+    GIT_TAG         dt
     CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
                     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     -DNOELLE_SVF=${NOELLE_SVF}
@@ -57,8 +58,23 @@ if(NOT DEFINED GINO_INSTALL_DIR OR (GINO_INSTALL_DIR STREQUAL ""))
 
   ExternalProject_Get_Property(gino SOURCE_DIR)
   set(GINO_SRC_DIR ${SOURCE_DIR})
+  include_directories(${DT_INSTALL_DIR}/include)
 else()
   message(STATUS "${Purple}GINO_INSTALL_DIR${ColorReset} is ${GINO_INSTALL_DIR}")
+  execute_process(
+    COMMAND ${GINO_INSTALL_DIR}/bin/gino-config --include-dirs
+    OUTPUT_VARIABLE INCLUDE_DIRS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE GINO_CONFIG_RESULT
+  )
+  if(GINO_CONFIG_RESULT EQUAL 0)
+    string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
+    foreach(INCLUDE_DIR ${INCLUDE_DIRS})
+      include_directories(${INCLUDE_DIR})
+    endforeach()
+  else()
+    message(FATAL_ERROR "Failed to get include directories from gino-config")
+  endif()
 endif()
 
 FetchContent_Declare(
@@ -71,13 +87,6 @@ if(NOT leptoinst_POPULATED)
   FetchContent_MakeAvailable(leptoinst)
 endif()
 
-file(GLOB_RECURSE GINO_CORE_DIRS LIST_DIRECTORIES true "${GINO_SRC_DIR}/src/core/*")
-foreach(dir ${GINO_CORE_DIRS})
-  if(IS_DIRECTORY ${dir} AND EXISTS "${dir}/include")
-    include_directories(${dir}/include)
-  endif()
-endforeach()
-
 find_package(LLVM 14 REQUIRED CONFIG)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -88,8 +97,6 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(HandleLLVMOptions)
 include(AddLLVM)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
-
-include_directories(${DT_INSTALL_DIR}/include)
 
 get_filename_component(DT_CONFIG_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 set(DT_CONFIG_VERSION 0.1.0)
@@ -116,9 +123,9 @@ add_custom_target(
   DtCompileCommands ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
     ${CMAKE_BINARY_DIR}/compile_commands.json
-    ${DT_CMAKE_ROOT}/compile_commands.json
+    ${CMAKE_CURRENT_SOURCE_DIR}/compile_commands.json
 )
 
 add_subdirectory(compiler)
+add_subdirectory(include)
 add_subdirectory(bin)
-add_subdirectory(skynet)
