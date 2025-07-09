@@ -1,5 +1,6 @@
 .cache
 .clangd
+.config
 *.bc
 *.ll
 *.o
@@ -7,6 +8,7 @@
 *.tmp
 build
 compile_commands.json
+config.cmake
 deps
 enable
 install

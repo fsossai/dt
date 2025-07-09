@@ -1,0 +1,11 @@
+config DT_INSTALL_DIR
+  string "Installation directory for DT"
+  default "./install"
+
+config NOELLE_SVF
+  bool "Use SVF analyses"
+  default y
+
+config NOELLE_SCAF
+  bool "Use SCAF analyses"
+  default y

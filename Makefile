@@ -10,8 +10,6 @@ compile: $(BUILD_DIR)
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
 		-DCMAKE_INSTALL_PREFIX=install \
-		-DNOELLE_SVF=ON \
-		-DNOELLE_SCAF=ON \
 		-DCMAKE_BUILD_TYPE=Debug
 
 format:
@@ -20,12 +18,15 @@ format:
 install: compile
 	cmake --install $(BUILD_DIR)
 
+menuconfig:
+	@python3 bin/menuconfig.py
+
 clean:
 	rm -rf $(BUILD_DIR) install
-	rm -f compile_commands.json
+	rm -f compile_commands.json config.cmake
 
 uninstall:
 	-cat $(BUILD_DIR)/install_manifest.txt | xargs rm -f
 	rm -f enable
 
-.PHONY: compile clean format install uninstall
+.PHONY: compile clean format menuconfig install uninstall

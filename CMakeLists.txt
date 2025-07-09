@@ -4,12 +4,44 @@ project(dependence-terminator)
 
 set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
+include(config.default.cmake)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+  include(config.cmake)
+endif()
+
+if(DEFINED DT_INSTALL_DIR)
+  set(CMAKE_INSTALL_PREFIX ${DT_INSTALL_DIR})
+endif()
+
 include(FetchContent)
 include(ExternalProject)
 
 set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
 set(ENABLE_FILE ${CMAKE_CURRENT_LIST_DIR}/enable)
+
+string(ASCII 27 Esc)
+set(Purple "${Esc}[35m")
+set(Green "${Esc}[32m")
+set(Red "${Esc}[31m")
+set(ColorReset "${Esc}[m")
+
+function(dt_acquire_option OPT)
+  if(${OPT} MATCHES "ON|On|on|1")
+    set(${OPT} ON PARENT_SCOPE)
+    message(STATUS "${Purple}Option${ColorReset} ${OPT} ${Green}ON${ColorReset}")
+  elseif(${OPT} MATCHES "OFF|Off|off|0")
+    set(${OPT} OFF PARENT_SCOPE)
+    message(STATUS "${Purple}Option${ColorReset} ${OPT} ${Red}OFF${ColorReset}")
+  elseif(${OPT} MATCHES "OFF|Off|off|0")
+  else()
+    message(FATAL_ERROR "${OPT} must be either ON or OFF")
+  endif()
+endfunction()
+
+dt_acquire_option(NOELLE_SVF)
+dt_acquire_option(NOELLE_SCAF)
+message(STATUS "${Purple}Install directory${ColorReset} is ${CMAKE_INSTALL_PREFIX}")
 
 ExternalProject_Add(gino
   GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
