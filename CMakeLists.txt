@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 
 project(dependence-terminator)
 
+include(ExternalProject)
+include(FetchContent)
+
 set(DT_CMAKE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 include(config.default.cmake)
@@ -12,9 +15,6 @@ endif()
 if(DEFINED DT_INSTALL_DIR)
   set(CMAKE_INSTALL_PREFIX ${DT_INSTALL_DIR})
 endif()
-
-include(FetchContent)
-include(ExternalProject)
 
 set(DT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
 set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
@@ -39,22 +39,27 @@ function(dt_acquire_option OPT)
   endif()
 endfunction()
 
-dt_acquire_option(NOELLE_SVF)
-dt_acquire_option(NOELLE_SCAF)
-message(STATUS "${Purple}Install directory${ColorReset} is ${CMAKE_INSTALL_PREFIX}")
+if(NOT DEFINED GINO_INSTALL_DIR OR (GINO_INSTALL_DIR STREQUAL ""))
+  message(STATUS "${Purple}GINO_INSTALL_DIR${ColorReset} is not defined")
+  dt_acquire_option(NOELLE_SVF)
+  dt_acquire_option(NOELLE_SCAF)
+  message(STATUS "${Purple}Install directory${ColorReset} is ${CMAKE_INSTALL_PREFIX}")
 
-ExternalProject_Add(gino
-  GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
-  GIT_TAG         dt-refactored
-  CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
-                  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                  -DNOELLE_SVF=${NOELLE_SVF}
-                  -DNOELLE_SCAF=${NOELLE_SCAF}
-  INSTALL_DIR     ${CMAKE_BINARY_DIR}
-)
+  ExternalProject_Add(gino
+    GIT_REPOSITORY  "git@github.com:arcana-lab/gino-dt.git"
+    GIT_TAG         dt-refactored
+    CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${DT_INSTALL_DIR}
+                    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                    -DNOELLE_SVF=${NOELLE_SVF}
+                    -DNOELLE_SCAF=${NOELLE_SCAF}
+    INSTALL_DIR     ${CMAKE_BINARY_DIR}
+  )
 
-ExternalProject_Get_Property(gino SOURCE_DIR)
-set(GINO_SRC_DIR ${SOURCE_DIR})
+  ExternalProject_Get_Property(gino SOURCE_DIR)
+  set(GINO_SRC_DIR ${SOURCE_DIR})
+else()
+  message(STATUS "${Purple}GINO_INSTALL_DIR${ColorReset} is ${GINO_INSTALL_DIR}")
+endif()
 
 FetchContent_Declare(
   leptoinst

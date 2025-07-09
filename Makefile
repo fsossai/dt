@@ -1,11 +1,11 @@
 BUILD_DIR = build
-export JOBS ?= 16
-export MAKEFLAGS += --no-print-directory
+MAKEFLAGS += --no-print-directory
+JOBS ?=
 
 all: install
 
 compile: $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) -j$(JOBS)
+	cmake --build $(BUILD_DIR) -j $(JOBS)
 
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
@@ -23,7 +23,7 @@ menuconfig:
 
 clean:
 	rm -rf $(BUILD_DIR) install
-	rm -f compile_commands.json config.cmake
+	rm -f compile_commands.json config.cmake .config
 
 uninstall:
 	-cat $(BUILD_DIR)/install_manifest.txt | xargs rm -f

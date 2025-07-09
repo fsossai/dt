@@ -2,6 +2,10 @@ config DT_INSTALL_DIR
   string "Installation directory for DT"
   default "./install"
 
+config GINO_INSTALL_DIR
+  string "Pre-existing installation directory of Gino. If not provided it will be installed"
+  default ""
+
 config NOELLE_SVF
   bool "Use SVF analyses"
   default y
