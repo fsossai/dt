@@ -1,5 +1,4 @@
 configure_file(winchester.in winchester @ONLY)
-configure_file(dt-config.in dt-config @ONLY)
 
 install(
   PROGRAMS

@@ -1,3 +1,4 @@
 #!/bin/bash
 
 export PATH=@DT_INSTALL_DIR@/bin:$PATH
+export PKG_CONFIG_PATH=@DT_INSTALL_DIR@/lib64/pkgconfig:$PKG_CONFIG_PATH

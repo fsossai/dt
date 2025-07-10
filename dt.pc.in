@@ -1,0 +1,8 @@
+prefix=@pkgconfig_prefix@
+gino_prefix=@pkgconfig_gino_prefix@
+noelle_prefix=@pkgconfig_noelle_prefix@
+
+Name: Dependence Terminator
+Description: I need your clause, your loops, and your dependences
+URL: https://github.com/arcana-lab/dependence-terminator.git
+Version: 2025

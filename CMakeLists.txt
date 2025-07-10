@@ -59,6 +59,9 @@ if(NOT DEFINED GINO_INSTALL_DIR OR (GINO_INSTALL_DIR STREQUAL ""))
   ExternalProject_Get_Property(gino SOURCE_DIR)
   set(GINO_SRC_DIR ${SOURCE_DIR})
   include_directories(${DT_INSTALL_DIR}/include)
+  set(pkgconfig_prefix "${DT_INSTALL_DIR}")
+  set(pkgconfig_noelle_prefix "${DT_INSTALL_DIR}")
+  set(pkgconfig_gino_prefix "${DT_INSTALL_DIR}")
 else()
   message(STATUS "${Purple}GINO_INSTALL_DIR${ColorReset} is ${GINO_INSTALL_DIR}")
 
@@ -73,14 +76,19 @@ else()
   # symlink noelle-config to DT_INSTALL_DIR/bin
   execute_process(
     COMMAND ${GINO_INSTALL_DIR}/bin/gino-config --noelle-prefix
-    OUTPUT_VARIABLE NOELLE_PREFIX
+    OUTPUT_VARIABLE NOELLE_INSTALL_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE GINO_CONFIG_RESULT
   )
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E create_symlink
-      ${NOELLE_PREFIX}/bin/noelle-config ${DT_INSTALL_DIR}/bin/noelle-config
+      ${NOELLE_INSTALL_DIR}/bin/noelle-config ${DT_INSTALL_DIR}/bin/noelle-config
   )
+
+  # pkgconfig
+  set(pkgconfig_prefix "${DT_INSTALL_DIR}")
+  set(pkgconfig_noelle_prefix "${NOELLE_INSTALL_DIR}")
+  set(pkgconfig_gino_prefix "${GINO_INSTALL_DIR}")
 
   execute_process(
     COMMAND ${GINO_INSTALL_DIR}/bin/gino-config --include-dirs
@@ -139,6 +147,7 @@ execute_process(
 )
 
 configure_file(enable.in ${CMAKE_SOURCE_DIR}/enable @ONLY)
+configure_file(dt.pc.in ${DT_INSTALL_DIR}/lib64/pkgconfig/dt.pc @ONLY)
 
 add_custom_target(
   DtCompileCommands ALL
