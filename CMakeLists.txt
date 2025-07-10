@@ -19,7 +19,7 @@ else()
 endif()
 
 set(GINO_SRC_DIR ${CMAKE_BINARY_DIR}/_deps/gino)
-set(DT_ENABLE_FILE ${CMAKE_CURRENT_LIST_DIR}/enable)
+set(DT_ENABLE_FILE ${CMAKE_SOURCE_DIR}/enable)
 
 string(ASCII 27 Esc)
 set(Purple "${Esc}[35m")
