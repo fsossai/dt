@@ -64,21 +64,26 @@ stage=0
 echo "Winchester: Stage $stage: Bitcode extraction"
 
 source /project/gllvm/enable
+
 gclang++ \
   -DNOELLE_PRAGMA_BODY_DISABLE \
+  -L$(noelle-config --prefix)/lib \
+  -Wl,-rpath=$(noelle-config --prefix)/lib \
+  -lpragma \
   $winchester_frontend \
+  $winchester_linker \
   -fopenmp \
   -fno-exceptions \
   -fno-vectorize \
-  -c \
   -O3 \
   -Xclang \
   -disable-llvm-passes \
   -I $(noelle-config --include) \
-  -I /nfs-scratch/fsv1684/repo/dt/skynet \
-  -o $outDir/${winchester_outBin}_s${stage}_input.o \
+  -I @DT_INSTALL_DIR@/include \
+  -o $outDir/${winchester_outBin}_s${stage}_input.out \
   $@
-get-bc -o $outDir/${winchester_outBin}_s${stage}_input.bc $outDir/${winchester_outBin}_s${stage}_input.o
+
+get-bc -o $outDir/${winchester_outBin}_s${stage}_input.bc $outDir/${winchester_outBin}_s${stage}_input.out
 noelle-norm $outDir/${winchester_outBin}_s${stage}_input.bc -o $outDir/${winchester_outBin}_s${stage}_input.bc
 lap_timer
 
