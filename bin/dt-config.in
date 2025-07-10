@@ -4,11 +4,8 @@ function show_help() {
   echo "usage: $(basename $0) <OPTIONS>..."
   echo
   echo "Options"
-  echo "  --help                Print this help message"
-  echo "  --prefix              Print the installation directory"
-  echo "  --includedir          Print the include directory"
-  echo "  --libdir              Print the directory containing static/dynamic libraries"
-  echo "  --libs                Print the arguments to link against the libraries"
+  echo "  --help            Print this help message"
+  echo "  --prefix          Print the installation directory"
 }
 
 if [[ $# < 1 ]]; then
@@ -24,15 +21,6 @@ for arg in "$@"; do
       ;;
     --prefix) 
       echo "@CMAKE_INSTALL_PREFIX@"
-      ;;
-    --includedir)
-      echo "@CMAKE_INSTALL_PREFIX@/include"
-      ;;
-    --libdir)
-      echo "@CMAKE_INSTALL_PREFIX@/lib"
-      ;;
-    --libs)
-      echo ""
       ;;
     *)
       echo "Unknown argument: $arg"
