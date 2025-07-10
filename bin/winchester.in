@@ -2,8 +2,14 @@
 
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
-source @DT_ENABLE_FILE@
-DT_INSTALL_DIR=@DT_INSTALL_DIR@
+export PATH=@DT_INSTALL_DIR@/bin:$PATH
+export LD_LIBRARY_PATH=@DT_INSTALL_DIR@/lib:$LD_LIBRARY_PATH
+
+export PATH=$(@DT_INSTALL_DIR@/bin/gino-config --prefix)/bin:$PATH
+export LD_LIBRARY_PATH=$(@DT_INSTALL_DIR@/bin/gino-config --prefix)/lib:$LD_LIBRARY_PATH
+
+export PATH=$(@DT_INSTALL_DIR@/bin/noelle-config --prefix)/bin:$PATH
+export LD_LIBRARY_PATH=$(@DT_INSTALL_DIR@/bin/noelle-config --prefix)/lib:$LD_LIBRARY_PATH
 
 timer_file=$(mktemp)
 
@@ -82,8 +88,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $DT_INSTALL_DIR/lib/Terminator.so \
-      -load $DT_INSTALL_DIR/lib/Dot.so \
+      -load @DT_INSTALL_DIR@/lib/Terminator.so \
+      -load @DT_INSTALL_DIR@/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
       -dot-tag=$tag \
       -Dot \
@@ -92,8 +98,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $DT_INSTALL_DIR/lib/Terminator.so \
-      -load $DT_INSTALL_DIR/lib/Dot.so \
+      -load @DT_INSTALL_DIR@/lib/Terminator.so \
+      -load @DT_INSTALL_DIR@/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}_term.dot" \
       -dot-tag=$tag \
       -dot-term \
@@ -120,7 +126,7 @@ clang++ \
   -c \
   -emit-llvm \
   -O3 \
-  -I $DT_INSTALL_DIR/include/skynet \
+  -I @DT_INSTALL_DIR@/include/skynet \
   -o $outDir/runtime_def.bc \
   $(gino-config --runtime-def) \
   2>&1
@@ -128,7 +134,7 @@ clang \
   -c \
   -emit-llvm \
   -O3 \
-  -I $DT_INSTALL_DIR/include/skynet \
+  -I @DT_INSTALL_DIR@/include/skynet \
   -o $outDir/runtime_decl.bc \
   $(gino-config --runtime-decl) \
   2>&1
@@ -140,8 +146,8 @@ if [[ $winchester_craftPlan != "0" ]]; then
       -disable-output \
       -noelle-disable-dswp \
       -noelle-disable-helix \
-      -load $DT_INSTALL_DIR/lib/Terminator.so \
-      -load $DT_INSTALL_DIR/lib/Dot.so \
+      -load @DT_INSTALL_DIR@/lib/Terminator.so \
+      -load @DT_INSTALL_DIR@/lib/Dot.so \
       -dot-output="$outDir/${winchester_outBin}_s${stage}_tag${tag}.dot" \
       -dot-tag=$tag \
       -Dot \
@@ -155,8 +161,8 @@ echo "Winchester: Stage $stage: Termination"
 gino-load  \
   -noelle-disable-dswp \
   -noelle-disable-helix \
-  -load $DT_INSTALL_DIR/lib/LoopBlocker.so \
-  -load $DT_INSTALL_DIR/lib/Terminator.so \
+  -load @DT_INSTALL_DIR@/lib/LoopBlocker.so \
+  -load @DT_INSTALL_DIR@/lib/Terminator.so \
   -Terminator \
   --terminator-tagged-only=${winchester_taggedOnly} \
   --terminator-func=${winchester_func} \
