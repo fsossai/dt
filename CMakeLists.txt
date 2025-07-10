@@ -61,6 +61,27 @@ if(NOT DEFINED GINO_INSTALL_DIR OR (GINO_INSTALL_DIR STREQUAL ""))
   include_directories(${DT_INSTALL_DIR}/include)
 else()
   message(STATUS "${Purple}GINO_INSTALL_DIR${ColorReset} is ${GINO_INSTALL_DIR}")
+
+  file(MAKE_DIRECTORY ${DT_INSTALL_DIR}/bin)
+
+  # symlink gino-config to DT_INSTALL_DIR/bin
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${GINO_INSTALL_DIR}/bin/gino-config ${DT_INSTALL_DIR}/bin/gino-config
+  )
+
+  # symlink noelle-config to DT_INSTALL_DIR/bin
+  execute_process(
+    COMMAND ${GINO_INSTALL_DIR}/bin/gino-config --noelle-prefix
+    OUTPUT_VARIABLE NOELLE_PREFIX
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE GINO_CONFIG_RESULT
+  )
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${NOELLE_PREFIX}/bin/noelle-config ${DT_INSTALL_DIR}/bin/noelle-config
+  )
+
   execute_process(
     COMMAND ${GINO_INSTALL_DIR}/bin/gino-config --include-dirs
     OUTPUT_VARIABLE INCLUDE_DIRS
