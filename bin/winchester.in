@@ -2,9 +2,8 @@
 
 trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
 
-source @ENABLE_FILE@
+source @DT_ENABLE_FILE@
 DT_INSTALL_DIR=@DT_INSTALL_DIR@
-GINO_SRC=@GINO_SRC_DIR@
 
 timer_file=$(mktemp)
 
@@ -122,16 +121,16 @@ clang++ \
   -emit-llvm \
   -O3 \
   -I $DT_INSTALL_DIR/include/skynet \
-  -o $outDir/Parallelizer_utils.bc \
-  $GINO_SRC/src/runtime/Parallelizer_utils.cpp \
+  -o $outDir/runtime_def.bc \
+  $(gino-config --runtime-def) \
   2>&1
 clang \
   -c \
   -emit-llvm \
   -O3 \
   -I $DT_INSTALL_DIR/include/skynet \
-  -o $outDir/GINO_APIs.bc \
-  $GINO_SRC/src/runtime/GINO_APIs.c \
+  -o $outDir/runtime_decl.bc \
+  $(gino-config --runtime-decl) \
   2>&1
 lap_timer
 
@@ -177,8 +176,8 @@ stage=3
 echo "Winchester: Stage $stage: Linking runtime"
 llvm-link \
   $outDir/${winchester_outBin}_s$((stage-1))_terminated.bc \
-  $outDir/Parallelizer_utils.bc \
-  $outDir/GINO_APIs.bc \
+  $outDir/runtime_decl.bc \
+  $outDir/runtime_def.bc \
   -o $outDir/${winchester_outBin}_s${stage}_linked.bc
 lap_timer
 

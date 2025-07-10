@@ -9,6 +9,7 @@ compile: $(BUILD_DIR)
 
 $(BUILD_DIR):
 	cmake -B $(BUILD_DIR) -S . \
+		-DCMAKE_INSTALL_MESSAGE=LAZY \
 		-DCMAKE_INSTALL_PREFIX=install \
 		-DCMAKE_BUILD_TYPE=Debug
 
