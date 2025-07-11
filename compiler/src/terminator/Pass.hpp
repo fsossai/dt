@@ -25,7 +25,8 @@ public:
   uint64_t getLoopTag(noelle::LoopStructure *LS);
 
 private:
-  void populateLoopTags(noelle::Noelle &noelle, llvm::Function &F,
+  void populateLoopTags(noelle::Noelle &noelle,
+                        llvm::Function &F,
                         const std::vector<noelle::LoopStructure *> &LSs);
 
   noelle::Logger log;

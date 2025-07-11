@@ -14,7 +14,7 @@ $(BUILD_DIR):
 		-DCMAKE_BUILD_TYPE=Debug
 
 format:
-	find ./compiler ./skynet ./tests -regex '.*\.[c|h]pp' | xargs clang-format -i
+	find ./compiler ./include ./tests -regex '.*\.[c|h]pp' | xargs clang-format -i
 
 install: compile
 	cmake --install $(BUILD_DIR)
