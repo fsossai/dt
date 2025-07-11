@@ -431,11 +431,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
     // Moving the looporder metadata to the new outer loop
     auto LO = MM->getMetadata(LS, "gino.looporder");
-    MM->deleteMetadata(LS->getHeader()->getTerminator(),
-                       "gino.looporder");
-    MM->addMetadata(NewHeader->getTerminator(),
-                    "gino.looporder",
-                    LO);
+    MM->deleteMetadata(LS->getHeader()->getTerminator(), "gino.looporder");
+    MM->addMetadata(NewHeader->getTerminator(), "gino.looporder", LO);
 
     // Marking the new loop as DOALL
     auto scheduling = TA.getScheduling(LS);
