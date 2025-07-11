@@ -126,6 +126,7 @@ opt $inline --internalize-public-api-list=main --internalize --globaldce $outDir
 
 noelle-norm $outDir/${winchester_outBin}_s${stage}_inlined.bc -o $outDir/${winchester_outBin}_s${stage}_inlined.bc
 clang++ \
+  -fno-exceptions \
   -fopenmp \
   -std=c++17 \
   -c \
