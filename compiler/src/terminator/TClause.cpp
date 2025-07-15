@@ -23,11 +23,10 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
     this->variable = pragmaArgs[0];
     assert(this->variable->getType()->isPointerTy());
     this->defaultValue = pragmaArgs[1];
-
-    auto dstType = this->variable->getType()->getPointerElementType();
-    assert(this->defaultValue->getType() == dstType);
-
+    
+    assert(this->defaultValue->getType() == this->variable->getType()->getPointerElementType());
     assert(isa<Function>(pragmaArgs[2]));
+
     this->function = cast<Function>(pragmaArgs[2]);
     assert(this->function->getReturnType()->isVoidTy());
 
@@ -35,8 +34,7 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
     assert(this->function->arg_size() == (pragmaArgs.size() - 3 + 1));
     auto arg_it = this->function->arg_begin();
     // The first argument is the number of blocks
-    auto &context = this->function->getContext();
-    assert(arg_it->getType() == IntegerType::getInt32Ty(context));
+    assert(arg_it->getType() == IntegerType::getInt32Ty(this->function->getContext()));
     ++arg_it;
     for (size_t i = 3; i < pragmaArgs.size(); i++) {
       // The type of the arguments provided to the clause must be compatible
