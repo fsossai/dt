@@ -63,8 +63,6 @@ lap_timer_init # timer initialization
 stage=0
 echo "Winchester: Stage $stage: Bitcode extraction"
 
-source /project/gllvm/enable
-
 gclang++ \
   -DNOELLE_PRAGMA_BODY_DISABLE \
   -L$(noelle-config --prefix)/lib \
