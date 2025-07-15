@@ -101,6 +101,10 @@ public:
     add(1);
   }
 
+  INLINE void operator+=(T x) {
+    add(x);
+  }
+
   INLINE void __add(size_t k, T x) {
     container_[k * PAD] += x;
   }
