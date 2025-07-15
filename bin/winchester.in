@@ -222,7 +222,7 @@ opt \
 clang++ \
   $winchester_linker \
   $winchester_opt \
-  -pthreads \
+  -pthread \
   -fopenmp \
   $outDir/${winchester_outBin}_s${stage}_exe.bc \
   -o $outDir/${winchester_outBin}_s${stage}_exe.out
