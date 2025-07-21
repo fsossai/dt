@@ -38,6 +38,10 @@ if [[ -z $winchester_inline ]]; then
   winchester_inline="yes"
 fi
 
+if [[ -z $winchester_profiler ]]; then
+  winchester_profiler="no"
+fi
+
 if [[ -z $winchester_craftPlan ]]; then
   winchester_craftPlan="0"
 fi
@@ -68,6 +72,7 @@ gclang++ \
   -L$(noelle-config --prefix)/lib \
   -Wl,-rpath=$(noelle-config --prefix)/lib \
   -lpragma \
+  -lprofiler \
   $winchester_frontend \
   $winchester_linker \
   -fopenmp \
@@ -83,6 +88,16 @@ gclang++ \
 
 get-bc -o $outDir/${winchester_outBin}_s${stage}_input.bc $outDir/${winchester_outBin}_s${stage}_input.out
 noelle-norm $outDir/${winchester_outBin}_s${stage}_input.bc -o $outDir/${winchester_outBin}_s${stage}_input.bc
+
+if [[ $winchester_profiler == "yes" ]]; then
+  echo "Winchester: Profiler enabled"
+  noelle-profiler \
+    -profiler-no-std \
+    -profiler-no-demangle \
+    -o $outDir/${winchester_outBin}_s${stage}_input.bc \
+    $outDir/${winchester_outBin}_s${stage}_input.bc
+fi
+
 lap_timer
 
 if [[ $winchester_craftPlan != "0" ]]; then
@@ -217,8 +232,13 @@ opt \
   $outDir/${winchester_outBin}_s$((stage-1))_nopragma.bc \
   -o $outDir/${winchester_outBin}_s${stage}_exe.bc
 
+if [[ $winchester_profiler == "yes" ]]; then
+  profiler_linker="-L$(noelle-config --prefix)/lib -lprofiler"
+fi
+
 clang++ \
   $winchester_linker \
+  $profiler_linker \
   $winchester_opt \
   -pthread \
   -fopenmp \
