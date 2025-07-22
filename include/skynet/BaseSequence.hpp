@@ -144,21 +144,22 @@ public:
 
   void reduce() {
     auto &dst = container_[0];
-    std::atomic<size_t> offset = dst.size();
+    size_t orig_size = dst.size();
     dst.resize(size());
 
-#pragma omp parallel for ordered
+    // prefix sum
+    std::vector<size_t> offsets(container_.size(), 0);
+    offsets[0] = orig_size;
+    for (size_t i = 1; i < container_.size(); ++i) {
+      offsets[i] = offsets[i - 1] + container_[i].size();
+    }
+
+#pragma omp parallel for
     for (size_t i = 1; i < container_.size(); i++) {
       auto &src = container_[i];
-      size_t i_start;
-      if constexpr (Order) {
-#pragma omp ordered
-        i_start = offset.fetch_add(src.size());
-      } else {
-        i_start = offset.fetch_add(src.size());
-      }
+      size_t i_start = offsets[i - 1];
       std::copy(src.begin(), src.end(), dst.begin() + i_start);
-      src.resize(0);
+      src.clear();
     }
   }
 
