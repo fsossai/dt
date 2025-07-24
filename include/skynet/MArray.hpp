@@ -131,7 +131,7 @@ public:
   }
 
   INLINE void __add(int t, size_t idx, T value) {
-#pragma omp atomic
+// #pragma omp atomic
     container_[t / M_][idx] += value;
   }
 
