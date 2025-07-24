@@ -35,7 +35,7 @@ void clause_array_add(int N, MArray<T> *array) {
   auto L = array->size_;
   for (size_t i = currentK; i < K; i++) {
     auto &new_row = array->container_[i];
-    new_row.resize(L);
+    new_row.resize(L, array->default_value_);
   }
 }
 
@@ -55,6 +55,14 @@ int clause_array_add_nested(int N, MArray<T> *array, int M, int offset = 0) {
   int retVal = (offset + tc_chain_id()) * N;
   noelle_pragma_end(p);
   return retVal;
+}
+
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &lhs, const std::vector<T> &rhs) {
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    lhs[i] += rhs[i];
+  }
+  return lhs;
 }
 
 template <class T>
@@ -88,14 +96,15 @@ public:
     MArray<T> *base_;
   };
 
-  MArray(size_t size) : size_(size), M_(1) {
+  MArray(size_t size, T default_value)
+    : size_(size),
+      default_value_(default_value) {
     container_.emplace_back();
     container_[0].resize(size);
-  }
-
-  MArray(size_t size, T default_value) : MArray(size) {
     fill(default_value);
   }
+
+  MArray(size_t size) : MArray(size, T{}) {}
 
   void setSharing(int M) {
     assert(M >= 1);
@@ -130,12 +139,13 @@ public:
     noelle_pragma_end(p);
   }
 
-  INLINE void __add(int t, size_t idx, T value) {
-// #pragma omp atomic
-    container_[t / M_][idx] += value;
+  INLINE void __add(int t, size_t idx, const T& value) {
+    // #pragma omp atomic
+    // container_[t / M_][idx] += value;
+    container_[t][idx] += value;
   }
 
-  INLINE void add(size_t idx, T value) {
+  INLINE void add(size_t idx, const T& value) {
     int t = 0;
     auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array_add<T>, this);
     __add(t, idx, value);
@@ -207,6 +217,7 @@ public:
   std::vector<std::vector<T>> container_;
   size_t size_;
   int M_;
+  T default_value_;
 };
 
 } // namespace skynet
