@@ -93,6 +93,10 @@ public:
     container_[0].resize(size);
   }
 
+  MArray(size_t size, T default_value) : MArray(size) {
+    fill(default_value);
+  }
+
   void setSharing(int M) {
     assert(M >= 1);
     M_ = M;
