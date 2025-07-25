@@ -97,6 +97,21 @@ public:
     return acc;
   }
 
+  INLINE T stale_read() const {
+    int k;
+    auto p = noelle_pragma_begin("ldtc", &k, (int)0);
+    auto &x = container_[k];
+    noelle_pragma_end(p);
+    return x;
+  }
+
+  INLINE void stale_write(T x) {
+    int k;
+    auto p = noelle_pragma_begin("ldtc", &k, (int)0);
+    container_[k] = std::move(x);
+    noelle_pragma_end(p);
+  }
+
   INLINE void operator++() {
     add(1);
   }
