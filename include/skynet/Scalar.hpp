@@ -112,6 +112,14 @@ public:
     noelle_pragma_end(p);
   }
 
+  INLINE T __stale_read(int k) const {
+    return container_[k];
+  }
+
+  INLINE void __stale_write(int k, T x) {
+    container_[k] = std::move(x);
+  }
+
   INLINE void operator++() {
     add(1);
   }
