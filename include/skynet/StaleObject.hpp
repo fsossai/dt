@@ -18,8 +18,6 @@ void clause_stale_object_set(int N, StaleObject<T> *obj) {
   if (obj->container_.size() == N) {
     return;
   }
-  assert(obj->container_.size() >= 1);
-  auto current_size = obj->container_.size();
   obj->container_.resize(N);
 }
 
@@ -39,9 +37,9 @@ public:
     return *this;
   }
 
-  INLINE operator T() {
-    return get();
-  }
+  // INLINE operator T() {
+  //   return get();
+  // }
 
   INLINE T &get() {
     int k = 0;
