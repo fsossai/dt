@@ -54,7 +54,7 @@ if [[ -z $winchester_taggedOnly ]]; then
   winchester_taggedOnly="false"
 fi
 
-if [[ $# < 1 || $# > 2 ]]; then
+if [[ $# < 1 ]]; then
   echo "usage: `basename $0` <SOURCES>"
   exit 1
 fi
