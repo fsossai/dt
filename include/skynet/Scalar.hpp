@@ -11,8 +11,6 @@
 
 namespace skynet {
 
-const uint32_t L1D_CACHE_LINE_SIZE = 64;
-
 template <class T,
           uint32_t PAD = std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
 class Scalar;
