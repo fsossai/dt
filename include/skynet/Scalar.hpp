@@ -11,8 +11,7 @@
 
 namespace skynet {
 
-template <class T,
-          uint32_t PAD = std::max<uint32_t>(L1D_CACHE_LINE_SIZE / sizeof(T), 1)>
+template <class T, uint32_t PAD = compute_padding<T>()>
 class Scalar;
 
 template <class T, uint32_t PAD>
