@@ -79,7 +79,7 @@ public:
     Iterator(MArray<T> *base, int idx) : idx_(idx), base_(base) {}
 
     T operator*() {
-      return base_[idx_];
+      return (*base_)[idx_];
     }
 
     Iterator &operator++() {
@@ -139,13 +139,13 @@ public:
     noelle_pragma_end(p);
   }
 
-  INLINE void __add(int t, size_t idx, const T& value) {
+  INLINE void __add(int t, size_t idx, const T &value) {
     // #pragma omp atomic
     // container_[t / M_][idx] += value;
     container_[t][idx] += value;
   }
 
-  INLINE void add(size_t idx, const T& value) {
+  INLINE void add(size_t idx, const T &value) {
     int t = 0;
     auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array_add<T>, this);
     __add(t, idx, value);
@@ -167,7 +167,7 @@ public:
     return false;
   }
 
-  T operator[](size_t idx) {
+  T operator[](size_t idx) const {
     T v = container_[0][idx];
     for (size_t i = 1; i < container_.size(); i++) {
       v += container_[i][idx];
