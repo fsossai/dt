@@ -169,14 +169,17 @@ public:
   }
 
   template <typename R = void>
+  typename std::enable_if_t<Order, R> __append(int t, T *values, size_t N) {
+    const int offset = container_[t].size();
+    container_[t].resize(offset + N);
+    std::copy(values, values + N, container_[t].begin() + offset);
+  }
+
+  template <typename R = void>
   typename std::enable_if_t<Order, R> __append(int t,
                                                skynet::Array<T> &values,
                                                size_t N) {
-    const int offset = container_[t].size();
-    container_[t].resize(offset + N);
-    std::copy(values.container_,
-              values.container_ + N,
-              container_[t].begin() + offset);
+    __append(t, values.container_, N);
   }
 
   template <typename R = void>
