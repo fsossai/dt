@@ -98,7 +98,8 @@ public:
 
   MArray(size_t size, T default_value)
     : size_(size),
-      default_value_(default_value) {
+      default_value_(default_value),
+      M_(1) {
     container_.emplace_back();
     container_[0].resize(size);
     fill(default_value);
