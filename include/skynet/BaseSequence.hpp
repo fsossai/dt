@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <omp.h>
+#include <sys/types.h>
 #include <vector>
 
 #include "Common.hpp"
@@ -342,6 +343,7 @@ public:
 
   // private:
   std::vector<VectorT> container_;
+  uint32_t pad_ = PAD;
 
   INLINE std::pair<size_t, size_t> getCoordinates(size_t idx) const {
     int i = -1;

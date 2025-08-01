@@ -11,6 +11,8 @@
 #include "Array.hpp"
 #include "Bag.hpp"
 #include "BaseSequence.hpp"
+#include "CMultimap.hpp"
+#include "CCMultimap.hpp"
 #include "EnumSet.hpp"
 #include "HSequence.hpp"
 #include "IV.hpp"
