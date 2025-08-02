@@ -184,6 +184,28 @@ public:
     container_.resize(1);
   }
 
+  // recursive doubling
+  void reduce_rd() {
+    int P = container_.size();
+    if (P == 0)
+      return;
+
+    int N = container_[0].size();
+
+    // Recursive doubling
+    for (int step = 1; step < P; step <<= 1) {
+#pragma omp parallel for
+      for (int i = 0; i < P; i += 2 * step) {
+        int j = i + step;
+        if (j < P) {
+          for (int k = 0; k < N; ++k)
+            container_[i][k] += container_[j][k];
+        }
+      }
+    }
+    container_.resize(1);
+  }
+
   Iterator begin() {
     return Iterator(this, 0);
   }
