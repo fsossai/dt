@@ -197,9 +197,11 @@ public:
 #pragma omp parallel for
       for (int i = 0; i < P; i += 2 * step) {
         int j = i + step;
+        const auto &lhs = container_[i];
+        const auto &rhs = container_[j];
         if (j < P) {
           for (int k = 0; k < N; ++k)
-            container_[i][k] += container_[j][k];
+            lhs[k] += rhs[k];
         }
       }
     }
