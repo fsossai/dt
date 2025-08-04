@@ -60,7 +60,8 @@ int clause_array_add_nested(int N, MArray<T> *array, int M, int offset = 0) {
 
 template <typename T>
 std::vector<T> &operator+=(std::vector<T> &lhs, const std::vector<T> &rhs) {
-  for (size_t i = 0; i < lhs.size(); ++i) {
+  const auto N = lhs.size();
+  for (size_t i = 0; i < N; ++i) {
     lhs[i] += rhs[i];
   }
   return lhs;
@@ -99,8 +100,8 @@ public:
 
   MArray(size_t size, T default_value)
     : size_(size),
-      default_value_(default_value),
-      M_(1) {
+      M_(1),
+      default_value_(default_value) {
     container_.emplace_back();
     container_[0].resize(size);
     fill(default_value);
