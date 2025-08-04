@@ -177,7 +177,7 @@ public:
   }
 
   void reduce() {
-#pragma omp parallel for
+// #pragma omp parallel for
     for (size_t i = 0; i < size_; i++) {
       container_[0][i] = operator[](i);
     }
@@ -194,7 +194,7 @@ public:
 
     // Recursive doubling
     for (int step = 1; step < P; step <<= 1) {
-#pragma omp parallel for
+// #pragma omp parallel for
       for (int i = 0; i < P; i += 2 * step) {
         int j = i + step;
         auto &lhs = container_[i];
