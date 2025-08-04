@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <omp.h>
 #include <type_traits>
 #include <vector>
 
@@ -176,8 +177,9 @@ public:
     return v;
   }
 
-  void reduce() {
-// #pragma omp parallel for
+  void reduce(bool parallel = true) {
+    const int nthreads = omp_get_max_threads() ? parallel : 1;
+#pragma omp parallel for num_threads(nthreads)
     for (size_t i = 0; i < size_; i++) {
       container_[0][i] = operator[](i);
     }
@@ -185,8 +187,10 @@ public:
   }
 
   // recursive doubling
-  void reduce_rd() {
+  void reduce_rd(bool parallel = true) {
+    const int nthreads = omp_get_max_threads() ? parallel : 1;
     int P = container_.size();
+
     if (P == 0)
       return;
 
@@ -194,7 +198,7 @@ public:
 
     // Recursive doubling
     for (int step = 1; step < P; step <<= 1) {
-// #pragma omp parallel for
+#pragma omp parallel for num_threads(nthreads)
       for (int i = 0; i < P; i += 2 * step) {
         int j = i + step;
         auto &lhs = container_[i];
