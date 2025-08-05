@@ -11,28 +11,36 @@
 
 namespace skynet {
 
-template <size_t Padding = 1>
+template <size_t BITSIZE = 1>
 class EnumSet {
 public:
   EnumSet(size_t size) {
-    buf_size_ = ((size * Padding) + 7) / 8;
-    buf_ = new uint8_t[buf_size_];
+    buf_size_ = ((size * BITSIZE) + 7) / 8;
+    buf_ = static_cast<uint8_t*>(aligned_alloc(64, buf_size_));
   }
 
   ~EnumSet() {
-    delete[] buf_;
+    free(buf_);
   }
 
   INLINE void insert(size_t value) {
     auto p = noelle_pragma_begin("ldtc");
-    __atomic_fetch_or(&buf_[(value * Padding) / 8],
-                      1ULL << ((value * Padding) % 8),
-                      __ATOMIC_RELAXED);
+    if constexpr (BITSIZE % 8 == 0) {
+      buf_[value * (BITSIZE / 8)] = 1;
+    } else {
+      __atomic_fetch_or(&buf_[(value * BITSIZE) / 8],
+                        1ULL << ((value * BITSIZE) % 8),
+                        __ATOMIC_RELAXED);
+    }
     noelle_pragma_end(p);
   }
 
-  bool contains(size_t value) const {
-    return buf_[(value * Padding) / 8] & (1ULL << ((value * Padding) % 8ULL));
+  INLINE bool contains(size_t value) const {
+    if constexpr (BITSIZE % 8 == 0) {
+      return buf_[value * (BITSIZE / 8)];
+    } else {
+      return buf_[(value * BITSIZE) / 8] & (1ULL << ((value * BITSIZE) % 8ULL));
+    }
   }
 
   bool find(size_t value) const {
@@ -47,8 +55,8 @@ public:
     memset(buf_, 0x00, sizeof(uint8_t) * buf_size_);
   }
 
-private:
-  uint8_t *buf_;
+  // private:
+  alignas(64) uint8_t *buf_;
   size_t buf_size_;
 };
 
