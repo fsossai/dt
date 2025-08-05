@@ -11,7 +11,7 @@
 
 namespace skynet {
 
-template <class T = size_t, size_t Padding = 1>
+template <size_t Padding = 1>
 class EnumSet {
 public:
   EnumSet(size_t size) {
@@ -35,7 +35,7 @@ public:
     return buf_[(value * Padding) / 8] & (1ULL << ((value * Padding) % 8ULL));
   }
 
-  bool find(T value) const {
+  bool find(size_t value) const {
     return contains(value);
   }
 
