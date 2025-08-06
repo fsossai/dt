@@ -32,14 +32,15 @@ void clause_array_add(int N, MArray<T> *array) {
 #endif
 
   assert(currentK < K);
-  auto ceil_div = [](size_t a, size_t b) { return (a + b - 1) / b; };
+  constexpr auto ceil_div = [](size_t a, size_t b) { return (a + b - 1) / b; };
 
   array->container_.resize(K);
   auto L = array->size_;
   for (size_t i = currentK; i < K; i++) {
     auto &new_row = array->container_[i];
-    const auto padding_elements = ceil_div(MArray<T>::TAIL_PADDING, sizeof(T));
-    new_row.reserve(L + MArray<T>::TAIL_PADDING);
+    constexpr auto padding_elements =
+        ceil_div(MArray<T>::TAIL_PADDING, sizeof(T));
+    new_row.reserve(L + padding_elements);
     new_row.resize(L, array->default_value_);
   }
 }
@@ -80,7 +81,7 @@ public:
                                         int M,
                                         int offset);
 
-  static constexpr size_t TAIL_PADDING = 4000; // bytes
+  static constexpr size_t TAIL_PADDING = 1000; // bytes
 
   class Iterator {
   public:
