@@ -70,7 +70,7 @@ public:
   }
 
   Tk minKey() {
-    Tk current_min = std::numeric_limits<Tk>::min();
+    Tk current_min = std::numeric_limits<Tk>::max();
 #pragma omp parallel for reduction(min : current_min)
     for (int i = 0; i < container_.size() / PAD; i++) {
       auto &block = container_[i * PAD];
@@ -84,7 +84,7 @@ public:
   }
 
   Tk maxKey() {
-    Tk current_max = std::numeric_limits<Tk>::max();
+    Tk current_max = std::numeric_limits<Tk>::min();
 #pragma omp parallel for reduction(max : current_max)
     for (int i = 0; i < container_.size() / PAD; i++) {
       auto &block = container_[i * PAD];
