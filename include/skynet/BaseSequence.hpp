@@ -305,7 +305,8 @@ public:
   }
 
   void serialize(const std::function<void(T *, size_t)> &writer) {
-    for (size_t i = 0; i < container_.size() / PAD; i++) {
+    const size_t P = container_.size() / PAD;
+    for (size_t i = 0; i < P; i++) {
       auto &row = container_[i * PAD];
       writer(row.data(), row.size());
     }
@@ -320,12 +321,19 @@ public:
   }
 
   bool empty() const {
-    return size() == 0;
+    const size_t P = container_.size() / PAD;
+    for (size_t i = 0; i < P; i++) {
+      if (!container_[i * PAD].empty()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   size_t size() const {
     size_t sum = 0;
-    for (size_t i = 0; i < container_.size() / PAD; i++) {
+    const size_t P = container_.size() / PAD;
+    for (size_t i = 0; i < P; i++) {
       sum += container_[i * PAD].size();
     }
     return sum;
@@ -354,7 +362,8 @@ public:
 
   void clear() {
     // #pragma omp parallel for
-    for (int i = 0; i < container_.size() / PAD; i++) {
+    const size_t P = container_.size() / PAD;
+    for (int i = 0; i < P; i++) {
       container_[i * PAD].clear();
     }
   }
