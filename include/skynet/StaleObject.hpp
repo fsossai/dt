@@ -46,7 +46,7 @@ public:
   INLINE T &get() {
     int k = 0;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
-    auto &result = container_[k];
+    auto &result = container_[k * PAD];
     noelle_pragma_end(p);
     return result;
   }
