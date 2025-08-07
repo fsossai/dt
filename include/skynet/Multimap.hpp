@@ -21,7 +21,9 @@ namespace skynet {
 template <typename T>
 using Bucket = std::vector<T>;
 
-template <typename Tk, typename Tv, uint32_t PAD = compute_padding<Bucket<Tv>>()>
+template <typename Tk,
+          typename Tv,
+          uint32_t PAD = compute_padding<Bucket<Tv>>()>
 class Multimap;
 
 template <typename Tk, typename Tv, uint32_t PAD>
@@ -100,6 +102,19 @@ public:
     for (int i = 0; i < container_.size() / PAD; i++) {
       container_[i * PAD].erase(key);
     }
+  }
+
+  void reduce_seq() { // untested
+    const size_t P = container_.size() / PAD;
+    auto &dst = container_[0];
+    for (int i = 1; i < P; i++) {
+      for (auto &[key, bucket] : container_[i * PAD]) {
+        for (const auto &e : bucket) {
+          dst[key].push_back(e);
+        }
+      }
+    }
+    container_.resize(1 * PAD);
   }
 
   void printInternals() {
