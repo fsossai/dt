@@ -16,15 +16,10 @@ class Scalar;
 
 template <class T, uint32_t PAD>
 void clause_scalar_add(int N, Scalar<T, PAD> *s) {
-  N *= PAD;
-#ifdef DEBUG
-  std::printf("%s(%i, %p, %i)\n", __func__, N, s);
-#endif
-  if (s->container_.size() == N) {
+  if (s->container_.size() / PAD == N) {
     return;
   }
-  assert(s->container_.size() == 1);
-  s->container_.resize(N);
+  s->container_.resize(N * PAD);
 }
 
 template <class T, uint32_t PAD>
@@ -56,8 +51,9 @@ public:
   }
 
   void set(T x) {
-    for (auto &e : container_) {
-      e = T{};
+    const size_t P = container_.size() / PAD;
+    for (size_t i = 0; i < P; i++) {
+      container_[i * PAD] = T{};
     }
     container_[0] = x;
   }
@@ -87,9 +83,10 @@ public:
 
   T get() const {
     T acc = container_[0];
-// #pragma omp parallel for reduction(+ : acc) // not worth it
-    for (size_t i = 1; i < container_.size(); i++) {
-      acc += container_[i];
+    const size_t P = container_.size() / PAD;
+    // #pragma omp parallel for reduction(+ : acc) // not worth it
+    for (size_t i = 1; i < P; i++) {
+      acc += container_[i * PAD];
     }
     return acc;
   }
@@ -97,7 +94,7 @@ public:
   INLINE T stale_read() const {
     int k;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
-    auto &x = container_[k];
+    auto &x = container_[k * PAD];
     noelle_pragma_end(p);
     return x;
   }
@@ -105,16 +102,16 @@ public:
   INLINE void stale_write(T x) {
     int k;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
-    container_[k] = std::move(x);
+    container_[k * PAD] = std::move(x);
     noelle_pragma_end(p);
   }
 
   INLINE T __stale_read(int k) const {
-    return container_[k];
+    return container_[k * PAD];
   }
 
   INLINE void __stale_write(int k, T x) {
-    container_[k] = std::move(x);
+    container_[k * PAD] = std::move(x);
   }
 
   INLINE void operator++() {
