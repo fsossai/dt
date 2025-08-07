@@ -165,15 +165,14 @@ public:
     // prefix sum
     std::vector<size_t> offset(P + 1, 0);
     offset[0] = 0;
-    for (size_t i = 1; i <= P; ++i) {
-      offset[i] = offset[i - 1] + container_[(i - 1) * PAD].size();
+    for (size_t i = 0; i < P; ++i) {
+      offset[i + 1] = offset[i] + container_[i * PAD].size();
     }
 
     auto &dst = container_[0];
     dst.resize(offset[P]);
     for (size_t i = 1; i < P; i++) {
       auto &src = container_[i * PAD];
-      size_t i_start = offset[i - 1];
       std::copy(src.begin(), src.end(), dst.begin() + offset[i]);
       src.clear();
     }
@@ -185,8 +184,8 @@ public:
     // prefix sum
     std::vector<size_t> offset(P + 1, 0);
     offset[0] = 0;
-    for (size_t i = 1; i <= P; ++i) {
-      offset[i] = offset[i - 1] + container_[(i - 1) * PAD].size();
+    for (size_t i = 0; i < P; ++i) {
+      offset[i + 1] = offset[i] + container_[i * PAD].size();
     }
 
     auto &dst = container_[0];
@@ -194,7 +193,6 @@ public:
 #pragma omp parallel for
     for (size_t i = 1; i < P; i++) {
       auto &src = container_[i * PAD];
-      size_t i_start = offset[i - 1];
       std::copy(src.begin(), src.end(), dst.begin() + offset[i]);
       src.clear();
     }
