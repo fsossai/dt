@@ -185,9 +185,15 @@ public:
     return v;
   }
 
-  void reduce(bool parallel = true) {
-    const int nthreads = omp_get_max_threads() ? parallel : 1;
-#pragma omp parallel for num_threads(nthreads)
+  void reduce_par() {
+#pragma omp parallel for
+    for (size_t i = 0; i < size_; i++) {
+      container_[0][i] = operator[](i);
+    }
+    container_.resize(1);
+  }
+
+  void reduce_seq() {
     for (size_t i = 0; i < size_; i++) {
       container_[0][i] = operator[](i);
     }

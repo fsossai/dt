@@ -87,7 +87,7 @@ public:
 
   T get() const {
     T acc = container_[0];
-#pragma omp parallel for reduction(+ : acc)
+// #pragma omp parallel for reduction(+ : acc) // not worth it
     for (size_t i = 1; i < container_.size(); i++) {
       acc += container_[i];
     }
