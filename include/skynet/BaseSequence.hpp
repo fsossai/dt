@@ -137,6 +137,7 @@ public:
       assert(idxs_[t * PAD] < subc.size());
 
       // swap-and-pop idiom
+      // not sure about the following std::move
       subc[idxs_[t * PAD]] = std::move(subc[subc.size() - 1]);
       subc.pop_back();
     }
