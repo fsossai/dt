@@ -19,31 +19,38 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
   if (pragmaArgs.size() == 0) {
     // We call this "strong" clause
     this->function = nullptr;
-  } else if (pragmaArgs.size() >= 3) {
+  } else if (pragmaArgs.size() >= 2) {
     this->variable = pragmaArgs[0];
     assert(this->variable->getType()->isPointerTy());
     this->defaultValue = pragmaArgs[1];
-    
-    assert(this->defaultValue->getType() == this->variable->getType()->getPointerElementType());
-    assert(isa<Function>(pragmaArgs[2]));
 
-    this->function = cast<Function>(pragmaArgs[2]);
-    assert(this->function->getReturnType()->isVoidTy());
+    assert(this->defaultValue->getType()
+           == this->variable->getType()->getPointerElementType());
 
-    // Remaining arguments are arguments of the clause function
-    assert(this->function->arg_size() == (pragmaArgs.size() - 3 + 1));
-    auto arg_it = this->function->arg_begin();
-    // The first argument is the number of blocks
-    assert(arg_it->getType() == IntegerType::getInt32Ty(this->function->getContext()));
-    ++arg_it;
-    for (size_t i = 3; i < pragmaArgs.size(); i++) {
-      // The type of the arguments provided to the clause must be compatible
-      // with the signature of the clause function
-      assert(arg_it->getType() == pragmaArgs[i]->getType());
-      this->callArguments.push_back(pragmaArgs[i]);
+    // Often times, clauses might not have a function
+    if (pragmaArgs.size() >= 3) {
+      assert(isa<Function>(pragmaArgs[2]));
+
+      this->function = cast<Function>(pragmaArgs[2]);
+      assert(this->function->getReturnType()->isVoidTy());
+
+      // Remaining arguments are arguments of the clause function
+      assert(this->function->arg_size() == (pragmaArgs.size() - 3 + 1));
+      auto arg_it = this->function->arg_begin();
+      // The first argument is the number of blocks
+      assert(arg_it->getType()
+             == IntegerType::getInt32Ty(this->function->getContext()));
       ++arg_it;
+      for (size_t i = 3; i < pragmaArgs.size(); i++) {
+        // The type of the arguments provided to the clause must be compatible
+        // with the signature of the clause function
+        assert(arg_it->getType() == pragmaArgs[i]->getType());
+        this->callArguments.push_back(pragmaArgs[i]);
+        ++arg_it;
+      }
     }
   } else {
+    PT.print(errs());
     assert(false && "invalid number of pragma arguments for a clause");
   }
 
