@@ -19,7 +19,7 @@ int main() {
 
   skynet::Scalar<int> result;
   for (auto x : a) {
-    result.sum(x);
+    result.add(x);
   }
 
   cout << "Sum = " << result.get() << "\n";

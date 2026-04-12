@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include "Array.hpp"
 
 #include "arcana/noelle/core/Pragma.h"
+#include "arcana/noelle/core/PragmaDecl.h"
 
 namespace skynet {
 
@@ -41,6 +43,21 @@ void clause_sequence_append(int N, BaseSequence<T, Order, PAD> *seq) {
   }
 }
 
+template <typename T, uint32_t PAD>
+void clause_bag_iterator_erase(
+    int N,
+    typename BaseSequence<T, /*Order=*/false, PAD>::Iterator *it) {
+  // nothing to do
+}
+
+template <typename T, uint32_t PAD>
+void clause_bag_iterator_op_plusplus(
+    int N,
+    typename BaseSequence<T, /*Order=*/false, PAD>::Iterator *it) {
+  it->idxs_.resize(N * PAD);
+  assert(it->base_->container_.size() == (N * PAD));
+}
+
 template <typename T, bool Order, uint32_t PAD>
 class BaseSequence {
 public:
@@ -52,38 +69,92 @@ public:
   class Iterator {
   public:
     Iterator(BaseSequence<T, Order, PAD> *base, size_t idx)
-      : idx_(idx),
-        base_(base) {}
+      : idxs_({ idx }),
+        base_(base) {
+      idxs_.resize(PAD);
+    }
 
-    T operator*() {
-      auto c = base_->getCoordinates(idx_);
-      return base_->container_[c.first * PAD][c.second];
+    T &__op_star(int t) {
+      assert(idxs_[t * PAD] < base_->container_[t * PAD].size());
+      return base_->container_[t * PAD][idxs_[t * PAD]];
+    }
+
+    T &operator*() {
+      int k = 0;
+      auto p = noelle_pragma_begin("ldtc", &k, 0);
+      auto &val = __op_star(k);
+      noelle_pragma_end(p);
+      return val;
+    }
+
+    Iterator __op_plusplus(int t) {
+      ++idxs_[t * PAD];
+      assert(idxs_[t * PAD] <= base_->container_[t * PAD].size());
+      return *this;
     }
 
     Iterator &operator++() {
-      idx_++;
+      int k = 0;
+      auto p = noelle_pragma_begin("ldtc",
+                                   &k,
+                                   0,
+                                   clause_bag_iterator_op_plusplus<T, PAD>,
+                                   this);
+      __op_plusplus(k);
+      noelle_pragma_end(p);
       return *this;
     }
 
     Iterator &operator+=(size_t delta) {
-      idx_ += delta;
+      idxs_[0] += delta;
       return *this;
     }
 
+    bool __op_neq(int t, const Iterator & /*other*/) const {
+      assert(idxs_[t * PAD] <= base_->container_[t * PAD].size());
+      return idxs_[t * PAD] != base_->container_[t * PAD].size();
+    }
+
     bool operator!=(const Iterator &other) const {
-      return idx_ != other.idx_;
+      int k = 0;
+      auto p = noelle_pragma_begin("ldtc", &k, 0);
+      bool val = __op_neq(k, other);
+      noelle_pragma_end(p);
+      return val;
     }
 
     int64_t operator-(const Iterator &other) const {
-      return (int64_t)idx_ - (int64_t)other.idx_;
+      return (int64_t)idxs_[0] - (int64_t)other.idxs_[0];
     }
 
     Iterator operator+(int64_t a) const {
-      return { base_, idx_ + a };
+      return { base_, idxs_[0] + a };
     }
 
-  private:
-    size_t idx_;
+    template <typename R = void>
+    typename std::enable_if_t<!Order, R> __erase(int t) {
+      auto &subc = base_->container_[t * PAD];
+      assert(idxs_[t * PAD] < subc.size());
+
+      // swap-and-pop idiom
+      subc[idxs_[t * PAD]] = std::move(subc[subc.size() - 1]);
+      subc.pop_back();
+    }
+
+    template <typename R = void>
+    typename std::enable_if_t<!Order, R> erase() {
+      int k = 0;
+      auto p = noelle_pragma_begin("ldtc",
+                                   &k,
+                                   0,
+                                   clause_bag_iterator_erase<T, PAD>,
+                                   this);
+      __erase(k);
+      noelle_pragma_end(p);
+    }
+
+    // private:
+    std::vector<size_t> idxs_;
     BaseSequence<T, Order, PAD> *base_;
   };
 
@@ -370,7 +441,7 @@ public:
 
   // private:
   std::vector<VectorT> container_;
-  uint32_t pad_ = PAD;
+  static constexpr uint32_t pad_ = PAD;
 
   INLINE std::pair<size_t, size_t> getCoordinates(size_t idx) const {
     int i = -1;
