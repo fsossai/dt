@@ -1,4 +1,5 @@
 
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 
@@ -95,7 +96,7 @@ bool TClause::isStrong() const {
 }
 
 raw_ostream &TClause::print(raw_ostream &stream, string prefix) {
-  if (this->isStrong()) {
+  if (this->isStrong() || this->function == nullptr) {
     stream << prefix << "<nofunc> (" << this->getUniqueName() << ")";
   } else {
     stream << prefix << this->function->getName().str() << " ("
