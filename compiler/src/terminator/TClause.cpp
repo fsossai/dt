@@ -2,6 +2,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include <cstddef>
 
 #include "arcana/noelle/core/PragmaForest.hpp"
 #include "arcana/dt/TClause.hpp"
@@ -49,6 +50,8 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
         this->callArguments.push_back(pragmaArgs[i]);
         ++arg_it;
       }
+    } else {
+      this->function = nullptr;
     }
   } else {
     PT.print(errs());
