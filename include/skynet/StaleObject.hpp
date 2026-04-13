@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cassert>
+#include <iostream>
 #include <vector>
+
 #include "arcana/noelle/core/Pragma.h"
 
 #include "Common.hpp"
@@ -31,10 +33,6 @@ class StaleObject {
 public:
   friend void clause_stale_object_set<T>(int N, StaleObject<T, PAD> *obj);
 
-  // template <typename... Args>
-  // StaleObject(Args &&...args) : container_{ T(std::forward<Args>(args)...) }
-  // {}
-
   StaleObject() : container_(1) {}
 
   StaleObject<T, PAD> &operator=(StaleObject<T, PAD> &other) {
@@ -42,13 +40,13 @@ public:
     return *this;
   }
 
-  // INLINE operator T() {
-  //   return get();
-  // }
-
   INLINE T &get() {
     int k = 0;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
+#ifdef DEBUG
+    std::printf("%s(k=%i)\n", __func__, k);
+#endif
+
     auto &result = container_[k * PAD];
     noelle_pragma_end(p);
     return result;

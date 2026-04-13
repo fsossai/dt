@@ -30,8 +30,6 @@ public:
 
   llvm::raw_ostream &print(llvm::raw_ostream &stream, std::string prefix = "");
 
-  bool isStrong() const;
-
 private:
   noelle::PragmaTree &PT;
   llvm::Value *variable;

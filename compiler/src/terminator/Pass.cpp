@@ -353,64 +353,61 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto ClauseInsertionPoint = PreHeader->getTerminator();
 
     // Applying termination clauses
-    int clauseID = 0;
     for (auto clause : TA.getClausesOf(LS)) {
       log.info() << "Loop" << LD << ": Handling: " << *clause << "\n";
-      if (clause->isStrong()) {
-        // This kind of clauses don't need to be handled
-        continue;
-      }
 
-      // Solving for an earlier location of the arguments.
-      // By contract, we must find a pointer value that dominates
-      // the PreHeader.
-      auto AdjustedCallArgs = clause->getCallArguments();
-      auto F = LS->getHeader()->getParent();
-      DominatorTree DT(*F);
-      DT.recalculate(*F); // because a new BasicBlock has been created
+      if (clause->getFunction() != nullptr) {
+        // Solving for an earlier location of the arguments.
+        // By contract, we must find a pointer value that dominates
+        // the PreHeader.
+        auto AdjustedCallArgs = clause->getCallArguments();
+        auto F = LS->getHeader()->getParent();
+        DominatorTree DT(*F);
+        DT.recalculate(*F); // because a new BasicBlock has been created
 
-      for (auto &A : AdjustedCallArgs) {
-        if (!isa<Instruction>(A)) {
-          // We assume the Value is available
-          continue;
-        }
-        auto CurrentDef = dyn_cast<Instruction>(A);
-
-        // Construct the def-use chain back to the origin
-        stack<Instruction *> defUseChain;
-        while (!DT.dominates(CurrentDef, ClauseInsertionPoint)) {
-          if (auto GEP = dyn_cast<GetElementPtrInst>(CurrentDef)) {
-            defUseChain.push(CurrentDef);
-            CurrentDef = cast<Instruction>(GEP->getPointerOperand());
-          } else if (isa<AllocaInst>(CurrentDef)) {
-            break;
-          } else {
-            log.bypass() << "ERROR: Unhandled\n";
-            log.bypass() << *A << "\n";
-            abort();
+        for (auto &A : AdjustedCallArgs) {
+          if (!isa<Instruction>(A)) {
+            // We assume the Value is available
+            continue;
           }
+          auto CurrentDef = dyn_cast<Instruction>(A);
+
+          // Construct the def-use chain back to the origin
+          stack<Instruction *> defUseChain;
+          while (!DT.dominates(CurrentDef, ClauseInsertionPoint)) {
+            if (auto GEP = dyn_cast<GetElementPtrInst>(CurrentDef)) {
+              defUseChain.push(CurrentDef);
+              CurrentDef = cast<Instruction>(GEP->getPointerOperand());
+            } else if (isa<AllocaInst>(CurrentDef)) {
+              break;
+            } else {
+              log.bypass() << "ERROR: Unhandled\n";
+              log.bypass() << *A << "\n";
+              abort();
+            }
+          }
+
+          // Re-construct a new def-use chain in which all instructions
+          // dominates any call to a clause function
+          auto LastNewDef = CurrentDef;
+          while (!defUseChain.empty()) {
+            auto Def = defUseChain.top();
+            defUseChain.pop();
+            auto NewDef = Def->clone();
+            assert(isa<GetElementPtrInst>(NewDef));
+            NewDef->setOperand(0, LastNewDef);
+            PreHeader->getInstList().insert(Builder.GetInsertPoint(), NewDef);
+            LastNewDef = NewDef;
+          }
+
+          A = LastNewDef;
         }
 
-        // Re-construct a new def-use chain in which all instructions
-        // dominates any call to a clause function
-        auto LastNewDef = CurrentDef;
-        while (!defUseChain.empty()) {
-          auto Def = defUseChain.top();
-          defUseChain.pop();
-          auto NewDef = Def->clone();
-          assert(isa<GetElementPtrInst>(NewDef));
-          NewDef->setOperand(0, LastNewDef);
-          PreHeader->getInstList().insert(Builder.GetInsertPoint(), NewDef);
-          LastNewDef = NewDef;
-        }
-
-        A = LastNewDef;
+        // The first argument is always `NumBlocks` by contract
+        AdjustedCallArgs.insert(AdjustedCallArgs.begin(), NumBlocks);
+        Builder.SetInsertPoint(ClauseInsertionPoint);
+        Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
       }
-
-      // The first argument is always `NumBlocks` by contract
-      AdjustedCallArgs.insert(AdjustedCallArgs.begin(), NumBlocks);
-      Builder.SetInsertPoint(ClauseInsertionPoint);
-      Builder.CreateCall(clause->getFunction(), AdjustedCallArgs);
 
       // Type manipulation of the `t` induction variable
       // auto SrcTy = NewIVPHI->getType();
@@ -426,7 +423,6 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
         Replacement = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
       }
       Builder.CreateStore(Replacement, clause->getVariable());
-      clauseID++;
     }
 
     // Moving the looporder metadata to the new outer loop

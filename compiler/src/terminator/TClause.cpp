@@ -15,12 +15,11 @@ static int clauseIncrementalID = 0;
 
 namespace arcana::dt {
 
-TClause::TClause(PragmaTree &PT) : PT(PT) {
+TClause::TClause(PragmaTree &PT) : PT(PT), function(nullptr) {
   auto pragmaArgs = PT.getArguments();
 
   if (pragmaArgs.size() == 0) {
-    // We call this "strong" clause
-    this->function = nullptr;
+    // This clause requires no termination
   } else if (pragmaArgs.size() >= 2) {
     this->variable = pragmaArgs[0];
     assert(this->variable->getType()->isPointerTy());
@@ -50,8 +49,6 @@ TClause::TClause(PragmaTree &PT) : PT(PT) {
         this->callArguments.push_back(pragmaArgs[i]);
         ++arg_it;
       }
-    } else {
-      this->function = nullptr;
     }
   } else {
     PT.print(errs());
@@ -94,12 +91,8 @@ void TClause::erase() {
   this->PT.getEndDelimiter()->eraseFromParent();
 }
 
-bool TClause::isStrong() const {
-  return this->function == nullptr;
-}
-
 raw_ostream &TClause::print(raw_ostream &stream, string prefix) {
-  if (this->isStrong() || this->function == nullptr) {
+  if (this->function == nullptr) {
     stream << prefix << "<nofunc> (" << this->getUniqueName() << ")";
   } else {
     stream << prefix << this->function->getName().str() << " ("
