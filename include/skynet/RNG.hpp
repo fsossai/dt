@@ -36,13 +36,13 @@ public:
     size_t k = 0;
     auto _p =
         noelle_pragma_begin("ldtc", &k, (size_t)0, clause_rng_gen<PAD>, this);
-    auto num = __gen(k * PAD);
+    auto num = __gen(k);
     noelle_pragma_end(_p);
     return num;
   }
 
   INLINE int64_t __gen(size_t k) {
-    return std::uniform_int_distribution<int>(0, RAND_MAX)(engine_[k]);
+    return std::uniform_int_distribution<int>(0, RAND_MAX)(engine_[k * PAD]);
   }
 
 private:
