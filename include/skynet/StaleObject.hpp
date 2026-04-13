@@ -21,6 +21,9 @@ void clause_stale_object_set(int N, StaleObject<T, PAD> *obj) {
     return;
   }
   obj->container_.resize(N * PAD);
+  for (int i = 1; i < N; i++) {
+    obj->container_[i * PAD] = obj->container_[0];
+  }
 }
 
 template <class T, uint32_t PAD>
