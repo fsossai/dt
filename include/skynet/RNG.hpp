@@ -11,42 +11,47 @@
 
 namespace skynet {
 
-template <uint32_t PAD = compute_padding<std::mt19937>()>
+static constexpr uint32_t RNG_PAD = compute_padding<std::mt19937>();
+
 class RNG;
 
-template <uint32_t PAD>
-void clause_rng_gen(int N, RNG<PAD> *rng) {
-  if (rng->engine_.size() / PAD == N) {
-    return;
-  }
+void clause_rng_gen(int N, RNG *rng);
 
-  rng->engine_.resize(N * PAD, std::mt19937(std::random_device{}()));
-}
-
-template <uint32_t PAD>
 class RNG {
 public:
-  friend void clause_rng_gen<PAD>(int N, RNG<PAD> *s);
+  friend void clause_rng_gen(int N, RNG *s);
 
   RNG() {
-    engine_.resize(PAD, std::mt19937(std::random_device{}()));
+    engine_.resize(RNG_PAD, std::mt19937(std::random_device{}()));
   }
 
   INLINE int64_t gen() {
     size_t k = 0;
-    auto _p =
-        noelle_pragma_begin("ldtc", &k, (size_t)0, clause_rng_gen<PAD>, this);
+    auto _p = noelle_pragma_begin("ldtc", &k, (size_t)0, clause_rng_gen, this);
     auto num = __gen(k);
     noelle_pragma_end(_p);
     return num;
   }
 
   INLINE int64_t __gen(size_t k) {
-    return std::uniform_int_distribution<int>(0, RAND_MAX)(engine_[k * PAD]);
+    return std::uniform_int_distribution<int>(0,
+                                              RAND_MAX)(engine_[k * RNG_PAD]);
   }
 
 private:
   std::vector<std::mt19937> engine_;
 };
+
+inline void clause_rng_gen(int N, RNG *rng) {
+  if (rng->engine_.size() / RNG_PAD == N) {
+    return;
+  }
+
+  std::random_device rd;
+  rng->engine_.resize(N * RNG_PAD);
+  for (auto &eng : rng->engine_) {
+    eng.seed(rd());
+  }
+}
 
 } // namespace skynet
