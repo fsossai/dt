@@ -24,6 +24,7 @@
 #include "Multimap.hpp"
 #include "PSequence.hpp"
 #include "Range.hpp"
+#include "RNG.hpp"
 #include "Scalar.hpp"
 #include "Sequence.hpp"
 #include "Set.hpp"
