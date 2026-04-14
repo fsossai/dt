@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef INLINE
+#define INLINE __attribute__((always_inline))
+#endif
+
 enum { SKYNET_L1D_CACHE_LINE_SIZE = 64u };
 
 static inline uint32_t skynet_gcd_u32(uint32_t a, uint32_t b) {

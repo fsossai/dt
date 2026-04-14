@@ -46,7 +46,7 @@ static void test_sequence_ordered_ints(void) {
 
   printf("[sequence_c] expand to 2 lanes and append to lane 1\n");
   assert(seq.pad > 0);
-  assert(skynet_sequence_append_clause(2, &seq));
+  skynet_sequence_append_clause(2, &seq);
   assert(skynet_sequence_append__(&seq, 1, &lane1_a));
   assert(skynet_sequence_append__(&seq, 1, &lane1_b));
   assert(*(int *)skynet_sequence_at(&seq, 6) == 60);
@@ -92,7 +92,7 @@ static void test_sequence_ordered_ints(void) {
   printf("[sequence_c] parallel append with OpenMP: threads=%d per_thread=%d\n",
          nt,
          per_thread);
-  assert(skynet_sequence_append_clause(nt, &seq));
+  skynet_sequence_append_clause(nt, &seq);
 
 #pragma omp parallel num_threads(nt)
   {

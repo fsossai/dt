@@ -25,14 +25,16 @@ typedef struct skynet_sequence {
   size_t elem_size;
 } skynet_sequence_t;
 
-static inline int skynet_sequence_append_clause(int n, skynet_sequence_t *seq);
+static inline void skynet_sequence_append_clause(int n, skynet_sequence_t *seq);
 
 static inline uint32_t skynet_sequence_default_pad(void) {
-  uint32_t pad = skynet_compute_padding_for_size(sizeof(skynet_sequence_lane_t));
+  uint32_t pad =
+      skynet_compute_padding_for_size(sizeof(skynet_sequence_lane_t));
   return pad == 0u ? 1u : pad;
 }
 
-static inline int skynet_sequence_init(skynet_sequence_t *seq, size_t elem_size) {
+static inline int skynet_sequence_init(skynet_sequence_t *seq,
+                                       size_t elem_size) {
   if (seq == NULL || elem_size == 0u) {
     return 0;
   }
@@ -85,7 +87,8 @@ static inline int skynet_sequence_reserve__(skynet_sequence_t *seq,
   return 1;
 }
 
-static inline int skynet_sequence_reserve(skynet_sequence_t *seq, size_t capacity) {
+static inline int skynet_sequence_reserve(skynet_sequence_t *seq,
+                                          size_t capacity) {
   return skynet_sequence_reserve__(seq, 0, capacity);
 }
 
@@ -120,14 +123,13 @@ static inline int skynet_sequence_append__(skynet_sequence_t *seq,
   return 1;
 }
 
-static inline int skynet_sequence_append(skynet_sequence_t *seq, const void *elem) {
+INLINE
+static inline int skynet_sequence_append(skynet_sequence_t *seq,
+                                         const void *elem) {
   int k = 0;
   int ok = 0;
-  int p = noelle_pragma_begin("ldtc",
-                              &k,
-                              0,
-                              skynet_sequence_append_clause,
-                              seq);
+  int p =
+      noelle_pragma_begin("ldtc", &k, 0, skynet_sequence_append_clause, seq);
   if (seq != NULL && elem != NULL) {
     ok = skynet_sequence_append__(seq, k, elem);
   }
@@ -158,11 +160,8 @@ static inline int skynet_sequence_append_many(skynet_sequence_t *seq,
                                               size_t n) {
   int k = 0;
   int ok = 0;
-  int p = noelle_pragma_begin("ldtc",
-                              &k,
-                              0,
-                              skynet_sequence_append_clause,
-                              seq);
+  int p =
+      noelle_pragma_begin("ldtc", &k, 0, skynet_sequence_append_clause, seq);
   if (seq != NULL && (elems != NULL || n == 0u)) {
     ok = skynet_sequence_append_many__(seq, k, elems, n);
   }
@@ -170,35 +169,36 @@ static inline int skynet_sequence_append_many(skynet_sequence_t *seq,
   return ok;
 }
 
-static inline int skynet_sequence_append_clause(int n, skynet_sequence_t *seq) {
+static inline void skynet_sequence_append_clause(int n, skynet_sequence_t *seq) {
   size_t parts;
   size_t old_count;
   size_t new_count;
   skynet_sequence_lane_t *new_lanes;
 
   if (seq == NULL || n <= 0) {
-    return 0;
+    return;
   }
 
   parts = (size_t)n;
   if (seq->pad == 0u || parts == 0u) {
-    return 0;
+    return;
   }
   if (parts <= seq->parts) {
-    return 1;
+    return;
   }
 
   old_count = seq->parts * (size_t)seq->pad;
   new_count = parts * (size_t)seq->pad;
-  if (old_count > SIZE_MAX / sizeof(skynet_sequence_lane_t) ||
-      new_count > SIZE_MAX / sizeof(skynet_sequence_lane_t)) {
-    return 0;
+  if (old_count > SIZE_MAX / sizeof(skynet_sequence_lane_t)
+      || new_count > SIZE_MAX / sizeof(skynet_sequence_lane_t)) {
+    return;
   }
 
   new_lanes = (skynet_sequence_lane_t *)realloc(
-      seq->lanes, new_count * sizeof(skynet_sequence_lane_t));
+      seq->lanes,
+      new_count * sizeof(skynet_sequence_lane_t));
   if (new_lanes == NULL) {
-    return 0;
+    return;
   }
 
   memset(new_lanes + old_count,
@@ -206,7 +206,6 @@ static inline int skynet_sequence_append_clause(int n, skynet_sequence_t *seq) {
          (new_count - old_count) * sizeof(skynet_sequence_lane_t));
   seq->lanes = new_lanes;
   seq->parts = parts;
-  return 1;
 }
 
 static inline void *skynet_sequence_at(skynet_sequence_t *seq, size_t idx) {
