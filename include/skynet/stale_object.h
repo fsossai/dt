@@ -88,6 +88,7 @@ static inline void *skynet_stale_object_get__(skynet_stale_object_t *obj,
   return obj->container + (slot * obj->elem_size);
 }
 
+INLINE
 static inline void *skynet_stale_object_get(skynet_stale_object_t *obj) {
   int k = 0;
   void *result = NULL;
@@ -117,6 +118,7 @@ static inline int skynet_stale_object_set__(skynet_stale_object_t *obj,
   return 1;
 }
 
+INLINE
 static inline int skynet_stale_object_set(skynet_stale_object_t *obj,
                                           const void *value) {
   int k = 0;
