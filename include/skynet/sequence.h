@@ -155,6 +155,7 @@ static inline int skynet_sequence_append_many__(skynet_sequence_t *seq,
   return 1;
 }
 
+INLINE
 static inline int skynet_sequence_append_many(skynet_sequence_t *seq,
                                               const uint8_t *elems,
                                               size_t n) {
@@ -169,7 +170,8 @@ static inline int skynet_sequence_append_many(skynet_sequence_t *seq,
   return ok;
 }
 
-static inline void skynet_sequence_append_clause(int n, skynet_sequence_t *seq) {
+static inline void skynet_sequence_append_clause(int n,
+                                                 skynet_sequence_t *seq) {
   size_t parts;
   size_t old_count;
   size_t new_count;
