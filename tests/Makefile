@@ -1,3 +1,4 @@
+CC = clang
 CXX = clang++
 STD = -std=c++17
 INCLUDE =-I ../include/skynet -I $(shell noelle-config --include)
@@ -8,6 +9,7 @@ OPT ?= -g
 FLAGS=
 
 TARGETS=$(patsubst %.cpp,%,$(wildcard *.cpp))
+TARGETS_C=$(patsubst %.c,%,$(wildcard *.c))
 DIRS=
 
 all: $(TARGETS)
@@ -21,6 +23,9 @@ bfs_%:
 
 $(TARGETS): % : %.cpp
 	$(CXX) $(STD) -fopenmp $(CXX_ARGS) $(OPT) $(FLAGS) $^ -o $@.out
+
+$(TARGETS_C): % : %.c
+	$(CC) -fopenmp $(CXX_ARGS) $(OPT) $(FLAGS) $^ -o $@.out
 
 %.bc : %.cpp
 	$(CXX) $(STD) -fopenmp $(INCLUDE) $(FLAGS) -c -emit-llvm -O1 -Xclang -disable-llvm-passes -fno-exceptions $^ -o $@
