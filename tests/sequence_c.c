@@ -2,10 +2,31 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <omp.h>
 
 #include "sequence.h"
+
+typedef struct serialize_ctx {
+  int *buffer;
+  size_t capacity;
+  size_t count;
+  int calls;
+} serialize_ctx_t;
+
+static void collect_writer(const void *data, size_t n, void *user_data) {
+  serialize_ctx_t *ctx = (serialize_ctx_t *)user_data;
+  const int *row = (const int *)data;
+  size_t j;
+
+  assert(ctx->count + n <= ctx->capacity);
+  for (j = 0u; j < n; ++j) {
+    ctx->buffer[ctx->count + j] = row[j];
+  }
+  ctx->count += n;
+  ctx->calls += 1;
+}
 
 static void test_sequence_ordered_ints(void) {
   skynet_sequence_t seq;
@@ -119,6 +140,29 @@ static void test_sequence_ordered_ints(void) {
   assert(v != NULL && *v == 200000);
   v = (int *)skynet_sequence_at(&seq, ((size_t)per_thread * 2u) - 1u);
   assert(v != NULL && *v == 200000 + (per_thread - 1));
+
+  printf("[sequence_c] serialize via callback\n");
+  {
+    serialize_ctx_t ctx;
+    int *buffer = (int *)malloc(expected_total * sizeof(int));
+    assert(buffer != NULL);
+    ctx.buffer = buffer;
+    ctx.capacity = expected_total;
+    ctx.count = 0u;
+    ctx.calls = 0;
+    skynet_sequence_serialize(&seq, collect_writer, &ctx);
+    assert(ctx.calls == nt);
+    assert(ctx.count == expected_total);
+    for (i = 0u; i < expected_total; ++i) {
+      int *at = (int *)skynet_sequence_at(&seq, i);
+      assert(at != NULL);
+      assert(buffer[i] == *at);
+    }
+    free(buffer);
+  }
+
+  printf("[sequence_c] serialize guards against NULL writer\n");
+  skynet_sequence_serialize(&seq, NULL, NULL);
 
   printf("[sequence_c] destroy sequence\n");
   skynet_sequence_destroy(&seq);

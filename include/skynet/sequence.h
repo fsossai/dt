@@ -229,6 +229,22 @@ static inline void *skynet_sequence_at(skynet_sequence_t *seq, size_t idx) {
   return NULL;
 }
 
+typedef void (*skynet_sequence_writer_t)(const void *data,
+                                         size_t n,
+                                         void *user_data);
+
+static inline void skynet_sequence_serialize(skynet_sequence_t *seq,
+                                             skynet_sequence_writer_t writer,
+                                             void *user_data) {
+  if (seq == NULL || seq->lanes == NULL || writer == NULL) {
+    return;
+  }
+  for (size_t i = 0u; i < seq->parts; ++i) {
+    skynet_sequence_lane_t *lane = &seq->lanes[i * (size_t)seq->pad];
+    writer(lane->data, lane->size, user_data);
+  }
+}
+
 static inline void skynet_sequence_clear(skynet_sequence_t *seq) {
   size_t i;
 
