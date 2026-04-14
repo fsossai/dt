@@ -15,7 +15,10 @@ static int clauseIncrementalID = 0;
 
 namespace arcana::dt {
 
-TClause::TClause(PragmaTree &PT) : PT(PT), function(nullptr) {
+TClause::TClause(PragmaTree &PT)
+  : PT(PT),
+    variable(nullptr),
+    function(nullptr) {
   auto pragmaArgs = PT.getArguments();
 
   if (pragmaArgs.size() == 0) {
