@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Common.h"
+#include "common.h"
 #include "arcana/noelle/core/Pragma.h"
 
 #ifdef __cplusplus

@@ -5,7 +5,7 @@
 
 #include <omp.h>
 
-#include "Sequence.h"
+#include "sequence.h"
 
 static void test_sequence_ordered_ints(void) {
   skynet_sequence_t seq;
