@@ -54,6 +54,10 @@ if [[ -z $winchester_taggedOnly ]]; then
   winchester_taggedOnly="false"
 fi
 
+if [[ -z $winchester_forceBlockedScheduling ]]; then
+  winchester_forceBlockedScheduling="false"
+fi
+
 if [[ $# < 1 ]]; then
   echo "usage: `basename $0` <SOURCES>"
   exit 1
@@ -188,6 +192,7 @@ gino-load  \
   --terminator-details \
   --terminator-craft-plan=${winchester_craftPlan} \
   --terminator-interproc=${winchester_interproc} \
+  --force-blocked-scheduling=${winchester_forceBlockedScheduling} \
   --terminator-breaks=-1 \
   --noelle-verbose=0 \
   -o $outDir/${winchester_outBin}_s${stage}_terminated.bc \
