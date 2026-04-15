@@ -75,6 +75,12 @@ static cl::opt<bool> ForceBlockedScheduling(
     cl::init(false),
     cl::desc("Override loop scheduling metadata to blocked"));
 
+static cl::opt<bool> ForceRuntimeScheduling(
+    "force-runtime-scheduling",
+    cl::ZeroOrMore,
+    cl::init(false),
+    cl::desc("Override loop scheduling metadata to runtime"));
+
 DependenceAnalysis *lastAnalysisAdded = nullptr;
 
 TerminatorPass::TerminatorPass()
@@ -230,7 +236,12 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     bool isDOALL = doall.canBeAppliedToLoop(LC, heuristics);
     auto isUnordered = TA.isUnordered(LS);
     auto scheduling = TA.getScheduling(LS);
-    if (ForceBlockedScheduling) {
+    if (ForceRuntimeScheduling) {
+      log.info() << "Loop" << LD << ": Forcing runtime scheduling (overriding "
+                 << scheduling.kind << ", " << scheduling.chunksize << ")\n";
+      scheduling.kind = "runtime";
+      scheduling.chunksize = 0;
+    } else if (ForceBlockedScheduling) {
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
                  << scheduling.kind << ", " << scheduling.chunksize << ")\n";
       scheduling.kind = "static";
@@ -447,7 +458,12 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
     // Marking the new loop as DOALL
     auto scheduling = TA.getScheduling(LS);
-    if (ForceBlockedScheduling) {
+    if (ForceRuntimeScheduling) {
+      log.info() << "Loop" << LD << ": Forcing runtime scheduling (overriding "
+                 << scheduling.kind << ", " << scheduling.chunksize << ")\n";
+      scheduling.kind = "runtime";
+      scheduling.chunksize = 0;
+    } else if (ForceBlockedScheduling) {
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
                  << scheduling.kind << ", " << scheduling.chunksize << ")\n";
       scheduling.kind = "static";
