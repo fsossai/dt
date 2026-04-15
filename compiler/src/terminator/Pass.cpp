@@ -231,10 +231,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     auto isUnordered = TA.isUnordered(LS);
     auto scheduling = TA.getScheduling(LS);
     if (ForceBlockedScheduling) {
-      scheduling.kind = "static";
-      scheduling.chunksize = 0;
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
                  << scheduling.kind << ", " << scheduling.chunksize << ")\n";
+      scheduling.kind = "static";
+      scheduling.chunksize = 0;
     }
 
     if (isDOALL) {
@@ -448,10 +448,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     // Marking the new loop as DOALL
     auto scheduling = TA.getScheduling(LS);
     if (ForceBlockedScheduling) {
-      scheduling.kind = "static";
-      scheduling.chunksize = 0;
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
                  << scheduling.kind << ", " << scheduling.chunksize << ")\n";
+      scheduling.kind = "static";
+      scheduling.chunksize = 0;
     }
     MM->addMetadata(NewHeader->getTerminator(), "gino.doall", "yes");
     MM->addMetadata(NewHeader->getTerminator(),
