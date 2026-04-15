@@ -234,7 +234,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       scheduling.kind = "static";
       scheduling.chunksize = 0;
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
-                 << scheduling.kind << "\", " << scheduling.chunksize << ")\n";
+                 << scheduling.kind << ", " << scheduling.chunksize << ")\n";
     }
 
     if (isDOALL) {
@@ -451,7 +451,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
       scheduling.kind = "static";
       scheduling.chunksize = 0;
       log.info() << "Loop" << LD << ": Forcing blocked scheduling (overriding "
-                 << scheduling.kind << "\", " << scheduling.chunksize << ")\n";
+                 << scheduling.kind << ", " << scheduling.chunksize << ")\n";
     }
     MM->addMetadata(NewHeader->getTerminator(), "gino.doall", "yes");
     MM->addMetadata(NewHeader->getTerminator(),
