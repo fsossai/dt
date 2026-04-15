@@ -419,6 +419,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
           auto ThreadNum = Builder.CreateCall(M.getOrInsertFunction(
               "omp_get_thread_num",
               FunctionType::get(Builder.getInt32Ty(), {}, /*isVarArg=*/false)));
+          MM->addMetadata(ThreadNum, "tc.context", "");
           Replacement = Builder.CreateZExtOrTrunc(ThreadNum, DestTy);
         } else {
           Replacement = Builder.CreateZExtOrTrunc(NewIVPHI, DestTy);
