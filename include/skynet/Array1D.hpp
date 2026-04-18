@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Common.hpp"
+#include "arcana/noelle/core/Pragma.h"
 
 namespace skynet {
 
@@ -43,17 +44,6 @@ public:
     container_[0].resize(size_, default_value_);
   }
 
-  INLINE void __set(size_t t, size_t idx, const T &value) {
-    skynet_assert(t < lanes());
-    skynet_assert(idx < size_);
-    container_[t][idx] = value;
-  }
-
-  INLINE void set(size_t idx, const T &value) {
-    int t = 0;
-    __set(t, idx, value);
-  }
-
   INLINE void __add(size_t t, size_t idx, const T &value) {
     skynet_assert(t < lanes());
     skynet_assert(idx < size_);
@@ -62,7 +52,9 @@ public:
 
   INLINE void add(size_t idx, const T &value) {
     int t = 0;
+    auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array1d_add<T>, this);
     __add(t, idx, value);
+    noelle_pragma_end(p);
   }
 
   INLINE T operator[](size_t idx) const {
