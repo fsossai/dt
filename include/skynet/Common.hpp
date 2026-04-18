@@ -3,6 +3,13 @@
 #include <algorithm>
 #include <cstdint>
 
+#if defined(SKYNET_ENABLE_ASSERT)
+#include <cassert>
+#define skynet_assert(expr) assert(expr)
+#else
+#define skynet_assert(expr) ((void)0)
+#endif
+
 #define INLINE __attribute__((always_inline))
 
 const uint32_t L1D_CACHE_LINE_SIZE = 64;

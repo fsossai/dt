@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <cstddef>
 #include <vector>
 
@@ -22,7 +21,7 @@ class Array1D;
 
 template <typename T>
 void clause_array1d_add(int N, Array1D<T> *array) {
-  assert(N >= 1);
+  skynet_assert(N >= 1);
   const size_t old_N = array->container_.size();
   array->container_.resize(N);
   for (size_t t = old_N; t < N; ++t) {
@@ -45,8 +44,8 @@ public:
   }
 
   INLINE void __set(size_t t, size_t idx, const T &value) {
-    assert(t < lanes());
-    assert(idx < size_);
+    skynet_assert(t < lanes());
+    skynet_assert(idx < size_);
     container_[t][idx] = value;
   }
 
@@ -56,8 +55,8 @@ public:
   }
 
   INLINE void __add(size_t t, size_t idx, const T &value) {
-    assert(t < lanes());
-    assert(idx < size_);
+    skynet_assert(t < lanes());
+    skynet_assert(idx < size_);
     container_[t][idx] += value;
   }
 
@@ -67,7 +66,7 @@ public:
   }
 
   INLINE T operator[](size_t idx) const {
-    assert(idx < size_);
+    skynet_assert(idx < size_);
     T v = default_value_;
     for (const auto &lane : container_) {
       v += lane[idx];
@@ -95,12 +94,12 @@ public:
   }
 
   std::vector<T> &lane(size_t t) {
-    assert(t < lanes());
+    skynet_assert(t < lanes());
     return container_[t];
   }
 
   const std::vector<T> &lane(size_t t) const {
-    assert(t < lanes());
+    skynet_assert(t < lanes());
     return container_[t];
   }
 
