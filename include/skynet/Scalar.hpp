@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstring>
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -51,10 +52,7 @@ public:
   }
 
   void set(T x) {
-    const size_t P = container_.size() / PAD;
-    for (size_t i = 0; i < P; i++) {
-      container_[i * PAD] = T{};
-    }
+    std::memset(container_.data(), 0x0, container_.size() * sizeof(T));
     container_[0] = x;
   }
 
@@ -124,6 +122,11 @@ public:
 
   INLINE void __add(size_t k, T x) {
     container_[k * PAD] += x;
+  }
+
+  void reduce() {
+    container_[0] = get();
+    container_.resize(1 * PAD);
   }
 
   void printInternals() const {

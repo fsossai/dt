@@ -25,7 +25,11 @@ void clause_array1d_add(int N, Array1D<T> *array) {
   skynet_assert(N >= 1);
   const size_t old_N = array->container_.size();
   array->container_.resize(N);
+
+  // constexpr int PAD = ceil_div(1024, sizeof(T));
+
   for (size_t t = old_N; t < N; ++t) {
+    // array->container_[t].reserve(array->size_ + PAD);
     array->container_[t].resize(array->size_, array->default_value_);
   }
 }
