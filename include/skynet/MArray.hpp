@@ -127,7 +127,9 @@ public:
 
   INLINE void set(size_t idx, T value) {
     int t = 0;
+    auto p = noelle_pragma_begin("ldtc", &t, 0);
     __set(t, idx, value);
+    noelle_pragma_end(p);
   }
 
   void fill(T value) {
