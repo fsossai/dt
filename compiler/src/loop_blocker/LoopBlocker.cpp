@@ -198,14 +198,26 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
 
     Builder.SetInsertPoint(OuterHeader);
 
+    // N
+    auto NumIterations = LGIV->getExitConditionValue();
+
+    // NumIterations is an instruction in the header it means that
+    // NumIterations may be computed from a chain of loop-invariant value that
+    // should have been hoisted out, ideally.
+    // For now, just report this and give up.
+    if (cast<Instruction>(NumIterations)->getParent() == InnerHeader) {
+      log.bypass() << "ERROR: Not implemented\n";
+      assert(false);
+    }
+
     // N - InnerOriginalStartIdx
-    auto NumIterations =
-        Builder.CreateSub(InnerCmp->getOperand(1), InnerOriginalStartIdx);
+    auto AdjustedNumIterations =
+        Builder.CreateSub(NumIterations, InnerOriginalStartIdx);
 
     // InnerNewStartIdx = i * (N - i_start) / numBlocks + i_start
     auto AdjustedNumBlocks = Builder.CreateZExtOrTrunc(NumBlocks, OuterTy);
     auto InnerNewStartIdx = Builder.CreateAdd(
-        Builder.CreateSDiv(Builder.CreateMul(LGOuterPHI, NumIterations),
+        Builder.CreateSDiv(Builder.CreateMul(LGOuterPHI, AdjustedNumIterations),
                            AdjustedNumBlocks),
         InnerOriginalStartIdx);
 
@@ -214,7 +226,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
         Builder.CreateSDiv(
             Builder.CreateMul(
                 Builder.CreateAdd(LGOuterPHI, ConstantInt::get(OuterTy, 1)),
-                NumIterations),
+                AdjustedNumIterations),
             AdjustedNumBlocks),
         InnerOriginalStartIdx);
 
