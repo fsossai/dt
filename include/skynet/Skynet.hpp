@@ -9,6 +9,7 @@
 #include "Common.hpp"
 
 #include "Array.hpp"
+#include "Array1D.hpp"
 #include "Backpack.hpp"
 #include "Bag.hpp"
 #include "BaseSequence.hpp"
