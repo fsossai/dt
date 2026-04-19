@@ -63,14 +63,14 @@ int clause_array_add_nested(int N, MArray<T> *array, int M, int offset = 0) {
   return retVal;
 }
 
-template <typename T>
-std::vector<T> &operator+=(std::vector<T> &lhs, const std::vector<T> &rhs) {
-  const auto N = lhs.size();
-  for (size_t i = 0; i < N; ++i) {
-    lhs[i] += rhs[i];
-  }
-  return lhs;
-}
+// template <typename T>
+// std::vector<T> &operator+=(std::vector<T> &lhs, const std::vector<T> &rhs) {
+//   const auto N = lhs.size();
+//   for (size_t i = 0; i < N; ++i) {
+//     lhs[i] += rhs[i];
+//   }
+//   return lhs;
+// }
 
 template <class T>
 class MArray {
