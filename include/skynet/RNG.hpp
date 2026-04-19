@@ -38,6 +38,18 @@ public:
                                               RAND_MAX)(engine_[k * RNG_PAD]);
   }
 
+  INLINE double genN() {
+    size_t k = 0;
+    auto _p = noelle_pragma_begin("ldtc", &k, (size_t)0, clause_rng_gen, this);
+    auto num = __genN(k);
+    noelle_pragma_end(_p);
+    return num;
+  }
+
+  INLINE double __genN(size_t k) {
+    return std::normal_distribution<double>(0.0, 1.0)(engine_[k * RNG_PAD]);
+  }
+
 private:
   std::vector<std::mt19937> engine_;
 };
