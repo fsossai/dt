@@ -24,10 +24,19 @@ void clause_scalar_add(int N, Scalar<T, PAD> *s) {
 }
 
 template <class T, uint32_t PAD>
+void clause_scalar_min(int N, Scalar<T, PAD> *s) {
+  if (s->container_.size() / PAD == N) {
+    return;
+  }
+  s->container_.resize(N * PAD);
+}
+
+template <class T, uint32_t PAD>
 void clause_scalar_keepMin(int N, Scalar<T, PAD> *s) {
   auto value = s->get();
   s->container_.resize(1);
-  s->container_[0] = value;
+  auto &lane0 = s->container_[0];
+  lane0 = value;
 }
 
 template <class T, uint32_t PAD>
@@ -47,13 +56,27 @@ public:
                                   (size_t)0,
                                   clause_scalar_add<T, PAD>,
                                   this);
-    container_[k * PAD] += x;
+    auto &lane = container_[k * PAD];
+    lane += x;
+    noelle_pragma_end(_p);
+  }
+
+  INLINE void min(T x) {
+    size_t k = 0;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  (size_t)0,
+                                  clause_scalar_min<T, PAD>,
+                                  this);
+    auto &lane = container_[k * PAD];
+    lane = (lane < x) ? lane : x;
     noelle_pragma_end(_p);
   }
 
   void set(T x) {
     std::memset(container_.data(), 0x0, container_.size() * sizeof(T));
-    container_[0] = x;
+    auto &lane0 = container_[0];
+    lane0 = x;
   }
 
   bool keepMin(T new_value) {
@@ -63,13 +86,13 @@ public:
                                  (int)0,
                                  clause_scalar_keepMin<T, PAD>,
                                  this);
-    auto *addr = &container_[0];
-    auto current_value = *addr;
-    while (current_value > new_value) {
-      if (__sync_bool_compare_and_swap(addr, current_value, new_value)) {
+    auto *lane_addr = &container_[0];
+    auto current_lane = *lane_addr;
+    while (current_lane > new_value) {
+      if (__sync_bool_compare_and_swap(lane_addr, current_lane, new_value)) {
         return true;
       }
-      current_value = *addr;
+      current_lane = *lane_addr;
     }
     noelle_pragma_end(p);
     return false;
@@ -80,11 +103,13 @@ public:
   }
 
   T get() const {
-    T acc = container_[0];
+    const auto lane0 = container_[0];
+    T acc = lane0;
     const size_t P = container_.size() / PAD;
     // #pragma omp parallel for reduction(+ : acc) // not worth it
     for (size_t i = 1; i < P; i++) {
-      acc += container_[i * PAD];
+      const auto lane = container_[i * PAD];
+      acc += lane;
     }
     return acc;
   }
@@ -92,24 +117,27 @@ public:
   INLINE T stale_read() const {
     int k;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
-    auto &x = container_[k * PAD];
+    auto &lane = container_[k * PAD];
     noelle_pragma_end(p);
-    return x;
+    return lane;
   }
 
   INLINE void stale_write(T x) {
     int k;
     auto p = noelle_pragma_begin("ldtc", &k, (int)0);
-    container_[k * PAD] = std::move(x);
+    auto &lane = container_[k * PAD];
+    lane = std::move(x);
     noelle_pragma_end(p);
   }
 
   INLINE T __stale_read(int k) const {
-    return container_[k * PAD];
+    const auto &lane = container_[k * PAD];
+    return lane;
   }
 
   INLINE void __stale_write(int k, T x) {
-    container_[k * PAD] = std::move(x);
+    auto &lane = container_[k * PAD];
+    lane = std::move(x);
   }
 
   INLINE void operator++() {
@@ -121,18 +149,35 @@ public:
   }
 
   INLINE void __add(size_t k, T x) {
-    container_[k * PAD] += x;
+    auto &lane = container_[k * PAD];
+    lane += x;
+  }
+
+  INLINE void __min(size_t k, T x) {
+    auto &lane = container_[k * PAD];
+    lane = (lane < x) ? lane : x;
   }
 
   void reduce() {
-    container_[0] = get();
+    auto &lane0 = container_[0];
+    lane0 = get();
+    container_.resize(1 * PAD);
+  }
+
+  void reduce_min() {
+    auto &lane0 = container_[0];
+    const size_t P = container_.size() / PAD;
+    for (size_t i = 1; i < P; i++) {
+      const auto lane = container_[i * PAD];
+      lane0 = (lane0 < lane) ? lane0 : lane;
+    }
     container_.resize(1 * PAD);
   }
 
   void printInternals() const {
     std::cout << "{ ";
-    for (auto x : container_) {
-      std::cout << x << " ";
+    for (auto lane : container_) {
+      std::cout << lane << " ";
     }
     std::cout << "}\n";
   }
