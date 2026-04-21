@@ -2,7 +2,7 @@
 #include <vector>
 #include <omp.h>
 
-#include "Skynet.hpp"
+#include "skynet/Skynet.hpp"
 #include "ScopeTimer.hpp"
 
 using namespace std;

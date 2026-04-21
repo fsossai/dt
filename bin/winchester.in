@@ -63,7 +63,24 @@ if [[ -z $winchester_forceRuntimeScheduling ]]; then
 fi
 
 if [[ $# < 1 ]]; then
-  echo "usage: `basename $0` <SOURCES>"
+  cat <<EOF
+usage: $(basename "$0") <SOURCES>
+
+Set behavior through environment variables (all winchester_ parameters):
+  winchester_outBin                   string default=""
+  winchester_outDir                   string default="."
+  winchester_frontend                 string default="-std=c++17"
+  winchester_linker                   string default=""
+  winchester_opt                      string default=""
+  winchester_inline                   yes|no default="yes"
+  winchester_profiler                 yes|no default="no"
+  winchester_craftPlan                csv|0 default="0"
+  winchester_interproc                true|false default="false"
+  winchester_taggedOnly               true|false default="false"
+  winchester_func                     string default=""
+  winchester_forceBlockedScheduling   true|false default="false"
+  winchester_forceRuntimeScheduling   true|false default="false"
+EOF
   exit 1
 fi
 

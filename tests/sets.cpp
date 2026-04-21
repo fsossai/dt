@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 
-#include "Set.hpp"
-#include "Skynet.hpp"
+#include "skynet/Set.hpp"
+#include "skynet/Skynet.hpp"
 
 using namespace std;
 

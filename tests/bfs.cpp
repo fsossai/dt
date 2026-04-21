@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "ScopeTimer.hpp"
-#include "Skynet.hpp"
+#include "skynet/Skynet.hpp"
 #include "arcana/noelle/core/Pragma.h"
 
 #include "include/Graph.hpp"

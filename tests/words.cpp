@@ -4,7 +4,7 @@
 #include <string>
 #include <fstream>
 
-#include "Skynet.hpp"
+#include "skynet/Skynet.hpp"
 
 using namespace std;
 

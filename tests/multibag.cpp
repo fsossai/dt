@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Skynet.hpp"
+#include "skynet/Skynet.hpp"
 
 using namespace std;
 using namespace skynet;

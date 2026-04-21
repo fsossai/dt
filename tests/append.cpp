@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "Sequence.hpp"
-#include "Skynet.hpp"
+#include "skynet/Sequence.hpp"
+#include "skynet/Skynet.hpp"
 
 using namespace std;
 

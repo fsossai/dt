@@ -1,7 +1,8 @@
 CC = clang
 CXX = clang++
 STD = -std=c++17
-INCLUDE =-I ../include/skynet -I $(shell noelle-config --include)
+INCLUDE += -I ../include
+INCLUDE += -I $(shell noelle-config --include)
 CXX_ARGS = $(INCLUDE)
 CXX_ARGS += -L/nfs-scratch/fsv1684/.local/lib64 -ltbb
 OUTDIR ?= .
@@ -32,7 +33,7 @@ $(TARGETS_C): % : %.c
 	noelle-norm $@ -o $@
 
 clean:
-	rm -f *.out *.bc *.ll
+	rm -f *.out *.bc *.ll .*.o *.o .*.bc
 	@for dir in $(DIRS); do \
 		make -C $$dir clean; \
 	done

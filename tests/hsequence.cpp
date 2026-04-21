@@ -4,9 +4,9 @@
 #include <string>
 #include <fstream>
 
-#include "Sequence.hpp"
-#include "Set.hpp"
-#include "Skynet.hpp"
+#include "skynet/Sequence.hpp"
+#include "skynet/Set.hpp"
+#include "skynet/Skynet.hpp"
 #include "HSequence.hpp"
 
 using namespace std;
