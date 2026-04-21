@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -390,18 +391,20 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
 
         for (auto &A : AdjustedCallArgs) {
           if (!isa<Instruction>(A)) {
-            // We assume the Value is available
+            // We assume the Value is available. Non-Instructions could be
+            // Argument's and Alloca's.
             continue;
           }
-          auto CurrentDef = dyn_cast<Instruction>(A);
+          Value *CurrentDef = A;
 
           // Construct the def-use chain back to the origin
           stack<Instruction *> defUseChain;
           while (!DT.dominates(CurrentDef, ClauseInsertionPoint)) {
             if (auto GEP = dyn_cast<GetElementPtrInst>(CurrentDef)) {
-              defUseChain.push(CurrentDef);
-              CurrentDef = cast<Instruction>(GEP->getPointerOperand());
-            } else if (isa<AllocaInst>(CurrentDef)) {
+              defUseChain.push(GEP);
+              CurrentDef = GEP->getPointerOperand();
+            } else if (isa<AllocaInst>(CurrentDef)
+                       || isa<Argument>(CurrentDef)) {
               break;
             } else {
               log.bypass() << "ERROR: Unhandled\n";
@@ -419,7 +422,8 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
             auto NewDef = Def->clone();
             assert(isa<GetElementPtrInst>(NewDef));
             NewDef->setOperand(0, LastNewDef);
-            PreHeader->getInstList().insert(Builder.GetInsertPoint(), NewDef);
+            Builder.SetInsertPoint(PreHeader->getTerminator());
+            Builder.Insert(NewDef);
             LastNewDef = NewDef;
           }
 
