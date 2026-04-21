@@ -44,12 +44,37 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
   // errs() << "=========================================================\n";
   // errs() << "NUM LATCHES = " << LS->getLatches().size() << "\n";
 
-  // for (auto IV : IVM->getInductionVariables()) {
-  //   errs() << "IV\n";
-  //   for (auto PHI : IV->getPHIs()) {
-  //     errs() << " PHI" << *PHI << "\n";
-  //   }
-  // }
+  if (LGIV) {
+    LGInnerPHI = LGIV->getInductionVariable()->getLoopEntryPHI();
+  } else {
+    log.info() << "No LGIV found\n";
+  }
+
+  if (LS->getLoopExitBasicBlocks().size() > 1) {
+    log.info() << "WARNING: Loop with multiple exits\n";
+
+    for (auto IV : IVM->getInductionVariables()) {
+      log.debug() << "Found IV\n";
+      auto n = log.namedSection("PHI");
+      for (auto PHI : IV->getPHIs()) {
+        log.debug() << *PHI << "\n";
+      }
+    }
+  }
+
+  if (LGInnerPHI == nullptr) {
+    // If we are here it's because we couldn't find a proper LGIV. Then, if
+    // there's only one IV in the loop, we assume that it is our 'improper'
+    // LGIV
+    auto IVs = IVM->getInductionVariables();
+    if (IVs.size() == 1) {
+      LGInnerPHI = (*IVs.begin())->getLoopEntryPHI();
+      log.info() << "Selected the only IV as LGInnerPHI\n";
+    } else {
+      log.info() << "No LGIV and many IVs\n";
+      assert(false);
+    }
+  }
 
   if (LGInnerPHI) {
     log.debug() << "LGInnerPHI = " << *LGInnerPHI << "\n";
@@ -69,18 +94,18 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
       }
     }
   } else {
-    log.debug() << "No LGInnerPHI\n";
+    // As of April 21st 2026, this is not supposed to happen anymore
+    log.info() << "No LGInnerPHI\n";
   }
 
   auto OuterLatch = BasicBlock::Create(Context, "", F);
 
   // When exiting the loop, we now go to the latch of the outermost loop
 
-  // I haven't thought about how to handle a more general case
-  assert(LS->getLoopExitBasicBlocks().size() == 1);
   auto ExitBB = LS->getLoopExitBasicBlocks()[0];
   for (auto [BB, E] : LS->getLoopExitEdges()) {
-    assert(E == ExitBB);
+    // Rewire all exiting edges to the OuterLatch even though some of them could
+    // have terminated the program. We don't handle the latter case.
     BB->getTerminator()->replaceSuccessorWith(ExitBB, OuterLatch);
   }
   auto InnerHeaderSuccInLoop = LS->getSuccessorWithinLoopOfTheHeader();
