@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 #include "arcana/noelle/core/Pragma.h"
@@ -69,6 +70,23 @@ public:
 
   INLINE void __set(int k, T new_value) {
     container_[k * PAD] = std::move(new_value);
+  }
+
+  template <typename F>
+  INLINE void __mutate(int k, F &&fn) {
+    std::forward<F>(fn)(container_[k * PAD]);
+  }
+
+  template <typename F>
+  INLINE void mutate(F &&fn) {
+    int k = 0;
+    auto p = noelle_pragma_begin("ldtc",
+                                 &k,
+                                 (int)0,
+                                 clause_stale_object_set<T, PAD>,
+                                 this);
+    std::forward<F>(fn)(container_[k * PAD]);
+    noelle_pragma_end(p);
   }
 
 private:
