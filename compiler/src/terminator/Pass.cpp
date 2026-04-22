@@ -416,12 +416,15 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
             if (auto GEP = dyn_cast<GetElementPtrInst>(CurrentDef)) {
               defUseChain.push(GEP);
               CurrentDef = GEP->getPointerOperand();
+            } else if (auto Load = dyn_cast<LoadInst>(CurrentDef)) {
+              defUseChain.push(Load);
+              CurrentDef = Load->getPointerOperand();
             } else if (isa<AllocaInst>(CurrentDef)
                        || isa<Argument>(CurrentDef)) {
               break;
             } else {
               log.bypass() << "ERROR: Unhandled\n";
-              log.bypass() << *A << "\n";
+              log.bypass() << *CurrentDef << "\n";
               abort();
             }
           }
@@ -433,7 +436,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
             auto Def = defUseChain.top();
             defUseChain.pop();
             auto NewDef = Def->clone();
-            assert(isa<GetElementPtrInst>(NewDef));
+            assert(isa<GetElementPtrInst>(NewDef) || isa<LoadInst>(NewDef));
             NewDef->setOperand(0, LastNewDef);
             Builder.SetInsertPoint(PreHeader->getTerminator());
             Builder.Insert(NewDef);
