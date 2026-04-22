@@ -274,8 +274,10 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   // Squashing loops with multiple exits into one
   for (auto *LS : retryLSs) {
     auto LD = getLoopDescription(LS);
-    if (LS->getLoopExitEdges().size() > 1) {
-      log.info() << "Loop" << LD << ": Squashing\n";
+    bool squash = LS->getLoopExitEdges().size() > 1;
+    log.info()
+        << "Loop" << LD << ": Squash: " << (squash ? "yes" : "no") << "\n";
+    if (squash) {
       squashLoop(LS);
     }
   }
