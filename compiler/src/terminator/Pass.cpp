@@ -17,6 +17,7 @@
 #include "arcana/noelle/core/PragmaAnalysis.hpp"
 
 #include "arcana/dt/LoopBlocker.hpp"
+#include "arcana/dt/LoopSquasher.hpp"
 #include "arcana/dt/Analysis.hpp"
 #include "Pass.hpp"
 
@@ -270,6 +271,16 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
   }
 
   // Phase 3
+  // Squashing loops with multiple exits into one
+  for (auto *LS : retryLSs) {
+    auto LD = getLoopDescription(LS);
+    if (LS->getLoopExitEdges().size() > 1) {
+      log.info() << "Loop" << LD << ": Squashing\n";
+      squashLoop(LS);
+    }
+  }
+
+  // Phase 4
   // Let's give the non-DOALL loops a second chance by exploiting
   // the termination clauses.
   // We collect LoopContents that can be DOALL
@@ -319,7 +330,7 @@ bool TerminatorPass::runOnFunction(Noelle &noelle,
     }
   }
 
-  // Phase 4
+  // Phase 5
   // Applying loop blocking transformation to the termination targets.
   // This phase only applies to the collected DOALL loops
 

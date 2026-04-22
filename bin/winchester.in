@@ -206,6 +206,7 @@ gino-load  \
   -noelle-disable-dswp \
   -noelle-disable-helix \
   -load @DT_INSTALL_DIR@/lib/LoopBlocker.so \
+  -load @DT_INSTALL_DIR@/lib/LoopSquasher.so \
   -load @DT_INSTALL_DIR@/lib/Terminator.so \
   -Terminator \
   --terminator-tagged-only=${winchester_taggedOnly} \
