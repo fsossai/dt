@@ -115,6 +115,11 @@ gclang++ \
 
 get-bc -o $outDir/${winchester_outBin}_s${stage}_input.bc $outDir/${winchester_outBin}_s${stage}_input.out
 noelle-norm $outDir/${winchester_outBin}_s${stage}_input.bc -o $outDir/${winchester_outBin}_s${stage}_input.bc
+noelle-load \
+  -load @DT_INSTALL_DIR@/lib/Lifetime.so \
+  -Lifetime \
+  $outDir/${winchester_outBin}_s${stage}_input.bc \
+  -o $outDir/${winchester_outBin}_s${stage}_input.bc
 
 if [[ $winchester_profiler == "yes" ]]; then
   echo "Winchester: Profiler enabled"
