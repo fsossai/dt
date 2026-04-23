@@ -68,6 +68,17 @@ public:
     noelle_pragma_end(p);
   }
 
+  INLINE void set_ref(T& new_value) {
+    int k = 0;
+    auto p = noelle_pragma_begin("ldtc",
+                                 &k,
+                                 (int)0,
+                                 clause_stale_object_set<T, PAD>,
+                                 this);
+    container_[k * PAD] = new_value;
+    noelle_pragma_end(p);
+  }
+
   INLINE void __set(int k, T new_value) {
     container_[k * PAD] = std::move(new_value);
   }
