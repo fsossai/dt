@@ -232,6 +232,7 @@ BasicBlock *blockLoop(LoopContent *LC, Value *NumBlocks, PHINode **NewIVPHI) {
     // For now, just report this and give up.
     if (cast<Instruction>(NumIterations)->getParent() == InnerHeader) {
       log.bypass() << "ERROR: Not implemented\n";
+      log.debug().noPrefix() << *InnerHeader << "\n";
       assert(false);
     }
 
