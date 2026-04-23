@@ -19,11 +19,13 @@ namespace arcana::dt {
 void squashLoop(LoopStructure *LS) {
   Logger log(NoelleLumberjack, "LoopSquasher");
 
+  auto ID = LS->getID().value();
+  auto s = log.namedSection("Loop(id=" + to_string(ID) + ")");
+
   // Creating a new unique latch
   auto F = LS->getFunction();
   auto &Context = F->getContext();
   auto Header = LS->getHeader();
-  auto ID = LS->getID().value();
   auto NewLatch =
       BasicBlock::Create(Context,
                          "loop.id." + std::to_string(ID) + ".uniquelatch",
