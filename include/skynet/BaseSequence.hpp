@@ -276,6 +276,11 @@ public:
   }
 
   template <typename R = void>
+  typename std::enable_if_t<Order, R> __append_ref(int t, T& value) {
+    container_[t * PAD].push_back(value);
+  }
+
+  template <typename R = void>
   typename std::enable_if_t<Order, R> __append(int t, T *values, size_t N) {
     const int offset = container_[t * PAD].size();
     container_[t * PAD].resize(offset + N);
@@ -298,6 +303,18 @@ public:
                                   clause_sequence_append<T, Order, PAD>,
                                   this);
     __append(k, value);
+    noelle_pragma_end(_p);
+  }
+
+  template <typename R = void>
+  typename std::enable_if_t<Order, R> INLINE append_ref(T& value) {
+    int k = (container_.size() / PAD) - 1;
+    auto _p = noelle_pragma_begin("ldtc",
+                                  &k,
+                                  0,
+                                  clause_sequence_append<T, Order, PAD>,
+                                  this);
+    __append_ref(k, value);
     noelle_pragma_end(_p);
   }
 
