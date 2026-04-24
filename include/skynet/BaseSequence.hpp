@@ -181,6 +181,21 @@ public:
     }
   }
 
+  BaseSequence &operator=(const BaseSequence &other) {
+    if (this == &other) {
+      return *this;
+    }
+
+    const auto M = other.container_.size();
+    container_.resize(M);
+    const size_t P = M / PAD;
+#pragma omp parallel for
+    for (size_t i = 0; i < P; i++) {
+      container_[i * PAD] = other.container_[i * PAD];
+    }
+    return *this;
+  }
+
   void fill(T value) {
     for (auto &subc : container_) {
 #pragma omp parallel for

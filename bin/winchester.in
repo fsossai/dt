@@ -166,7 +166,7 @@ fi
 ################################################################################
 stage=1
 echo "Winchester: Stage $stage: Inlining & Global DCE"
-echo "Winchester: Inline: $winchester_inline"
+echo "Winchester: Inline=$winchester_inline, AlwaysInline=$winchester_always_inline"
 if [[ $winchester_inline == "yes" ]]; then
   inline="--inline"
 else
