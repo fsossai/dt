@@ -52,7 +52,7 @@ public:
 
 private:
   std::vector<std::mt19937> engine_;
-  int start_seed_ = 0;
+  int start_seed_;
 };
 
 inline void clause_rng_gen(int N, RNG *rng) {
@@ -60,8 +60,9 @@ inline void clause_rng_gen(int N, RNG *rng) {
     return;
   }
 
+  const int oldN = rng->engine_.size() / RNG_PAD;
   rng->engine_.resize(N * RNG_PAD);
-  for (int i = 0; i < N; i++) {
+  for (int i = oldN; i < N; i++) {
     rng->engine_[i * RNG_PAD].seed(rng->start_seed_++);
   }
 }
