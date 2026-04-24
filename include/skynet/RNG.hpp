@@ -21,8 +21,8 @@ class RNG {
 public:
   friend void clause_rng_gen(int N, RNG *s);
 
-  RNG() {
-    engine_.resize(RNG_PAD, std::mt19937(std::random_device{}()));
+  RNG(int seed = 0) : start_seed_(seed) {
+    engine_.resize(RNG_PAD, std::mt19937(seed));
   }
 
   INLINE int64_t gen() {
@@ -52,6 +52,7 @@ public:
 
 private:
   std::vector<std::mt19937> engine_;
+  int start_seed_ = 0;
 };
 
 inline void clause_rng_gen(int N, RNG *rng) {
@@ -59,10 +60,9 @@ inline void clause_rng_gen(int N, RNG *rng) {
     return;
   }
 
-  std::random_device rd;
   rng->engine_.resize(N * RNG_PAD);
-  for (auto &eng : rng->engine_) {
-    eng.seed(rd());
+  for (int i = 0; i < N; i++) {
+    rng->engine_[i * RNG_PAD].seed(rng->start_seed_++);
   }
 }
 
