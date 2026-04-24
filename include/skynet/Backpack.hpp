@@ -28,13 +28,11 @@ public:
     free(container_);
   }
 
-  template <typename R = void>
-  std::enable_if_t<sizeof(T) >= 8, R> push_back(const T &value) {
+  void insert(T value) {
     container_[__sync_fetch_and_add(&size_, 1)] = value;
   }
 
-  template <typename R = void>
-  std::enable_if_t<sizeof(T) < 8, R> push_back(T value) {
+  void insert_ref(T &value) {
     container_[__sync_fetch_and_add(&size_, 1)] = value;
   }
 
