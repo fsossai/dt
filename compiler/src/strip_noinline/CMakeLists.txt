@@ -1,6 +1,6 @@
 add_llvm_library(
-  Lifetime
+  StripNoInline
   MODULE
-  Lifetime.cpp
+  StripNoInline.cpp
   Pass.cpp
 )

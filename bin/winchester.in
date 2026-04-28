@@ -68,6 +68,10 @@ if [[ -z $winchester_forceRuntimeScheduling ]]; then
   winchester_forceRuntimeScheduling="false"
 fi
 
+if [[ -z $winchester_strip_noinline ]]; then
+  winchester_strip_noinline="no"
+fi
+
 if [[ $# < 1 ]]; then
   cat <<EOF
 usage: $(basename "$0") <SOURCES>
@@ -87,6 +91,7 @@ Set behavior through environment variables (all winchester_ parameters):
   winchester_func                     string default=""
   winchester_forceBlockedScheduling   true|false default="false"
   winchester_forceRuntimeScheduling   true|false default="false"
+  winchester_strip_noinline           yes|no default="no"
 EOF
   exit 1
 fi
@@ -125,6 +130,14 @@ noelle-load \
   -Lifetime \
   $outDir/${winchester_outBin}_s${stage}_input.bc \
   -o $outDir/${winchester_outBin}_s${stage}_input.bc
+
+if [[ $winchester_strip_noinline == "yes" ]]; then
+  noelle-load \
+    -load @DT_INSTALL_DIR@/lib/StripNoInline.so \
+    -StripNoInline \
+    $outDir/${winchester_outBin}_s${stage}_input.bc \
+    -o $outDir/${winchester_outBin}_s${stage}_input.bc
+fi
 
 if [[ $winchester_profiler == "yes" ]]; then
   echo "Winchester: Profiler enabled"
