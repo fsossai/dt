@@ -4,6 +4,6 @@
 
 namespace arcana::dt {
 
-void stripNoInline(llvm::Module &M);
+uint64_t stripNoInline(llvm::Module &M);
 
 } // namespace arcana::dt

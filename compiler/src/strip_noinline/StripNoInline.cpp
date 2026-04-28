@@ -8,10 +8,15 @@ using namespace llvm;
 
 namespace arcana::dt {
 
-void stripNoInline(Module &M) {
+uint64_t stripNoInline(Module &M) {
+  uint64_t count = 0;
   for (auto &F : M) {
-    F.removeFnAttr(Attribute::NoInline);
+    if (F.hasFnAttribute(Attribute::NoInline)) {
+      F.removeFnAttr(Attribute::NoInline);
+      ++count;
+    }
   }
+  return count;
 }
 
 } // namespace arcana::dt
