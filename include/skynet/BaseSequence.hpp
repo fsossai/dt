@@ -405,22 +405,12 @@ public:
     return container_[c.first * PAD][c.second];
   }
 
-  template <typename R = T &>
-  typename std::enable_if_t<Order, R> operator[](size_t idx) {
+  const T &operator[](size_t idx) const {
     auto c = getCoordinates(idx);
     return container_[c.first * PAD][c.second];
   }
 
-  template <typename R = const T &, typename U>
-  typename std::enable_if_t<!Order, R> operator[](
-      const IV<U, /*Order=*/false> idx) const {
-    auto c = getCoordinates(idx);
-    return container_[c.first * PAD][c.second];
-  }
-
-  template <typename R = T &, typename U>
-  typename std::enable_if_t<!Order, R> operator[](
-      const IV<U, /*Order=*/false> idx) {
+  T &operator[](size_t idx) {
     auto c = getCoordinates(idx);
     return container_[c.first * PAD][c.second];
   }
