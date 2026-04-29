@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <omp.h>
 
 #include "Common.hpp"
 #include "arcana/noelle/core/Pragma.h"
@@ -81,6 +82,35 @@ public:
   void reduce() {
     for (size_t i = 0; i < size_; i++) {
       container_[0][i] = operator[](i);
+    }
+    container_.resize(1);
+  }
+
+  void reduce_par() {
+#pragma omp parallel for
+    for (size_t i = 0; i < size_; i++) {
+      container_[0][i] = operator[](i);
+    }
+    container_.resize(1);
+  }
+
+  void reduce_rd(bool parallel = true) {
+    const int nthreads = omp_get_max_threads() ? parallel : 1;
+    int P = container_.size();
+    int N = container_[0].size();
+
+    // Recursive doubling
+    for (int step = 1; step < P; step <<= 1) {
+#pragma omp parallel for num_threads(nthreads)
+      for (int i = 0; i < P; i += 2 * step) {
+        int j = i + step;
+        auto &lhs = container_[i];
+        auto &rhs = container_[j];
+        if (j < P) {
+          for (int k = 0; k < N; ++k)
+            lhs[k] += rhs[k];
+        }
+      }
     }
     container_.resize(1);
   }
