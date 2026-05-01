@@ -88,6 +88,10 @@ public:
     container_[idx] = value;
   }
 
+  INLINE Range<size_t, /*Order=*/false> getRange() {
+    return { 0, size_ };
+  }
+
   void clear() {
     size_ = 0;
   }
@@ -112,13 +116,7 @@ public:
     return container_ + size_;
   }
 
-  template <typename U>
-  T &operator[](UIV<U> idx) {
-    return container_[idx];
-  }
-
-  template <typename U>
-  const T &operator[](UIV<U> idx) const {
+  T operator[](size_t idx) const {
     return container_[idx];
   }
 
