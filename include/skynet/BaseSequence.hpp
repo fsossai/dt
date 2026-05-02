@@ -181,6 +181,9 @@ public:
     }
   }
 
+  BaseSequence(BaseSequence &&other) noexcept = default;
+  BaseSequence &operator=(BaseSequence &&other) noexcept = default;
+
   BaseSequence &operator=(const BaseSequence &other) {
     if (this == &other) {
       return *this;
