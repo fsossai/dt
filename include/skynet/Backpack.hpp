@@ -120,6 +120,10 @@ public:
     return container_[idx];
   }
 
+  T &at(size_t idx) {
+    return container_[idx];
+  }
+
   // private:
 
   T *container_;
