@@ -17,7 +17,7 @@ namespace skynet {
 template <typename T>
 class Backpack {
 public:
-  Backpack(size_t N = 4000) : container_(new T[N]), N_(N), size_(0) {}
+  Backpack(size_t N) : container_(new T[N]), N_(N), size_(0) {}
 
   Backpack(const Backpack &other)
     : container_(new T[other.N_]),
