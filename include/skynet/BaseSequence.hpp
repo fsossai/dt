@@ -453,6 +453,10 @@ public:
     return sum;
   }
 
+  VectorT &flatView() {
+    return container_[0];
+  }
+
   void printInternals() const {
     for (int i = 0; i < container_.size() / PAD; i++) {
       std::cout << "> ";
