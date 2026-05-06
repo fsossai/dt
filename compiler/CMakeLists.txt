@@ -3,6 +3,7 @@ include_directories(
   ${NOELLE_INSTALL_DIR}/include
   ${GINO_INSTALL_DIR}/include
   ${leptoinst_SOURCE_DIR}/include
+  ${timers_SOURCE_DIR}/include
   include
 )
 add_subdirectory(src)

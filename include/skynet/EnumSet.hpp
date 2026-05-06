@@ -16,7 +16,7 @@ class EnumSet {
 public:
   EnumSet(size_t size) {
     buf_size_ = ((size * BITSIZE) + 7) / 8;
-    buf_ = static_cast<uint8_t*>(aligned_alloc(64, buf_size_));
+    buf_ = static_cast<uint8_t *>(aligned_alloc(64, buf_size_));
   }
 
   ~EnumSet() {

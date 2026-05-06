@@ -68,7 +68,7 @@ public:
     noelle_pragma_end(p);
   }
 
-  INLINE void set_ref(T& new_value) {
+  INLINE void set_ref(T &new_value) {
     int k = 0;
     auto p = noelle_pragma_begin("ldtc",
                                  &k,

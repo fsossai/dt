@@ -18,11 +18,9 @@ int main() {
   assert(obj.__get(1) == 10);
   assert(obj.__get(2) == 10);
   assert(obj.__get(3) == 10);
-  std::cout << "  lanes after expansion: "
-            << obj.__get(0) << ", "
-            << obj.__get(1) << ", "
-            << obj.__get(2) << ", "
-            << obj.__get(3) << "\n";
+  std::cout << "  lanes after expansion: " << obj.__get(0) << ", "
+            << obj.__get(1) << ", " << obj.__get(2) << ", " << obj.__get(3)
+            << "\n";
 
   std::cout << "[stale_object_mutate] mutate lane 2 with __mutate (+5)\n";
   obj.__set(2, 20);
@@ -36,11 +34,8 @@ int main() {
   assert(obj.__get(1) == 10);
   assert(obj.__get(2) == 25);
   assert(obj.__get(3) == 10);
-  std::cout << "  lanes after mutate: "
-            << obj.__get(0) << ", "
-            << obj.__get(1) << ", "
-            << obj.__get(2) << ", "
-            << obj.__get(3) << "\n";
+  std::cout << "  lanes after mutate: " << obj.__get(0) << ", " << obj.__get(1)
+            << ", " << obj.__get(2) << ", " << obj.__get(3) << "\n";
 
   std::cout << "[stale_object_mutate] all checks passed\n";
 

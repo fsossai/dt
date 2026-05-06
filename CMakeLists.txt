@@ -116,6 +116,16 @@ if(NOT leptoinst_POPULATED)
   FetchContent_MakeAvailable(leptoinst)
 endif()
 
+FetchContent_Declare(
+  timers
+  GIT_REPOSITORY  "https://github.com/fsossai/timers.git"
+)
+
+FetchContent_GetProperties(timers)
+if(NOT timers_POPULATED)
+  FetchContent_MakeAvailable(timers)
+endif()
+
 find_package(LLVM 14 REQUIRED CONFIG)
 
 set(CMAKE_CXX_STANDARD 17)
