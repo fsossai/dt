@@ -1,0 +1,172 @@
+#!/bin/bash -e
+
+trap 'echo "error: $(basename $0): line $LINENO"; exit 1' ERR
+
+export PATH=@DT_INSTALL_DIR@/bin:$PATH
+export LD_LIBRARY_PATH=@DT_INSTALL_DIR@/lib:$LD_LIBRARY_PATH
+
+export PATH=$(@DT_INSTALL_DIR@/bin/gino-config --prefix)/bin:$PATH
+export LD_LIBRARY_PATH=$(@DT_INSTALL_DIR@/bin/gino-config --prefix)/lib:$LD_LIBRARY_PATH
+
+export PATH=$(@DT_INSTALL_DIR@/bin/noelle-config --prefix)/bin:$PATH
+export LD_LIBRARY_PATH=$(@DT_INSTALL_DIR@/bin/noelle-config --prefix)/lib:$LD_LIBRARY_PATH
+
+timer_file=$(mktemp)
+
+lap_timer_init() {
+  date +%s > "$timer_file"
+}
+
+lap_timer() {
+  if [[ -f $timer_file ]]; then
+    echo "Stopwatches: Stage $stage: Elapsed time: $(( $(date +%s) - $(<"$timer_file") ))s"
+  fi
+  date +%s > "$timer_file"
+}
+
+total_timer=$(date +%s)
+
+if [[ -z $stopwatches_outDir ]]; then
+  outDir=.
+else
+  outDir=$stopwatches_outDir
+fi
+
+if [[ -z $stopwatches_frontend ]]; then
+  stopwatches_frontend="-std=c++17"
+fi
+
+if [[ -z $stopwatches_inline ]]; then
+  stopwatches_inline="yes"
+fi
+
+if [[ -z $stopwatches_always_inline ]]; then
+  stopwatches_always_inline="yes"
+fi
+
+if [[ -z $stopwatches_profiler ]]; then
+  stopwatches_profiler="no"
+fi
+
+if [[ -z $stopwatches_craftPlan ]]; then
+  stopwatches_craftPlan="0"
+fi
+
+if [[ -z $stopwatches_interproc ]]; then
+  stopwatches_interproc="false"
+fi
+
+if [[ -z $stopwatches_taggedOnly ]]; then
+  stopwatches_taggedOnly="false"
+fi
+
+if [[ -z $stopwatches_forceBlockedScheduling ]]; then
+  stopwatches_forceBlockedScheduling="false"
+fi
+
+if [[ -z $stopwatches_forceRuntimeScheduling ]]; then
+  stopwatches_forceRuntimeScheduling="false"
+fi
+
+if [[ -z $stopwatches_strip_noinline ]]; then
+  stopwatches_strip_noinline="no"
+fi
+
+if [[ $# < 1 ]]; then
+  cat <<EOF
+usage: $(basename "$0") <SOURCES>
+
+Set behavior through environment variables (all stopwatches_ parameters):
+  stopwatches_outBin                   string default=""
+  stopwatches_outDir                   string default="."
+  stopwatches_frontend                 string default="-std=c++17"
+  stopwatches_linker                   string default=""
+  stopwatches_opt                      string default=""
+  stopwatches_inline                   yes|no default="yes"
+  stopwatches_always_inline            yes|no default="yes"
+  stopwatches_profiler                 yes|no default="no"
+  stopwatches_craftPlan                csv|0 default="0"
+  stopwatches_interproc                true|false default="false"
+  stopwatches_taggedOnly               true|false default="false"
+  stopwatches_func                     string default=""
+  stopwatches_forceBlockedScheduling   true|false default="false"
+  stopwatches_forceRuntimeScheduling   true|false default="false"
+  stopwatches_strip_noinline           yes|no default="no"
+EOF
+  exit 1
+fi
+
+mkdir -p $outDir
+
+lap_timer_init # timer initialization
+
+################################################################################
+stage=0
+echo "Stopwatches: Stage $stage: Bitcode extraction"
+
+gclang++ \
+  -DNOELLE_PRAGMA_BODY_DISABLE \
+  -L$(noelle-config --prefix)/lib \
+  -Wl,-rpath=$(noelle-config --prefix)/lib \
+  -lpragma \
+  -lprofiler \
+  $stopwatches_frontend \
+  $stopwatches_linker \
+  -fopenmp \
+  -fno-exceptions \
+  -fno-vectorize \
+  -O3 \
+  -Xclang \
+  -disable-llvm-passes \
+  -I $(noelle-config --include) \
+  -I @DT_INSTALL_DIR@/include \
+  -o $outDir/${stopwatches_outBin}_s${stage}_input.out \
+  $@
+
+get-bc -o $outDir/${stopwatches_outBin}_s${stage}_input.bc $outDir/${stopwatches_outBin}_s${stage}_input.out
+noelle-norm $outDir/${stopwatches_outBin}_s${stage}_input.bc -o $outDir/${stopwatches_outBin}_s${stage}_input.bc
+
+lap_timer
+
+################################################################################
+stage=1
+echo "Stopwatches: Stage $stage: Injecting stopwatches"
+
+noelle-load \
+  -load @DT_INSTALL_DIR@/lib/LoopStopwatch.so \
+  -LoopStopwatch \
+  -PragmaEraser \
+  $outDir/${stopwatches_outBin}_s$((stage-1))_input.bc \
+  -o $outDir/${stopwatches_outBin}_s${stage}_stopwatches.bc
+
+lap_timer
+
+################################################################################
+stage=2
+echo "Stopwatches: Stage $stage: Binary generation"
+opt \
+  $stopwatches_opt \
+  $outDir/${stopwatches_outBin}_s$((stage-1))_stopwatches.bc \
+  -o $outDir/${stopwatches_outBin}_s${stage}_exe.bc
+
+clang++ \
+  $stopwatches_linker \
+  $profiler_linker \
+  $stopwatches_opt \
+  -pthread \
+  -fopenmp \
+  -L@DT_INSTALL_DIR@/lib \
+  -Wl,-rpath,@DT_INSTALL_DIR@/lib \
+  -ldtsw \
+  $outDir/${stopwatches_outBin}_s${stage}_exe.bc \
+  -o $outDir/${stopwatches_outBin}_s${stage}_exe.out
+
+sleep 0.5
+
+if [[ -n $stopwatches_outBin ]]; then
+  cp $outDir/${stopwatches_outBin}_s${stage}_exe.out $outDir/$stopwatches_outBin
+fi
+lap_timer
+
+echo "Stopwatches: Elapsed time: $(( $(date +%s) - $total_timer ))s"
+echo "Stopwatches: Done"

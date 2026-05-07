@@ -126,6 +126,11 @@ if(NOT timers_POPULATED)
   FetchContent_MakeAvailable(timers)
 endif()
 
+install(
+  DIRECTORY ${timers_SOURCE_DIR}/include/timers
+  DESTINATION ${DT_INSTALL_DIR}/include
+)
+
 find_package(LLVM 14 REQUIRED CONFIG)
 
 set(CMAKE_CXX_STANDARD 17)

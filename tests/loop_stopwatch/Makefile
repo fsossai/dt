@@ -13,7 +13,7 @@ CXXFLAGS := $(STD) -O1 -Xclang -disable-llvm-passes -fno-exceptions \
             -I$(NOELLE_INCLUDE) -I$(DT_INCLUDE)
 
 PASS_SO := $(DT_LIB)/LoopStopwatch.so
-RT_SO   := $(DT_LIB)/libdttimers.so
+RT_SO   := $(DT_LIB)/libdtsw.so
 
 SRC  := main.cpp
 BC   := main.bc
@@ -41,7 +41,7 @@ $(INST): $(NORM)
 $(BIN): $(INST)
 	clang++ -fopenmp $(STD) \
 	  -L$(DT_LIB) -Wl,-rpath,$(DT_LIB) \
-	  -ldttimers \
+	  -ldtsw \
 	  $< -o $@
 
 run: $(BIN)
