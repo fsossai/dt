@@ -30,3 +30,4 @@
 #include "Sequence.hpp"
 #include "Set.hpp"
 #include "StaleObject.hpp"
+#include "TeamArray1D.hpp"
