@@ -32,3 +32,4 @@
 #include "Set.hpp"
 #include "StaleObject.hpp"
 #include "TeamArray1D.hpp"
+#include "TeamArray2D.hpp"

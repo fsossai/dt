@@ -11,34 +11,37 @@
 
 namespace skynet {
 
-template <typename T>
-class Array2D;
+template <typename T, size_t K>
+class TeamArray2D;
 
-template <typename T>
-void clause_array2d_add(int N, Array2D<T> *array) {
+template <typename T, size_t K>
+void clause_team_array2d_add(int N, TeamArray2D<T, K> *array) {
   skynet_assert(N >= 1);
-  const size_t old_N = array->container_.size();
-  array->container_.resize(N);
+  const size_t teams = ceil_div(static_cast<size_t>(N), K);
+  const size_t old_teams = array->container_.size();
+  array->container_.resize(teams);
 
-  for (size_t t = old_N; t < static_cast<size_t>(N); ++t) {
+  for (size_t t = old_teams; t < teams; ++t) {
     auto &lane = array->container_[t];
     lane.resize(array->elements());
     array->fill_lane(lane, array->default_row_);
   }
 }
 
-template <typename T>
-class Array2D {
+template <typename T, size_t K>
+class TeamArray2D {
+  static_assert(K >= 1, "team size K must be >= 1");
+
 public:
-  friend void clause_array2d_add<T>(int N, Array2D<T> *array);
+  friend void clause_team_array2d_add<T, K>(int N, TeamArray2D<T, K> *array);
 
-  explicit Array2D(size_t rows, size_t cols)
-    : Array2D(rows, cols, T{}) {}
+  explicit TeamArray2D(size_t rows, size_t cols)
+    : TeamArray2D(rows, cols, T{}) {}
 
-  Array2D(size_t rows, size_t cols, T default_value)
-    : Array2D(rows, std::vector<T>(cols, std::move(default_value))) {}
+  TeamArray2D(size_t rows, size_t cols, T default_value)
+    : TeamArray2D(rows, std::vector<T>(cols, std::move(default_value))) {}
 
-  Array2D(size_t rows, std::vector<T> default_row)
+  TeamArray2D(size_t rows, std::vector<T> default_row)
     : rows_(rows),
       cols_(default_row.size()),
       default_row_(std::move(default_row)) {
@@ -48,18 +51,20 @@ public:
   }
 
   INLINE void __add(size_t t, size_t row, size_t col, const T &value) {
-    skynet_assert(t < lanes());
+    const size_t team = t / K;
+    skynet_assert(team < lanes());
     skynet_assert(row < rows_);
     skynet_assert(col < cols_);
-    container_[t][offset(row, col)] += value;
+    container_[team][offset(row, col)] += value;
   }
 
   INLINE void __add(size_t t, size_t row, const std::vector<T> &value) {
-    skynet_assert(t < lanes());
+    const size_t team = t / K;
+    skynet_assert(team < lanes());
     skynet_assert(row < rows_);
     skynet_assert(value.size() == cols_);
 
-    auto *dst = row_data(container_[t], row);
+    auto *dst = row_data(container_[team], row);
     for (size_t col = 0; col < cols_; ++col) {
       dst[col] += value[col];
     }
@@ -67,14 +72,16 @@ public:
 
   INLINE void add(size_t row, size_t col, const T &value) {
     int t = 0;
-    auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array2d_add<T>, this);
+    auto p =
+        noelle_pragma_begin("ldtc", &t, 0, clause_team_array2d_add<T, K>, this);
     __add(t, row, col, value);
     noelle_pragma_end(p);
   }
 
   INLINE void add(size_t row, const std::vector<T> &value) {
     int t = 0;
-    auto p = noelle_pragma_begin("ldtc", &t, 0, clause_array2d_add<T>, this);
+    auto p =
+        noelle_pragma_begin("ldtc", &t, 0, clause_team_array2d_add<T, K>, this);
     __add(t, row, value);
     noelle_pragma_end(p);
   }
@@ -171,6 +178,10 @@ public:
 
   size_t cols() const {
     return cols_;
+  }
+
+  static constexpr size_t team_size() {
+    return K;
   }
 
   std::vector<T> &lane(size_t t) {
