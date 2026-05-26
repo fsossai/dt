@@ -44,9 +44,7 @@ public:
     const size_t team = t / K;
     skynet_assert(team < lanes());
     skynet_assert(idx < size_);
-    // __atomic_fetch_add(&container_[team][idx], value, __ATOMIC_RELAXED);
-    // #pragma omp critical
-    container_[team][idx] += value;
+    __atomic_fetch_add(&container_[team][idx], value, __ATOMIC_RELAXED);
   }
 
   INLINE void add(size_t idx, const T &value) {
