@@ -117,6 +117,18 @@ public:
     }
   }
 
+  Array2D<T> reduced() const {
+    Array2D<T> out(rows_, default_row_);
+    for (size_t idx = 0; idx < elements(); ++idx) {
+      T v = default_row_[idx % cols_];
+      for (const auto &lane : container_) {
+        v += lane[idx];
+      }
+      out.container_[0][idx] = v;
+    }
+    return out;
+  }
+
   void reduce() {
     for (size_t idx = 0; idx < elements(); ++idx) {
       T v = default_row_[idx % cols_];
