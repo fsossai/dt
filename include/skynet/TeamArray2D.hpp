@@ -66,6 +66,7 @@ public:
 
     auto *dst = row_data(container_[team], row);
     for (size_t col = 0; col < cols_; ++col) {
+#pragma omp atomic
       dst[col] += value[col];
     }
   }
