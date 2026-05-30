@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <vector>
 #include <omp.h>
@@ -44,12 +45,18 @@ public:
     const size_t team = t / K;
     skynet_assert(team < lanes());
     skynet_assert(idx < size_);
-    __atomic_fetch_add(&container_[team][idx], value, __ATOMIC_RELAXED);
+    std::atomic_ref<T>(container_[team][idx])
+        .fetch_add(value, std::memory_order_relaxed);
+    // CAS retry loop equivalent (same codegen on aarch64):
+    // T expected = container_[team][idx];
+    // while (!__atomic_compare_exchange_n(&container_[team][idx], &expected,
+    // expected + value, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
   }
 
   INLINE void add(size_t idx, const T &value) {
     int t = 0;
-    auto p = noelle_pragma_begin("ldtc", &t, 0, clause_team_array1d_add<T, K>, this);
+    auto p =
+        noelle_pragma_begin("ldtc", &t, 0, clause_team_array1d_add<T, K>, this);
     __add(t, idx, value);
     noelle_pragma_end(p);
   }

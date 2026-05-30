@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -55,7 +56,8 @@ public:
     skynet_assert(team < lanes());
     skynet_assert(row < rows_);
     skynet_assert(col < cols_);
-    container_[team][offset(row, col)] += value;
+    std::atomic_ref<T>(container_[team][offset(row, col)])
+        .fetch_add(value, std::memory_order_relaxed);
   }
 
   INLINE void __add(size_t t, size_t row, const std::vector<T> &value) {
@@ -66,7 +68,12 @@ public:
 
     auto *dst = row_data(container_[team], row);
     for (size_t col = 0; col < cols_; ++col) {
-      __atomic_fetch_add(&dst[col], value[col], __ATOMIC_RELAXED);
+      std::atomic_ref<T>(dst[col]).fetch_add(value[col],
+                                             std::memory_order_relaxed);
+      // CAS retry loop equivalent (same codegen on aarch64):
+      // T expected = dst[col];
+      // while (!__atomic_compare_exchange_n(&dst[col], &expected, expected +
+      // value[col], true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
     }
   }
 
