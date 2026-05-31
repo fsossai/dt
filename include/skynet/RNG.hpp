@@ -23,6 +23,8 @@ public:
 
   RNG() {
     engine_.resize(RNG_PAD, std::mt19937(std::random_device{}()));
+    gset_.resize(RNG_PAD, 0.0);
+    iset_.resize(RNG_PAD, 0);
   }
 
   INLINE int64_t gen() {
@@ -46,12 +48,31 @@ public:
     return num;
   }
 
-  INLINE double __genN(size_t k) {
-    return std::normal_distribution<double>(0.0, 1.0)(engine_[k * RNG_PAD]);
+  double __genN(size_t k) {
+    const size_t idx = k * RNG_PAD;
+    if (iset_[idx] == 0) {
+      // Box-Muller transform
+      double fac, rsq, v1, v2;
+      do {
+        v1 = 2.0 * (__gen(k) / (double)RAND_MAX) - 1.0;
+        v2 = 2.0 * (__gen(k) / (double)RAND_MAX) - 1.0;
+        rsq = v1 * v1 + v2 * v2;
+      } while (rsq >= 1.0 || rsq == 0.0);
+
+      fac = sqrt(-2.0 * log(rsq) / rsq);
+      gset_[idx] = v1 * fac;
+      iset_[idx] = 1;
+      return v2 * fac;
+    }
+
+    iset_[idx] = 0;
+    return gset_[idx];
   }
 
 private:
   std::vector<std::mt19937> engine_;
+  std::vector<double> gset_;
+  std::vector<int> iset_;
 };
 
 inline void clause_rng_gen(int N, RNG *rng) {
@@ -61,6 +82,8 @@ inline void clause_rng_gen(int N, RNG *rng) {
 
   std::random_device rd;
   rng->engine_.resize(N * RNG_PAD);
+  rng->gset_.resize(N * RNG_PAD, 0.0);
+  rng->iset_.resize(N * RNG_PAD, 0);
   for (auto &eng : rng->engine_) {
     eng.seed(rd());
   }
