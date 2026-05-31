@@ -45,12 +45,23 @@ public:
     const size_t team = t / K;
     skynet_assert(team < lanes());
     skynet_assert(idx < size_);
-    std::atomic_ref<T>(container_[team][idx])
-        .fetch_add(value, std::memory_order_relaxed);
-    // CAS retry loop equivalent (same codegen on aarch64):
-    // T expected = container_[team][idx];
-    // while (!__atomic_compare_exchange_n(&container_[team][idx], &expected,
-    // expected + value, true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    using IntT =
+        std::conditional_t<sizeof(T) == 4,
+                           uint32_t,
+                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+    auto *addr = &container_[team][idx];
+    T current_value = *addr;
+    T new_value;
+    do {
+      new_value = current_value + value;
+    } while (
+        !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
+                                   reinterpret_cast<IntT *>(&current_value),
+                                   reinterpret_cast<IntT *>(&new_value),
+                                   true,
+                                   __ATOMIC_RELAXED,
+                                   __ATOMIC_RELAXED));
   }
 
   INLINE void add(size_t idx, const T &value) {

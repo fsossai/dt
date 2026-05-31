@@ -51,15 +51,6 @@ public:
     fill_lane(container_[0], default_row_);
   }
 
-  INLINE void __add(size_t t, size_t row, size_t col, const T &value) {
-    const size_t team = t / K;
-    skynet_assert(team < lanes());
-    skynet_assert(row < rows_);
-    skynet_assert(col < cols_);
-    std::atomic_ref<T>(container_[team][offset(row, col)])
-        .fetch_add(value, std::memory_order_relaxed);
-  }
-
   INLINE void __add(size_t t, size_t row, const std::vector<T> &value) {
     const size_t team = t / K;
     skynet_assert(team < lanes());
@@ -68,12 +59,23 @@ public:
 
     auto *dst = row_data(container_[team], row);
     for (size_t col = 0; col < cols_; ++col) {
-      std::atomic_ref<T>(dst[col]).fetch_add(value[col],
-                                             std::memory_order_relaxed);
-      // CAS retry loop equivalent (same codegen on aarch64):
-      // T expected = dst[col];
-      // while (!__atomic_compare_exchange_n(&dst[col], &expected, expected +
-      // value[col], true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+      using IntT = std::conditional_t<
+          sizeof(T) == 4,
+          uint32_t,
+          std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+      auto *addr = &dst[col];
+      T current_value = *addr;
+      T new_value;
+      do {
+        new_value = current_value + value[col];
+      } while (
+          !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
+                                     reinterpret_cast<IntT *>(&current_value),
+                                     reinterpret_cast<IntT *>(&new_value),
+                                     true,
+                                     __ATOMIC_RELAXED,
+                                     __ATOMIC_RELAXED));
     }
   }
 
