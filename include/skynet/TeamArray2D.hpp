@@ -12,11 +12,11 @@
 
 namespace skynet {
 
-template <typename T, size_t K>
+template <typename T, size_t K, bool A = true>
 class TeamArray2D;
 
-template <typename T, size_t K>
-void clause_team_array2d_add(int N, TeamArray2D<T, K> *array) {
+template <typename T, size_t K, bool A>
+void clause_team_array2d_add(int N, TeamArray2D<T, K, A> *array) {
   skynet_assert(N >= 1);
   const size_t teams = ceil_div(static_cast<size_t>(N), K);
   const size_t old_teams = array->container_.size();
@@ -29,12 +29,12 @@ void clause_team_array2d_add(int N, TeamArray2D<T, K> *array) {
   }
 }
 
-template <typename T, size_t K>
+template <typename T, size_t K, bool A>
 class TeamArray2D {
   static_assert(K >= 1, "team size K must be >= 1");
 
 public:
-  friend void clause_team_array2d_add<T, K>(int N, TeamArray2D<T, K> *array);
+  friend void clause_team_array2d_add<T, K>(int N, TeamArray2D<T, K, A> *array);
 
   explicit TeamArray2D(size_t rows, size_t cols)
     : TeamArray2D(rows, cols, T{}) {}
@@ -65,17 +65,21 @@ public:
           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
 
       auto *addr = &dst[col];
-      T current_value = *addr;
-      T new_value;
-      do {
-        new_value = current_value + value[col];
-      } while (
-          !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
-                                     reinterpret_cast<IntT *>(&current_value),
-                                     reinterpret_cast<IntT *>(&new_value),
-                                     true,
-                                     __ATOMIC_RELAXED,
-                                     __ATOMIC_RELAXED));
+      if constexpr (A) {
+        T current_value = *addr;
+        T new_value;
+        do {
+          new_value = current_value + value[col];
+        } while (
+            !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
+                                       reinterpret_cast<IntT *>(&current_value),
+                                       reinterpret_cast<IntT *>(&new_value),
+                                       true,
+                                       __ATOMIC_RELAXED,
+                                       __ATOMIC_RELAXED));
+      } else {
+        *addr += value[col];
+      }
     }
   }
 
@@ -133,8 +137,8 @@ public:
     }
   }
 
-  TeamArray2D<T, K> reduced() const {
-    TeamArray2D<T, K> out(rows_, default_row_);
+  TeamArray2D<T, K, A> reduced() const {
+    TeamArray2D<T, K, A> out(rows_, default_row_);
     for (size_t idx = 0; idx < elements(); ++idx) {
       T v = default_row_[idx % cols_];
       for (const auto &lane : container_) {

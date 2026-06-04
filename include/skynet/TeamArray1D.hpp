@@ -10,11 +10,11 @@
 
 namespace skynet {
 
-template <typename T, size_t K>
+template <typename T, size_t K, bool A = true>
 class TeamArray1D;
 
-template <typename T, size_t K>
-void clause_team_array1d_add(int N, TeamArray1D<T, K> *array) {
+template <typename T, size_t K, bool A>
+void clause_team_array1d_add(int N, TeamArray1D<T, K, A> *array) {
   skynet_assert(N >= 1);
   const size_t teams = ceil_div(static_cast<size_t>(N), K);
   const size_t old_teams = array->container_.size();
@@ -25,12 +25,12 @@ void clause_team_array1d_add(int N, TeamArray1D<T, K> *array) {
   }
 }
 
-template <class T, size_t K>
+template <class T, size_t K, bool A>
 class TeamArray1D {
   static_assert(K >= 1, "team size K must be >= 1");
 
 public:
-  friend void clause_team_array1d_add<T, K>(int N, TeamArray1D<T, K> *array);
+  friend void clause_team_array1d_add<T, K>(int N, TeamArray1D<T, K, A> *array);
 
   explicit TeamArray1D(size_t size) : TeamArray1D(size, T{}) {}
 
@@ -45,23 +45,28 @@ public:
     const size_t team = t / K;
     skynet_assert(team < lanes());
     skynet_assert(idx < size_);
-    using IntT =
-        std::conditional_t<sizeof(T) == 4,
-                           uint32_t,
-                           std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
 
-    auto *addr = &container_[team][idx];
-    T current_value = *addr;
-    T new_value;
-    do {
-      new_value = current_value + value;
-    } while (
-        !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
-                                   reinterpret_cast<IntT *>(&current_value),
-                                   reinterpret_cast<IntT *>(&new_value),
-                                   true,
-                                   __ATOMIC_RELAXED,
-                                   __ATOMIC_RELAXED));
+    if constexpr (A) {
+      using IntT = std::conditional_t<
+          sizeof(T) == 4,
+          uint32_t,
+          std::conditional_t<sizeof(T) == 8, uint64_t, void>>;
+
+      auto *addr = &container_[team][idx];
+      T current_value = *addr;
+      T new_value;
+      do {
+        new_value = current_value + value;
+      } while (
+          !__atomic_compare_exchange(reinterpret_cast<IntT *>(addr),
+                                     reinterpret_cast<IntT *>(&current_value),
+                                     reinterpret_cast<IntT *>(&new_value),
+                                     true,
+                                     __ATOMIC_RELAXED,
+                                     __ATOMIC_RELAXED));
+    } else {
+      container_[team][idx] += value;
+    }
   }
 
   INLINE void add(size_t idx, const T &value) {
