@@ -34,7 +34,8 @@ class TeamArray2D {
   static_assert(K >= 1, "team size K must be >= 1");
 
 public:
-  friend void clause_team_array2d_add<T, K>(int N, TeamArray2D<T, K, A> *array);
+  friend void clause_team_array2d_add<T, K, A>(int N,
+                                               TeamArray2D<T, K, A> *array);
 
   explicit TeamArray2D(size_t rows, size_t cols)
     : TeamArray2D(rows, cols, T{}) {}
@@ -85,16 +86,22 @@ public:
 
   INLINE void add(size_t row, size_t col, const T &value) {
     int t = 0;
-    auto p =
-        noelle_pragma_begin("ldtc", &t, 0, clause_team_array2d_add<T, K>, this);
+    auto p = noelle_pragma_begin("ldtc",
+                                 &t,
+                                 0,
+                                 clause_team_array2d_add<T, K, A>,
+                                 this);
     __add(t, row, col, value);
     noelle_pragma_end(p);
   }
 
   INLINE void add(size_t row, const std::vector<T> &value) {
     int t = 0;
-    auto p =
-        noelle_pragma_begin("ldtc", &t, 0, clause_team_array2d_add<T, K>, this);
+    auto p = noelle_pragma_begin("ldtc",
+                                 &t,
+                                 0,
+                                 clause_team_array2d_add<T, K, A>,
+                                 this);
     __add(t, row, value);
     noelle_pragma_end(p);
   }

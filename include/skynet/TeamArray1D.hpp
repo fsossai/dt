@@ -30,7 +30,8 @@ class TeamArray1D {
   static_assert(K >= 1, "team size K must be >= 1");
 
 public:
-  friend void clause_team_array1d_add<T, K>(int N, TeamArray1D<T, K, A> *array);
+  friend void clause_team_array1d_add<T, K, A>(int N,
+                                               TeamArray1D<T, K, A> *array);
 
   explicit TeamArray1D(size_t size) : TeamArray1D(size, T{}) {}
 
@@ -71,8 +72,11 @@ public:
 
   INLINE void add(size_t idx, const T &value) {
     int t = 0;
-    auto p =
-        noelle_pragma_begin("ldtc", &t, 0, clause_team_array1d_add<T, K>, this);
+    auto p = noelle_pragma_begin("ldtc",
+                                 &t,
+                                 0,
+                                 clause_team_array1d_add<T, K, A>,
+                                 this);
     __add(t, idx, value);
     noelle_pragma_end(p);
   }
