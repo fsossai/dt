@@ -24,6 +24,7 @@
 #include "MSequence.hpp"
 #include "Multibag.hpp"
 #include "Multimap.hpp"
+#include "MultimapTBB.hpp"
 #include "PSequence.hpp"
 #include "Range.hpp"
 #include "RNG.hpp"
