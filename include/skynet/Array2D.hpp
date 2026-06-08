@@ -33,8 +33,7 @@ class Array2D {
 public:
   friend void clause_array2d_add<T>(int N, Array2D<T> *array);
 
-  explicit Array2D(size_t rows, size_t cols)
-    : Array2D(rows, cols, T{}) {}
+  explicit Array2D(size_t rows, size_t cols) : Array2D(rows, cols, T{}) {}
 
   Array2D(size_t rows, size_t cols, T default_value)
     : Array2D(rows, std::vector<T>(cols, std::move(default_value))) {}
@@ -120,7 +119,7 @@ public:
 
   void reset() {
     const size_t bytes = elements() * sizeof(T);
-    // #pragma omp parallel for
+#pragma omp parallel for
     for (auto &lane : container_) {
       std::memset(lane.data(), 0, bytes);
     }
