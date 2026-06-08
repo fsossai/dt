@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstring>
 #include <vector>
 #include <omp.h>
 
@@ -88,6 +89,13 @@ public:
       v += lane[idx];
     }
     return v;
+  }
+
+  void reset() {
+    const size_t bytes = size_ * sizeof(T);
+    for (auto &lane : container_) {
+      std::memset(lane.data(), 0, bytes);
+    }
   }
 
   void fill(const T &value) {

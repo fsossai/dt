@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <cstring>
 #include <utility>
 #include <vector>
 #include <omp.h>
@@ -129,6 +130,14 @@ public:
       }
     }
     return v;
+  }
+
+  void reset() {
+    const size_t bytes = elements() * sizeof(T);
+#pragma omp parallel for
+    for (auto &lane : container_) {
+      std::memset(lane.data(), 0, bytes);
+    }
   }
 
   void fill(const T &value) {
