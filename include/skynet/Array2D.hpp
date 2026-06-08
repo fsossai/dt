@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <utility>
 #include <vector>
 #include <omp.h>
@@ -114,6 +115,14 @@ public:
     skynet_assert(row_value.size() == cols_);
     for (auto &lane : container_) {
       fill_lane(lane, row_value);
+    }
+  }
+
+  void reset() {
+    const size_t bytes = elements() * sizeof(T);
+    // #pragma omp parallel for
+    for (auto &lane : container_) {
+      std::memset(lane.data(), 0, bytes);
     }
   }
 
